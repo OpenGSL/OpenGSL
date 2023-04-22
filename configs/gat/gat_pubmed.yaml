@@ -1,0 +1,37 @@
+# This is config for GAT on small datasets
+re_split: false
+
+lr: 1e-2
+weight_decay: 1e-3
+n_epochs: 200
+batch_size: -1 # <0 for entire graph training
+
+# about the model
+n_layers: 2 # n_payers = normal_layers + classification_layer
+n_hidden: 8
+num_heads: 8 # for normal layers
+num_out_heads: 8 # for classification
+feat_drop: 0.6
+attn_drop: 0.6
+residual: false
+
+# about graph process
+self_loop: true
+to_symmetric: false
+
+# for small benchmarks, all node features and labels will be put in GPU for acceleration
+# if the GPU memory cannot hold it, specify it to True, e.g. when training ogb
+data_cpu: false
+
+# below are for loading new graph structure of benchmark
+# reload_gs: false
+# graph_fn: data/g_struct/example/cora_raw.pth
+
+# below is for random feature input testing
+# random_feature: true
+
+# for learning rate scheduler
+# if you do not need a scheduler, comment all lines below
+# scheduler: MultiStep
+# milestones: [20, 150]
+# gamma: 0.1

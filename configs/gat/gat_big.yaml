@@ -1,0 +1,35 @@
+re_split: false
+
+lr: 1e-2
+weight_decay: 5e-4
+n_epochs: 200
+batch_size: 1024 # <0 for entire graph training
+
+# about the model
+n_layers: 3 # n_payers = normal_layers + classification_layer
+n_hidden: 256
+num_heads: 4 # for normal layers
+num_out_heads: 6 # for classification
+feat_drop: 0
+attn_drop: 0
+residual: false
+
+# about training
+num_workers: 1
+
+# for small benchmarks, all node features and labels will be put in GPU for acceleration
+# if the GPU memory cannot hold it, specify it to True, e.g. when training ogb
+data_cpu: true
+
+# below are for loading new graph structure of benchmark
+# reload_gs: false
+# graph_fn: data/g_struct/example/cora_raw.pth
+
+# below is for random feature input testing
+# random_feature: true
+
+# for learning rate scheduler
+# if you do not need a scheduler, comment all lines below
+scheduler: MultiStep
+milestones: [20, 150]
+gamma: 0.1

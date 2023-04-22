@@ -1,0 +1,14 @@
+enhancedgcn: false
+
+lr: 0.05
+n_epochs: 400
+weight_decay: 5e-7
+
+n_hidden: 64
+n_layers: 2
+dropout: 0.5
+input_dropout: 0  # cora:0.8,citeseer:0.0
+norm: false
+re_split: true
+
+not_norm_feats: false

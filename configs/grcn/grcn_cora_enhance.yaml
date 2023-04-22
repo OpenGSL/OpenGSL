@@ -1,0 +1,45 @@
+enhancedgcn: true
+
+re_split: false
+
+n_epochs: 2000
+lr: 1e-5
+lr_pre: 1e-3
+wd: 0
+lr_graph: 3e-5
+
+n_layers: 5
+n_hid: 512
+dropout: 0.2
+input_dropout: 0.2
+norm: true
+hid_graph1: 100
+hid_graph2: 10
+
+K: 30
+normalize: true
+
+save_graph: false
+
+# analysis
+analysis: false
+project: gsl
+group: group2
+
+# use wandb to tune hyperparams
+sweep: true
+sweep_config:
+  method: grid
+  name: grcn
+  description: chameleon
+  metric:
+    goal: maximize
+    name: loss
+  parameters:
+    batch_size:
+      values: [16,32,64]
+    lr:
+      min: 0.0001
+      max: 0.1
+    epochs:
+      values: [5, 10, 15]
