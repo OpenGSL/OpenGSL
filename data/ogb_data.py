@@ -1,5 +1,5 @@
 import torch
-from dgl.transforms import AddReverse, ToSimple        # dgl0.9
+# from dgl.transforms import AddReverse, ToSimple        # dgl0.9
 
 def load_ogb(name):
     """

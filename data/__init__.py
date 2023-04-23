@@ -2,7 +2,6 @@ import torch
 import dgl
 import dgl.data
 import os
-from .load_cora import CoraData
 from .ogb_data import load_ogb
 
 
@@ -17,34 +16,7 @@ def load_dataset(name='cora', reload_gs=False, graph_fn=""):
            'coauthorph':'CoauthorPhysicsDataset',
            'wikics':'WikiCSDataset'}
 
-    if name == 'raw_cora':
-        dataset = CoraData('data/cora', True)
-        g = dataset[0]
-    # elif name == 'cora':
-    #     dataset = dgl.data.CoraGraphDataset()
-    #     g = dataset[0]
-    # elif name == 'citeseer':
-    #     dataset = dgl.data.CiteseerGraphDataset()
-    #     g = dataset[0]
-    # elif name == 'pubmed':
-    #     dataset = dgl.data.PubmedGraphDataset()
-    #     g = dataset[0]
-    # elif name == 'amazoncom':
-    #     dataset = dgl.data.AmazonCoBuyComputerDataset()
-    #     g = dataset[0]
-    # elif name == 'amazonpho':
-    #     dataset = dgl.data.AmazonCoBuyPhotoDataset()
-    #     g = dataset[0]
-    # elif name == 'coauthorcs':
-    #     dataset = dgl.data.CoauthorCSDataset()
-    #     g = dataset[0]
-    # elif name == 'coauthorph':
-    #     dataset = dgl.data.CoauthorPhysicsDataset()
-    #     g = dataset[0]
-    # elif name == 'wikics':
-    #     dataset = dgl.data.WikiCSDataset()
-    #     g = dataset[0]
-    elif name == "ogbn-arxiv":
+    if name == "ogbn-arxiv":
         dataset, g = load_ogb(name='ogbn-arxiv')
     elif name in dic.keys():
         dataset = eval('dgl.data.'+dic[name]+'()')

@@ -168,24 +168,6 @@ class BaseSolver(nn.Module):
                 #Test samples %d""" %
                   (len(self.train_mask), len(self.val_mask), len(self.test_mask)))
 
-    def split_data_v2(self, seed):
-        self.train_mask = torch.zeros(self.n_nodes).type(torch.bool)
-        self.val_mask = torch.zeros(self.n_nodes).type(torch.bool)
-        self.test_mask = torch.zeros(self.n_nodes).type(torch.bool)
-        inds = np.arange(self.n_nodes)
-        np.random.seed(seed)
-        np.random.shuffle(inds)
-        inds = torch.tensor(inds).long()
-        data_y_shuffle = self.labels[inds]
-        for i in range(self.n_classes):
-            inds_i = inds[data_y_shuffle == i]
-            self.train_mask[inds_i[:20]] = 1
-        val_test_inds = np.arange(self.n_nodes)[self.train_mask.numpy() == 0]
-        np.random.shuffle(val_test_inds)
-        val_test_inds = torch.tensor(val_test_inds).long()
-        self.val_mask[val_test_inds[:500]] = 1
-        self.test_mask[val_test_inds[500:1500]] = 1
-
     def run(self):
         total_runs = self.args.n_runs * self.args.n_splits
         assert self.args.n_splits <= len(self.split_seeds)
