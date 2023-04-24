@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .GCN2 import GCN
+from .gcn_idgl import GCN
 
 
 class AnchorGCNLayer(nn.Module):

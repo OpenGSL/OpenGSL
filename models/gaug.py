@@ -1,5 +1,5 @@
 # from .GCN3 import GraphConvolution, GCN
-from .enhancedgcn import GCN
+from .gcn import GCN
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -156,13 +156,8 @@ class AverageMeter(object):
 def get_node_homophily(label, adj):
     num_node = len(label)
     label = label.repeat(num_node).reshape(num_node, -1)
-    # n = np.triu((label == label.T) & (adj == 1)).sum(axis=0)
-    n = ((label == label.T) * adj).sum(axis=0)
-    # print(((label == label.T) & (adj == 1)).sum(axis=0))
-    # print(n)
-    # exit(0)
-    # d = np.triu(adj).sum(axis=0)
-    d = adj.sum(axis=0)
+    n = (np.multiply((label == label.T), adj)).sum(axis=1)
+    d = adj.sum(axis=1)
     homos = []
     for i in range(num_node):
         if d[i] > 0:
@@ -204,5 +199,5 @@ def get_edge_homophily(label, adj):
     return cnt/num_edge
 
 def get_homophily(label, adj, type='node'):
-    np.fill_diagonal(adj, 0)
+    # np.fill_diagonal(adj, 0)
     return eval('get_'+type+'_homophily(label, adj)')

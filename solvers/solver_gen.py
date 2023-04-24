@@ -1,7 +1,7 @@
 from copy import deepcopy
 from models.gen import EstimateAdj, prob_to_adj
 # from models.GCN3 import GCN
-from models.enhancedgcn import GCN
+from models.gcn import GCN
 import torch
 import numpy as np
 import time

@@ -1,5 +1,5 @@
 import torch
-from models.enhancedgcn import GCN
+from models.gcn import GCN
 from utils.utils import normalize_sp_tensor, accuracy, set_seed, sample_mask
 from copy import deepcopy
 import time

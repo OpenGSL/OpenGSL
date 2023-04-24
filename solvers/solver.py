@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from data import load_dataset
 from data.pyg_load import pyg_load_dataset
 from data.hetero_load import hetero_load
 import dgl
@@ -23,14 +22,12 @@ class BaseSolver(nn.Module):
         self.conf = conf
         self.cfg = argparse.Namespace(**vars(args), **vars(conf))
         self.device = torch.device('cuda')
-        self.prepare_data(args.data, mode=self.args.data_load)
-        # self.split_seeds = [i for i in range(20)]
+        self.prepare_data(args.data)
         self.train_seeds = [i for i in range(400)]
-        # self.split_seeds = [103,219,977,678,527,549,368,945,573,920]
         self.split_seeds = [0,1,2,3,4,5,6,7,8,9]
 
-    def prepare_data(self, ds_name, mode='dgl'):
-        if mode =='pyg':
+    def prepare_data(self, ds_name):
+        if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph']:
             self.data_raw = pyg_load_dataset(ds_name)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # 这个feats尚未经过归一化
@@ -45,19 +42,13 @@ class BaseSolver(nn.Module):
                 self.feats = self.feats.to(self.device)
                 self.labels = self.labels.to(self.device)
                 self.adj = self.adj.to(self.device)
-            if ds_name in ['chameleon', 'squirrel', 'cornell', 'texas', 'wisconsin', 'actor']:
-                # adj in these datasets need transforming to symmetric and removing self loop
-                adj = self.adj.to_dense()   # not very large
-                self.adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
-                self.adj.fill_diagonal_(0)
-                self.adj = self.adj.to_sparse()
             # normalize features
             if self.args.not_norm_feats:
                 pass
             else:
                 self.feats = normalize_feats(self.feats)
 
-        elif mode == 'hetero':
+        elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
             self.g = hetero_load(ds_name)
             self.adj = self.g.adj()
             if not ('data_cpu' in self.conf and self.conf['data_cpu']):
@@ -75,18 +66,8 @@ class BaseSolver(nn.Module):
             self.n_classes = len(self.labels.unique())
 
         else:
-            self.data_raw, g = load_dataset(ds_name)
-            self.g = dgl.remove_self_loop(g)  # this operation is aimed to get a adj without self loop
-            self.adj = self.g.adj()
-            if not ('data_cpu' in self.conf and self.conf['data_cpu']):
-                self.g = self.g.int().to(self.device)
-                self.adj = self.adj.to(self.device)
-            self.feats = self.g.ndata['feat']  # 这个feats已经经过归一化了
-            self.n_nodes = self.feats.shape[0]
-            self.dim_feats = self.feats.shape[1]
-            self.labels = self.g.ndata['label']
-            self.n_edges = self.g.number_of_edges()
-            self.n_classes = self.data_raw.num_classes
+            print('dataset not implemented')
+            exit(0)
 
         if self.args.verbose:
             print("""----Data statistics------'
@@ -102,23 +83,13 @@ class BaseSolver(nn.Module):
         self.metric = roc_auc_score if self.num_targets == 1 else accuracy
 
 
-    def split_data(self, ds_name, seed, mode='dgl'):
+    def split_data(self, ds_name, seed):
         if ds_name in ['coauthorcs', 'coauthorph', 'amazoncom', 'amazonpho']:
             np.random.seed(seed)
             train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_examples_per_class=20, val_examples_per_class=30)  # 默认采取20-30-rest这种划分
             self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
             self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
             self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
-        elif ds_name == 'wikics':
-            assert seed <= 19 and seed >= 0
-            if mode == 'pyg':
-                self.train_mask = self.g.train_mask[:, seed].bool()
-                self.val_mask = self.g.val_mask[:, seed].bool()
-                self.test_mask = self.g.test_mask.bool()
-            else:
-                self.train_mask = self.g.ndata['train_mask'][:, seed].bool()
-                self.val_mask = self.g.ndata['val_mask'][:, seed].bool()
-                self.test_mask = self.g.ndata['test_mask'].bool()
         elif ds_name in ['cora', 'citeseer', 'pubmed']:
             if 're_split' in self.conf.dataset and self.conf.dataset['re_split']:
                 np.random.seed(seed)
@@ -127,28 +98,9 @@ class BaseSolver(nn.Module):
                 self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
                 self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
             else:
-                if mode == 'pyg':
-                    self.train_mask = self.g.train_mask
-                    self.val_mask = self.g.val_mask
-                    self.test_mask = self.g.test_mask
-                else:
-                    self.train_mask = self.g.ndata['train_mask']
-                    self.val_mask = self.g.ndata['val_mask']
-                    self.test_mask = self.g.ndata['test_mask']
-        elif ds_name == 'ogbn-arxiv':
-            if mode == 'pyg':
                 self.train_mask = self.g.train_mask
                 self.val_mask = self.g.val_mask
                 self.test_mask = self.g.test_mask
-            else:
-                self.train_mask = self.g.ndata['train_mask']
-                self.val_mask = self.g.ndata['val_mask']
-                self.test_mask = self.g.ndata['test_mask']
-        elif ds_name in ['chameleon', 'squirrel', 'cornell', 'texas', 'wisconsin', 'actor']:
-            assert seed >=0 and seed <=9
-            self.train_mask = self.g.train_mask[:,seed]
-            self.val_mask = self.g.val_mask[:, seed]
-            self.test_mask = self.g.test_mask[:, seed]
         elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
             assert seed >= 0 and seed <= 9
             self.train_mask = self.g.ndata['train_mask'][:, seed]
@@ -174,7 +126,7 @@ class BaseSolver(nn.Module):
         assert total_runs <= len(self.train_seeds)
         logger = Logger(runs=total_runs)
         for i in range(self.args.n_splits):
-            self.split_data(self.args.data, self.split_seeds[i], mode=self.args.data_load)   # split the data
+            self.split_data(self.args.data, self.split_seeds[i])   # split the data
             # self.split_data_v2(self.split_seeds[i])
             for j in range(self.args.n_runs):
                 idx = i * self.args.n_runs + j

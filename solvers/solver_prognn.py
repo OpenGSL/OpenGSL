@@ -2,7 +2,7 @@ import torch.nn.functional as F
 from copy import deepcopy
 import torch.optim as optim
 # from models.GCN3 import GCN
-from models.enhancedgcn import GCN
+from models.gcn import GCN
 from models.prognn import PGD, prox_operators, EstimateAdj, feature_smoothing
 import torch
 import time

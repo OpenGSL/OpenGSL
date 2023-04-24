@@ -14,7 +14,7 @@ class Solver(BaseSolver):
     def __init__(self, args, conf):
         super().__init__(args, conf)
         print("Solver Version : [{}]".format("grcn"))
-        if self.args.data_load == 'pyg':
+        if self.args.data in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph']:
             loop_edge_index = torch.stack([torch.arange(self.n_nodes), torch.arange(self.n_nodes)])
             edges = torch.cat([self.g.edge_index, loop_edge_index], dim=1)
             self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(

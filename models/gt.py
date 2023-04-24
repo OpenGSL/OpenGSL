@@ -2,13 +2,14 @@
 This is the GT model from UniMP [https://arxiv.org/pdf/2009.03509.pdf]
 implemented by [https://arxiv.org/pdf/2302.11640.pdf] via dgl
 '''
-
-
+import numpy as np
 import torch
 from torch import nn
 from dgl import ops
 from dgl.nn.functional import edge_softmax
 import torch.nn.functional as F
+import scipy.sparse as sp
+from utils.utils import get_homophily
 
 
 class TransformerAttentionModule(nn.Module):
@@ -27,7 +28,7 @@ class TransformerAttentionModule(nn.Module):
         self.output_linear = nn.Linear(in_features=dim, out_features=dim)
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x, graph):
+    def forward(self, x, graph, labels=None, graph_analysis=False):
         queries = self.attn_query(x)
         keys = self.attn_key(x)
         values = self.attn_value(x)
@@ -45,7 +46,38 @@ class TransformerAttentionModule(nn.Module):
         x = self.output_linear(x)
         x = self.dropout(x)
 
-        return x
+        if graph_analysis:
+            assert labels is not None, 'error'
+            homophily = self.compute_homo(graph, attn_probs, labels)
+            return x, homophily
+        return x, 0
+
+    def compute_homo(self, graph, attn_weights, labels):
+        '''
+        Args:
+            graph: dgl graph
+            attn_weights: [n_edges, n_heads, 1], attention weights learned by a transformer layer
+
+        Returns:
+            homophily: [n_heads] the homophily of attention weights of each head
+
+        '''
+
+        n_heads = self.num_heads
+        n_nodes = graph.num_nodes()
+        homophily = np.zeros(n_heads)
+        edges = graph.edges()
+        row = edges[0].cpu().numpy()
+        col = edges[1].cpu().numpy()
+        # values = adj.coalesce().values().numpy()
+        # return sp.coo_matrix((values, (row, col)), shape=adj.shape)
+        for i in range(n_heads):
+            values = attn_weights.squeeze()[:, i].cpu().detach().numpy()
+            adj = sp.coo_matrix((values, (row, col)), shape=(n_nodes, n_nodes)).todense()
+            homophily[i] = get_homophily(labels, adj)
+        return homophily
+
+
 
 class FeedForwardModule(nn.Module):
     def __init__(self, dim, hidden_dim_multiplier, dropout, act):
@@ -107,15 +139,16 @@ class GT(nn.Module):
                 self.ffns.append(FeedForwardModule(in_hidden, hidden_dim_multiplier, dropout, act))
                 self.norms_2.append(self.norm_type(in_hidden))
 
-    def forward(self, x, graph):
+    def forward(self, x, graph, labels=None, graph_analysis=False):
         if self.input_layer:
             x = self.input_linear(x)
             x = self.input_drop(x)
             x = self.act(x)
 
+        homo_heads = []
         for i, layer in enumerate(self.trans):
             x_res = self.norms_1[i](x)
-            x_res = layer(x_res, graph)
+            x_res, homophily = layer(x_res, graph, labels, graph_analysis)
             x = x + x_res
             if self.ff:
                 x_res = self.norms_1[i](x)
@@ -123,11 +156,13 @@ class GT(nn.Module):
                 x = x + x_res
             if i == self.n_layers - 1:
                 mid = x
+            if graph_analysis:
+                homo_heads.append(homophily)
 
         if self.output_layer:
             x = self.output_normalization(x)
             x = self.output_linear(x).squeeze(1)
-        return mid, x
+        return mid, x, homo_heads
 
 
 if __name__ == '__main__':

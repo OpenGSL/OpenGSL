@@ -16,8 +16,8 @@ dataset:
   re_split: false # for cora,citeseer and pubmed
   load_graph:
     flag: true
-    loc: results/graph/grcn
-  add_loop: false
+    loc: results/graph/prognn
+  add_loop: true
   normalize: true
 
 training:

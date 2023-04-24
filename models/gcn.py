@@ -54,7 +54,7 @@ class GCN(nn.Module):
         self.n_linear = n_linear
         self.norm_flag = norm['flag']
         self.norm_type = eval('nn.'+norm['norm_type'])
-        self.act = eval('F.'+act) if not act=='identity' else lambda x: x
+        self.act = eval('F.'+act) if not act == 'identity' else lambda x: x
         if input_layer:
             self.input_linear = nn.Linear(in_features=nfeat, out_features=nhid)
             self.input_drop = nn.Dropout(input_dropout)

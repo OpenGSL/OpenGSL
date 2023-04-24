@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
-from .enhancedgcn import GCN
+from .gcn import GCN
 
 
 class GCNConv_diag(torch.nn.Module):

@@ -25,7 +25,8 @@ class Solver(BaseSolver):
         if 'analysis' in self.conf and self.conf.analysis['flag']:
             wandb.init(config=self.cfg,
                        project=self.cfg.analysis['project'],
-                       dir=os.path.join('/home/zzy/NeDGSL/wandb',self.conf.analysis['dir']))
+                       dir=os.path.join('/home/zzy/NeDGSL/wandb',self.conf.analysis['dir']),
+                       group=self.cfg.analysis['group'])
             wandb.define_metric("loss_val", summary="min")
             wandb.define_metric("acc_val", summary="max")
             wandb.define_metric("loss_train", summary="min")
@@ -46,7 +47,7 @@ class Solver(BaseSolver):
             optim.zero_grad()
 
             # forward and backward
-            x, output = model(self.feats, self.graph)
+            x, output, _ = model(self.feats, self.graph, self.labels.cpu().numpy())
 
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
@@ -80,26 +81,32 @@ class Solver(BaseSolver):
 
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(total_time))
-        loss_test, acc_test, _ = self.test(model, weights)
+        loss_test, acc_test, homo_heads = self.test(model, weights)
         result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         if 'analysis' in self.conf and self.conf.analysis['flag']:
             wandb.log({'acc_test':acc_test})
+            if self.conf.analysis['graph_analysis']:
+                homo = []
+                for i in range(len(homo_heads)):
+                    for h in homo_heads[i]:
+                        homo.append([i,h])
+                wandb.log({'homo':wandb.plot.scatter(wandb.Table(data=homo, columns=['layer', 'homophily']), 'layer', 'homophily')})
             wandb.finish()
         return result
 
-    def evaluate(self, model, test_mask):
+    def evaluate(self, model, test_mask, graph_analysis=False):
         model.eval()
         with torch.no_grad():
-            x, output = model(self.feats, self.graph)
+            x, output, homo_heads = model(self.feats, self.graph, self.labels.cpu().numpy(), graph_analysis)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), output
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), homo_heads
 
     def test(self, model, weights):
         model.load_state_dict(weights)
-        return self.evaluate(model, self.test_mask)
+        return self.evaluate(model, self.test_mask, graph_analysis=self.conf.analysis['graph_analysis'])
 
 
 
