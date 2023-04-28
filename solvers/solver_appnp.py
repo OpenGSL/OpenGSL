@@ -13,9 +13,9 @@ class Solver(BaseSolver):
         print("Solver Version : [{}]".format("gcndense"))
         # self.edge_index = self.adj.coalesce().indices()
         self.normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
     def train(self):
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
         model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, dropout=self.conf.model['dropout'], K=self.conf.model['K'], alpha=self.conf.model['alpha']).to(self.device)
         optim = torch.optim.Adam(model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
         total_time = 0

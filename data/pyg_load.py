@@ -1,9 +1,8 @@
 '''
-Here we provide another way to load data with pyg. This is needed when running grcn because grcn uses the unnormalized
-feature, which is not supported in dgl.
+load data via pyg
 '''
 
-from torch_geometric.datasets import Planetoid, CoraFull, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor
+from torch_geometric.datasets import Planetoid, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor
 
 
 def pyg_load_dataset(name, path='./data/'):

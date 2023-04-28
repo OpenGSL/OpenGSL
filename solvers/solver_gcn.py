@@ -36,7 +36,7 @@ class Solver(BaseSolver):
             optim.zero_grad()
 
             # forward and backward
-            x, output = model(self.feats, normalized_adj)
+            x, output = model((self.feats, normalized_adj,False))
 
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
@@ -79,7 +79,7 @@ class Solver(BaseSolver):
     def evaluate(self, model, test_mask, normalized_adj):
         model.eval()
         with torch.no_grad():
-            x, output = model(self.feats, normalized_adj)
+            x, output = model((self.feats, normalized_adj,False))
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)

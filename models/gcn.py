@@ -82,7 +82,11 @@ class GCN(nn.Module):
                 self.norms.append(self.norm_type(in_hidden))
         self.convs[-1].last_layer = True
 
-    def forward(self, x, adj):
+    # def forward(self, x, adj, only_z=False):
+    def forward(self, input):
+        x=input[0]
+        adj=input[1]
+        only_z=input[2]
         if self.input_layer:
             x = self.input_linear(x)
             x = self.input_drop(x)
@@ -101,4 +105,7 @@ class GCN(nn.Module):
         if self.output_layer:
             x = self.output_normalization(x)
             x = self.output_linear(x).squeeze(1)
-        return mid, x
+        if only_z:
+            return x
+        else:
+            return mid, x

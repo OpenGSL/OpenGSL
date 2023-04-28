@@ -43,7 +43,7 @@ Here are some examples:
 ```python
 python main.py --data cora --solver gcn --config configs/gcn/gcn_cora.yaml --gpu 0
 python main.py --data cora --solver grcn --config configs/grcn/grcn_cora.yaml --gpu 0 --not_norm_feats
-python main.py --data wiki-cooc --solver gt --config configs/gt/gt_hetero.yaml --gpu 0 --data_load hetero --not_norm_feats
+python main.py --data wiki-cooc --solver gt --config configs/gt/gt_hetero.yaml --gpu 0 --not_norm_feats
 ```
 
 ## Performances

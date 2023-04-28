@@ -65,6 +65,19 @@ class BaseSolver(nn.Module):
                 self.feats = normalize_feats(self.feats)
             self.n_classes = len(self.labels.unique())
 
+        elif ds_name in ['penn94']:
+            from data.ls_hetero import load_fb100_dataset
+            self.adj, self.feats, self.labels, self.splits = load_fb100_dataset()
+            self.n_nodes = self.feats.shape[0]
+            self.dim_feats = self.feats.shape[1]
+            self.n_edges = len(self.adj.coalesce().values())
+            self.n_classes = 2
+            if not ('data_cpu' in self.conf and self.conf['data_cpu']):
+                self.feats = self.feats.to(self.device)
+                self.labels = self.labels.to(self.device)
+                self.adj = self.adj.to(self.device)
+
+
         else:
             print('dataset not implemented')
             exit(0)
@@ -106,6 +119,13 @@ class BaseSolver(nn.Module):
             self.train_mask = self.g.ndata['train_mask'][:, seed]
             self.val_mask = self.g.ndata['val_mask'][:, seed]
             self.test_mask = self.g.ndata['test_mask'][:, seed]
+        elif ds_name in ['penn94']:
+            train_indices = self.splits[seed]['train']
+            val_indices = self.splits[seed]['valid']
+            test_indices = self.splits[seed]['test']
+            self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
+            self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
+            self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
         else:
             print('dataset not implemented')
             exit(0)

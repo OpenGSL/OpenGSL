@@ -164,16 +164,6 @@ def get_node_homophily(label, adj):
             homos.append(n[i] * 1. / d[i])
     return np.mean(homos)
 
-def get_dict(adj):
-    g = {}
-    for i in range(adj.shape[0]):
-        g[i] = []
-    mn = adj.triu(1).nonzero().tolist()  # 每个边只会出现一次，列表不用去重
-    for m, n in mn:
-        g[m].append(n)
-        g[n].append(m)
-    return g
-
 def sample_mask(idx, l):
     """Create mask."""
     mask = np.zeros(l)

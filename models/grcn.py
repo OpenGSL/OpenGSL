@@ -108,6 +108,6 @@ class GRCN(torch.nn.Module):
         # x = self.conv1(input, Adj_new_norm)
         # x = F.dropout(F.relu(x), training=self.training, p=self.dropout)
         # x = self.conv2(x, Adj_new_norm)
-        _, x = self.conv_task(input, Adj_new_norm)
+        _, x = self.conv_task((input, Adj_new_norm, False))
 
         return x, Adj_new

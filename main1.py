@@ -2,12 +2,12 @@ import os
 import importlib
 import argparse
 import ruamel.yaml as yaml
+from data.dataset import Dataset
+from utils.utils import set_seed
 
 def main(args):
 
-    print(args)
-    a = importlib.import_module('.solver_'+args.solver, package='solvers')
-
+    # load config
     if args.config != '':
         conf = open(args.config, "r").read()
         conf = yaml.safe_load(conf)
@@ -16,8 +16,13 @@ def main(args):
     else:
         conf = None
 
-    solver = a.Solver(args, conf)
-    solver.run()
+    # load data
+    dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], verbose=args.verbose, n_splits=args.n_splits, cora_split=conf.dataset['cora_split'])
+
+    set_seed(0)
+    from solvers.solver_grcn1 import GRCNSolver
+    a=GRCNSolver(conf,dataset)
+    print(a.learn(debug=args.debug))
 
 
 if __name__ == '__main__':
@@ -36,6 +41,7 @@ if __name__ == '__main__':
                              "unless you have re_split=true in the config file)")
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--save', action='store_true')
+    parser.add_argument('--save_graph', action='store_true')
     parser.add_argument('--not_norm_feats', action='store_true', help='whether to normalize the feature matrix')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
