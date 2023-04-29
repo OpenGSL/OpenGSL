@@ -4,8 +4,8 @@ from utils.logger import Logger
 import os
 import pandas as pd
 from data.dataset import Dataset
-from solvers.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver
-from solvers.gslsolver import GRCNSolver
+from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver
+from pipeline.gslsolver import GRCNSolver
 
 
 solvers = {

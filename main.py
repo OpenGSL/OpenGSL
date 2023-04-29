@@ -1,7 +1,7 @@
 import os
 import argparse
 import ruamel.yaml as yaml
-from solvers.ExpManager import ExpManager
+from pipeline.ExpManager import ExpManager
 
 
 def main(args):

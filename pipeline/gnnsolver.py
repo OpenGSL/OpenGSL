@@ -1,6 +1,6 @@
 from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX
 from models.gcn import GCN
-from solvers.solver import Solver
+from pipeline.solver import Solver
 import torch
 from utils.utils import normalize_sp_tensor
 

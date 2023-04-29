@@ -2,7 +2,7 @@ from copy import deepcopy
 from models.grcn import GRCN
 import torch
 import time
-from solvers.solver import Solver
+from pipeline.solver import Solver
 
 
 class GRCNSolver(Solver):

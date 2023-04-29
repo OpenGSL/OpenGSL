@@ -25,8 +25,6 @@ class Solver:
         self.val_masks = dataset.val_masks
         self.test_masks = dataset.test_masks
 
-
-
     def run_exp(self, split=None, debug=False):
         self.set(split)
         return self.learn(debug)
