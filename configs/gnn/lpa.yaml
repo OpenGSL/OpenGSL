@@ -1,0 +1,12 @@
+model:
+  n_layers: 3
+  alpha: 0.9
+
+dataset:
+  cora_split: false
+  feat_norm: true
+  normalize: true
+  add_loop: false
+
+analysis:
+  flag: false

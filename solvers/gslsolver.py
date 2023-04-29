@@ -1,19 +1,14 @@
-import torch.nn.functional as F
 from copy import deepcopy
 from models.grcn import GRCN
 import torch
 import time
-from utils.utils import accuracy
-from solvers.solver1 import GSLSolver
-import dgl
-import wandb
-from utils.utils import get_homophily
+from solvers.solver import Solver
 
 
-class GRCNSolver(GSLSolver):
+class GRCNSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization to avoid repetitive computations.
+        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -27,8 +22,17 @@ class GRCNSolver(GSLSolver):
         self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(self.device).coalesce()
 
 
-    def learn(self, split=None, debug=False):
-        self.prepare(split)
+    def learn(self, debug=False):
+        '''
+        Learning process of GRCN.
+        Parameters
+        ----------
+        debug
+
+        Returns
+        -------
+
+        '''
 
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
@@ -82,7 +86,7 @@ class GRCNSolver(GSLSolver):
         loss=self.loss_fn(logits, labels)
         return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj
 
-    def get_model(self):
+    def set_method(self):
         self.model = GRCN(self.n_nodes, self.dim_feats, self.num_targets, self.device, self.conf).to(self.device)
         self.optim1 = torch.optim.Adam(self.model.base_parameters(), lr=self.conf.training['lr'],
                                        weight_decay=self.conf.training['weight_decay'])

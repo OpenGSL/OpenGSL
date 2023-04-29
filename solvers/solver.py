@@ -1,184 +1,147 @@
-import torch.nn as nn
 import torch
-import torch.nn.functional as F
-from data.pyg_load import pyg_load_dataset
-from data.hetero_load import hetero_load
-import dgl
-from data.split import get_split
-from dgl.data.utils import generate_mask_tensor
-from utils.utils import sample_mask, set_seed, normalize_feats, accuracy
-import numpy as np
-from utils.logger import Logger
+from copy import deepcopy
+import time
+from utils.utils import accuracy
 from sklearn.metrics import roc_auc_score
-import os
-import pandas as pd
-import argparse
+import torch.nn.functional as F
 
 
-class BaseSolver(nn.Module):
-    def __init__(self, args, conf):
-        super().__init__()
-        self.args = args
+class Solver:
+    def __init__(self, conf, dataset):
         self.conf = conf
-        self.cfg = argparse.Namespace(**vars(args), **vars(conf))
         self.device = torch.device('cuda')
-        self.prepare_data(args.data)
-        self.train_seeds = [i for i in range(400)]
-        self.split_seeds = [0,1,2,3,4,5,6,7,8,9]
-
-    def prepare_data(self, ds_name):
-        if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph']:
-            self.data_raw = pyg_load_dataset(ds_name)
-            self.g = self.data_raw[0]
-            self.feats = self.g.x  # 这个feats尚未经过归一化
-            self.n_nodes = self.feats.shape[0]
-            self.dim_feats = self.feats.shape[1]
-            self.labels = self.g.y
-            self.adj = torch.sparse.FloatTensor(self.g.edge_index, torch.ones(self.g.edge_index.shape[1]),
-                                                [self.n_nodes, self.n_nodes])
-            self.n_edges = self.g.num_edges
-            self.n_classes = self.data_raw.num_classes
-            if not ('data_cpu' in self.conf and self.conf['data_cpu']):
-                self.feats = self.feats.to(self.device)
-                self.labels = self.labels.to(self.device)
-                self.adj = self.adj.to(self.device)
-            # normalize features
-            if self.args.not_norm_feats:
-                pass
-            else:
-                self.feats = normalize_feats(self.feats)
-
-        elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
-            self.g = hetero_load(ds_name)
-            self.adj = self.g.adj()
-            if not ('data_cpu' in self.conf and self.conf['data_cpu']):
-                self.g = self.g.int().to(self.device)
-                self.adj = self.adj.to(self.device)
-            self.feats = self.g.ndata['feat']
-            self.n_nodes = self.feats.shape[0]
-            self.dim_feats = self.feats.shape[1]
-            self.labels = self.g.ndata['label']
-            self.n_edges = self.g.number_of_edges()
-            if self.args.not_norm_feats:
-                pass
-            else:
-                self.feats = normalize_feats(self.feats)
-            self.n_classes = len(self.labels.unique())
-
-        elif ds_name in ['penn94']:
-            from data.ls_hetero import load_fb100_dataset
-            self.adj, self.feats, self.labels, self.splits = load_fb100_dataset()
-            self.n_nodes = self.feats.shape[0]
-            self.dim_feats = self.feats.shape[1]
-            self.n_edges = len(self.adj.coalesce().values())
-            self.n_classes = 2
-            if not ('data_cpu' in self.conf and self.conf['data_cpu']):
-                self.feats = self.feats.to(self.device)
-                self.labels = self.labels.to(self.device)
-                self.adj = self.adj.to(self.device)
-
-
-        else:
-            print('dataset not implemented')
-            exit(0)
-
-        if self.args.verbose:
-            print("""----Data statistics------'
-                #Nodes %d
-                #Edges %d
-                #Classes %d""" %
-                  (self.n_nodes, self.n_edges, self.n_classes))
-
-        self.num_targets = self.n_classes
-        if self.num_targets == 2:
-            self.num_targets = 1
+        self.n_nodes = dataset.n_nodes
+        self.dim_feats = dataset.dim_feats
+        self.num_targets = dataset.num_targets
+        self.model = None
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.cross_entropy
         self.metric = roc_auc_score if self.num_targets == 1 else accuracy
+        self.model = None
+
+        self.feats = dataset.feats
+        self.adj = dataset.adj
+        self.labels = dataset.labels
+        self.train_masks = dataset.train_masks
+        self.val_masks = dataset.val_masks
+        self.test_masks = dataset.test_masks
 
 
-    def split_data(self, ds_name, seed):
-        if ds_name in ['coauthorcs', 'coauthorph', 'amazoncom', 'amazonpho']:
-            np.random.seed(seed)
-            train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_examples_per_class=20, val_examples_per_class=30)  # 默认采取20-30-rest这种划分
-            self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
-            self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
-            self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
-        elif ds_name in ['cora', 'citeseer', 'pubmed']:
-            if 're_split' in self.conf.dataset and self.conf.dataset['re_split']:
-                np.random.seed(seed)
-                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_examples_per_class=20, val_size=500, test_size=1000)
-                self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
-                self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
-                self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
-            else:
-                self.train_mask = self.g.train_mask
-                self.val_mask = self.g.val_mask
-                self.test_mask = self.g.test_mask
-        elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
-            assert seed >= 0 and seed <= 9
-            self.train_mask = self.g.ndata['train_mask'][:, seed]
-            self.val_mask = self.g.ndata['val_mask'][:, seed]
-            self.test_mask = self.g.ndata['test_mask'][:, seed]
-        elif ds_name in ['penn94']:
-            train_indices = self.splits[seed]['train']
-            val_indices = self.splits[seed]['valid']
-            test_indices = self.splits[seed]['test']
-            self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
-            self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
-            self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
-        else:
-            print('dataset not implemented')
-            exit(0)
-        self.train_mask = torch.nonzero(self.train_mask, as_tuple=False).squeeze()
-        self.val_mask = torch.nonzero(self.val_mask, as_tuple=False).squeeze()
-        self.test_mask = torch.nonzero(self.test_mask, as_tuple=False).squeeze()
 
-        if self.args.verbose:
-            print("""----Split statistics------'
-                #Train samples %d
-                #Val samples %d
-                #Test samples %d""" %
-                  (len(self.train_mask), len(self.val_mask), len(self.test_mask)))
+    def run_exp(self, split=None, debug=False):
+        self.set(split)
+        return self.learn(debug)
 
-    def run(self):
-        total_runs = self.args.n_runs * self.args.n_splits
-        assert self.args.n_splits <= len(self.split_seeds)
-        assert total_runs <= len(self.train_seeds)
-        logger = Logger(runs=total_runs)
-        for i in range(self.args.n_splits):
-            self.split_data(self.args.data, self.split_seeds[i])   # split the data
-            # self.split_data_v2(self.split_seeds[i])
-            for j in range(self.args.n_runs):
-                idx = i * self.args.n_runs + j
-                print("Exp {}/{}".format(idx, total_runs))
-                set_seed(self.train_seeds[idx])
-                if 'load_graph' in self.conf.dataset and self.conf.dataset['load_graph']['flag']:
-                    self.adj = torch.load(os.path.join(self.conf.dataset['load_graph']['loc'],'{}_{}_{}.pth'.format(self.args.data, i, self.train_seeds[idx]))).to_sparse().to(self.device)
-                result = self.train()
-                logger.add_result(idx, result)
-                if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
-                    self.save_graph(i, self.train_seeds[idx])
-        self.acc_save = 100 * torch.tensor(logger.results)[:,2].mean().float()
-        self.std_save = 100 * torch.tensor(logger.results)[:,2].std().float()
-        logger.print_statistics()
-        self.save()
+    def set(self, split):
+        '''
+        This sets necessary members for a run.
+        Parameters
+        ----------
+        split
 
-    def save(self):
-        # save results
-        if self.args.save:
-            if not os.path.exists('results'):
-                os.makedirs('results')
-            if os.path.exists('results/performance.csv'):
-                records = pd.read_csv('results/performance.csv')
-                records.loc[len(records)] = {'model':self.args.solver, 'data':self.args.data, 'acc':self.acc_save, 'std':self.std_save}
-                records.to_csv('results/performance.csv', index=False)
-            else:
-                records = pd.DataFrame(
-                    [[self.args.solver, self.args.data, self.acc_save, self.std_save]],
-                    columns=['model', 'data', 'acc', 'std'])
-                records.to_csv('results/performance.csv', index=False)
+        Returns
+        -------
 
-    def save_graph(self, split, seed):
-        if not os.path.exists('results/graph/{}'.format(self.args.solver)):
-            os.makedirs('results/graph/{}'.format(self.args.solver))
-        torch.save(self.best_graph.cpu(), 'results/graph/{}/{}_{}_{}.pth'.format(self.args.solver, self.args.data, split, seed))
+        '''
+        if split is None:
+            print('split set to default 0.')
+            split=0
+        assert split<len(self.train_masks), 'error, split id is larger than number of splits'
+        self.train_mask = self.train_masks[split]
+        self.val_mask = self.val_masks[split]
+        self.test_mask = self.test_masks[split]
+        self.total_time = 0
+        self.best_val_loss = 10
+        self.weights = None
+        self.best_graph = None
+        self.result = {'train': 0, 'valid': 0, 'test': 0}
+        self.start_time = time.time()
+        self.set_method()
+
+    def set_method(self):
+        '''
+        This sets model and other members, which is overrided for each method
+        Returns
+        -------
+
+        '''
+        self.model = None
+        self.optim = None
+
+    def learn(self, debug=False):
+        '''
+        This is the learning process of common gnns, which is overrided for special learning process
+
+        Parameters
+        ----------
+        debug
+
+        Returns
+        -------
+
+        '''
+
+        for epoch in range(self.conf.training['n_epochs']):
+            improve = ''
+            t0 = time.time()
+            self.model.train()
+            self.optim.zero_grad()
+
+            # forward and backward
+            output = self.model(self.input_distributer())
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(),
+                                    output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            self.optim.step()
+
+            # Evaluate
+            loss_val, acc_val = self.evaluate(self.val_mask)
+
+            # save
+            if loss_val < self.best_val_loss:
+                improve = '*'
+                self.total_time = time.time() - self.start_time
+                self.best_val_loss = loss_val
+                self.result['valid'] = acc_val
+                self.result['train'] = acc_train
+                self.weights = deepcopy(self.model.state_dict())
+
+            # print
+            if debug:
+                print(
+                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, 0
+
+    def evaluate(self, test_mask):
+        self.model.eval()
+        with torch.no_grad():
+            output = self.model(self.input_distributer())
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss = self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+    def input_distributer(self):
+        '''
+        This distributes different input in "learn" for different methods, overrided for each method
+        Returns
+        -------
+
+        '''
+        return None
+
+    def test(self):
+        self.model.load_state_dict(self.weights)
+        return self.evaluate(self.test_mask)
+
+
+
+
+
+

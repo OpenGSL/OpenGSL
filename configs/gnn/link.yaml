@@ -1,0 +1,16 @@
+model:
+  name: link
+
+training:
+  n_epochs: 500
+  lr: 0.01
+  weight_decay: 0.1
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  normalize: true
+  add_loop: true
+
+analysis:
+  flag: false

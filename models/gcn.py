@@ -82,7 +82,6 @@ class GCN(nn.Module):
                 self.norms.append(self.norm_type(in_hidden))
         self.convs[-1].last_layer = True
 
-    # def forward(self, x, adj, only_z=False):
     def forward(self, input):
         x=input[0]
         adj=input[1]
