@@ -1,4 +1,3 @@
-# from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
 import torch
 import torch.nn as nn
@@ -26,17 +25,18 @@ class VGAE(nn.Module):
         # GCN encoder
         # hidden = self.gcn_base(feats, adj)
         # self.mean = F.relu(self.gcn_mean(hidden, adj))
-        _, self.mean = self.conv_graph(feats, adj)
+        _, self.mean = self.conv_graph((feats, adj, False))
         self.mean = F.relu(self.mean)
         if self.gae:
             # GAE (no sampling at bottleneck)
             Z = self.mean
         else:
             # VGAE
-            self.logstd = F.relu(self.gcn_logstd(hidden, adj))
-            gaussian_noise = torch.randn_like(self.mean)
-            sampled_Z = gaussian_noise*torch.exp(self.logstd) + self.mean
-            Z = sampled_Z
+            # self.logstd = F.relu(self.gcn_logstd(hidden, adj))
+            # gaussian_noise = torch.randn_like(self.mean)
+            # sampled_Z = gaussian_noise*torch.exp(self.logstd) + self.mean
+            # Z = sampled_Z
+            pass
         # inner product decoder
         adj_logits = Z @ Z.T
         return adj_logits
@@ -86,7 +86,7 @@ class GAug(nn.Module):
         else:
             adj_new = self.sample_adj_add_bernoulli(adj_logits, adj_orig, self.alpha)
         adj_new_normed = normalize(adj_new)
-        hidden, output = self.nc_net(feats, adj_new_normed)
+        hidden, output = self.nc_net((feats, adj_new_normed, False))
         return output, adj_logits, adj_new
 
 

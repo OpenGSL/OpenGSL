@@ -29,10 +29,11 @@ gsl:
   gamma: 1
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
+  feat_norm: true
+  cora_split: false # for cora,citeseer and pubmed
 
 # analysis
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false

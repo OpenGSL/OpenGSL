@@ -15,7 +15,7 @@ model:
 dataset:
   re_split: false # for cora,citeseer and pubmed
   load_graph:
-    flag: true
+    flag: false
     loc: results/graph/prognn
   add_loop: true
   normalize: true

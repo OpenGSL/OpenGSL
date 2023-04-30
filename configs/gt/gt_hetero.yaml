@@ -27,3 +27,5 @@ analysis:
   project: gsl
   save_graph: false
   dir: gt_hetero
+  graph_analysis: true
+  group: attn_weights

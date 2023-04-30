@@ -10,10 +10,9 @@ training:
   n_epochs: 1000
 
 dataset:
-  re_split: true
-  load_graph:
-    flag: false
-    loc: [ results/graph/gen_cora_0_0.pth, results/graph/grcn_cora_0_0.pth ]
+  feat_norm: true
+  cora_split: false
+  load_graph: false
   normalize: true
   add_loop: true
 

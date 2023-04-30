@@ -35,10 +35,11 @@ gsl:
   test_eps_adj: 4e-5
 
 dataset:
-  re_split: true # for cora,citeseer and pubmed
+  feat_norm: true
+  cora_split: false # for cora,citeseer and pubmed
 
 # analysis
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false

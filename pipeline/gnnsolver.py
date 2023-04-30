@@ -1,4 +1,4 @@
-from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX
+from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP
 from models.gcn import GCN
 from pipeline.solver import Solver
 import torch
@@ -97,6 +97,22 @@ class LINKXSolver(Solver):
         self.model = LINKX(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'], self.n_nodes).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
+
+
+class APPNPSolver(Solver):
+    def __init__(self, conf, dataset):
+        super().__init__(conf, dataset)
+
+    def input_distributer(self):
+        return self.feats, self.normalized_adj
+
+    def set_method(self):
+        self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, dropout=self.conf.model['dropout'],
+                      K=self.conf.model['K'], alpha=self.conf.model['alpha']).to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                 weight_decay=self.conf.training['weight_decay'])
+        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
+        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 

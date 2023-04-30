@@ -13,6 +13,7 @@ class Solver:
         self.n_nodes = dataset.n_nodes
         self.dim_feats = dataset.dim_feats
         self.num_targets = dataset.num_targets
+        self.n_classes = dataset.n_classes
         self.model = None
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.cross_entropy
         self.metric = roc_auc_score if self.num_targets == 1 else accuracy

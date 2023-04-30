@@ -6,7 +6,7 @@ class EstimateAdj:
     def __init__(self, n_classes, adj, train_mask, labels, homophily):
         self.num_class = n_classes
         self.num_node = adj.shape[0]
-        self.idx_train = train_mask.cpu().numpy()
+        self.idx_train = train_mask
         self.label = labels.cpu().numpy()
         self.adj = adj.cpu().numpy()
 

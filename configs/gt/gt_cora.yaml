@@ -10,15 +10,14 @@ model:
   hidden_dim_multiplier: 1
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
-  load_graph:
-    flag: false
-    loc: results/graph/grcn
+  feat_norm: true
+  cora_split: false # for cora,citeseer and pubmed
+  load_graph: false
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 3e-5
-  n_epochs: 1000
+  n_epochs: 10
   weight_decay: 0
 
 # analysis
@@ -26,3 +25,4 @@ analysis:
   flag: true
   project: gsl
   save_graph: false
+  graph_analysis: false

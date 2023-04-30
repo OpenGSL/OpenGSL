@@ -31,7 +31,8 @@ gsl:
   temperature: 1.2
 
 dataset:
-  re_split: true # for cora,citeseer and pubmed
+  feat_norm: true
+  cora_split: false # for cora,citeseer and pubmed
 
 training:
   lr: 1e-2
@@ -47,4 +48,4 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false

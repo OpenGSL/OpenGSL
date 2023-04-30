@@ -18,7 +18,8 @@ gsl:
   threshold: 0.5
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
+  feat_norm: true
+  cora_split: false # for cora,citeseer and pubmed
 
 training:
   n_iters: 2
@@ -31,4 +32,4 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false
