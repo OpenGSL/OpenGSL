@@ -1,5 +1,6 @@
 from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP
 from models.gcn import GCN
+from models.jknet import JKNet
 from pipeline.solver import Solver
 import torch
 from utils.utils import normalize_sp_tensor
@@ -115,8 +116,23 @@ class APPNPSolver(Solver):
         self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
+class JKNetSolver(Solver):
+    def __init__(self, conf, dataset):
+        super().__init__(conf, dataset)
 
+    def input_distributer(self):
+        return self.feats, self.normalized_adj, True
 
+    def set_method(self):
+        self.model = JKNet(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                           self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                           self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                           self.conf.model['general'],
+                           self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                      weight_decay=self.conf.training['weight_decay'])
+        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
+        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 
