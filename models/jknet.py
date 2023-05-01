@@ -51,8 +51,8 @@ class JKNet(nn.Module):
         self.output_layer = output_layer
         self.n_linear = n_linear
         self.norm_flag = norm['flag']
-        self.norm_type = eval(norm['norm_type'])
-        self.general_aggregation = eval('torch.'+general)
+        self.norm_type = eval("nn."+norm['norm_type'])
+        self.general_aggregation = eval('self.'+general)
         self.act = eval('F.'+act) if not act == 'identity' else lambda x: x
         if input_layer:
             self.input_linear = nn.Linear(in_features=nfeat, out_features=nhid)
@@ -119,7 +119,7 @@ class JKNet(nn.Module):
         return torch.cat(layer_outputs, dim=1)
     
     def maxpool(self, layer_outputs):
-        return torch.max(torch.stack(layer_outputs, dim=0), dim=1)
+        return torch.max(torch.stack(layer_outputs, dim=0), dim=0)[0]
     
     def LSMT(self, layer_outputs):
         x = torch.stack(layer_outputs, dim=1)
