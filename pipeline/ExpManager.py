@@ -4,12 +4,13 @@ from utils.logger import Logger
 import os
 import pandas as pd
 from data.dataset import Dataset
-from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver
+from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, JKNetSolver
 from pipeline.gslsolver import GRCNSolver
 
 
 solvers = {
     'gcn':GCNSolver,
+    'jknet':JKNetSolver,
     'sgc':SGCSolver,
     'mlp':MLPSolver,
     'link':LINKSolver,
