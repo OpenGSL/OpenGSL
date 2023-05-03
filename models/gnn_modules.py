@@ -174,3 +174,58 @@ class APPNP(nn.Module):
         # x = self.prop1(x, edge_index)
         return z.squeeze(1)
 
+
+class GPRGNN(nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels, dropout=.5, dprate=.5, K=10, alpha=.1, init='SGC'):
+        super(GPRGNN, self).__init__()
+        self.lin1 = nn.Linear(in_channels, hidden_channels)
+        self.lin2 = nn.Linear(hidden_channels, out_channels)
+        self.dropout = dropout
+        self.dprate = dprate
+        self.K = K
+        self.alpha = alpha
+
+        assert init in ['SGC', 'PPR', 'NPPR', 'Random']
+        if init == 'SGC':
+            # SGC-like, note that in this case, alpha has to be a integer. It means where the peak at when initializing GPR weights.
+            TEMP = torch.zeros(K+1)
+            TEMP[0] = 1.0
+        elif init == 'PPR':
+            # PPR-like
+            TEMP = alpha*(1-alpha)**torch.arange(K+1)
+            TEMP[-1] = (1-alpha)**K
+        elif init == 'NPPR':
+            # Negative PPR
+            TEMP = (alpha)**torch.arange(K+1)
+            TEMP = TEMP/torch.sum(torch.abs(TEMP))
+        elif init == 'Random':
+            # Random
+            bound = torch.sqrt(3/(K+1))
+            TEMP = torch.random.uniform(-bound, bound, K+1)
+            TEMP = TEMP/torch.sum(torch.abs(TEMP))
+
+
+        self.temp = nn.Parameter(TEMP)
+
+    def reset_parameters(self):
+        self.lin1.reset_parameters()
+        self.lin2.reset_parameters()
+        torch.nn.init.zeros_(self.temp)
+        self.temp.data[self.k] = self.alpha*(1-self.alpha)**torch.arange(self.K+1)
+        self.temp.data[-1] = (1-self.alpha)**self.K
+
+    def forward(self, input):
+        # adj is normalized and sparse
+        x=input[0]
+        adj=input[1]
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.relu(self.lin1(x))
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.lin2(x)
+        
+        x = F.dropout(x, p=self.dprate, training=self.training)
+        z = x*self.temp[0]
+        for i in range(self.K):
+            x = torch.spmm(adj,x)
+            z = z + self.temp[i+1]*x
+        return z.squeeze(1)

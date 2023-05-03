@@ -4,8 +4,8 @@ from utils.logger import Logger
 import os
 import pandas as pd
 from data.dataset import Dataset
-from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver
-from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver
+from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, GPRGNNSolver
+from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver
 
 
 solvers = {
@@ -20,7 +20,9 @@ solvers = {
     'gen':GENSolver,
     'idgl':IDGLSolver,
     'prognn':PROGNNSolver,
-    'gt':GTSolver
+    'gt':GTSolver,
+    'slaps':SLAPSSolver,
+    'gprgnn':GPRGNNSolver
 }
 
 

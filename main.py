@@ -1,6 +1,7 @@
 import os
 import argparse
 import ruamel.yaml as yaml
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 from pipeline.ExpManager import ExpManager
 
 
@@ -27,7 +28,7 @@ if __name__ == '__main__':
                                  'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                                  'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94'], help='dataset')
     parser.add_argument('--method', type=str, default='gcn',
-                        choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen', 'gaug', 'idgl', 'grcn', 'sgc'], help="The version of solver")
+                        choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen', 'gaug', 'idgl', 'grcn', 'sgc', 'slaps', 'gprgnn'], help="The version of solver")
     parser.add_argument('--config', type=str, default='configs/gcn/gcn_template.yaml', help="Config file used for specific model training.")
     parser.add_argument('--n_runs', type=int, default=1,
                         help="number of exps per data split")
@@ -40,6 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 
     main(args)
