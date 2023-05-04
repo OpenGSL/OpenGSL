@@ -1,4 +1,4 @@
-from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP
+from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN
 from models.gcn import GCN
 from models.jknet import JKNet
 from pipeline.solver import Solver
@@ -131,6 +131,30 @@ class JKNetSolver(Solver):
                            self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
+        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
+        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+
+
+class GPRGNNSolver(Solver):
+    def __init__(self, conf, dataset):
+        super().__init__(conf, dataset)
+
+    def input_distributer(self):
+        return self.feats, self.normalized_adj
+
+    def set_method(self):
+        self.model = GPRGNN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, dropout=self.conf.model['dropout'],
+                      dprate=self.conf.model['dprate'], K=self.conf.model['K'], alpha=self.conf.model['alpha'], init=self.conf.model['init']).to(self.device)
+        self.optim = torch.optim.Adam([{
+                'params': self.model.lin1.parameters(),
+                'weight_decay': self.conf.training['weight_decay'], 'lr': self.conf.training['lr']
+            }, {
+                'params': self.model.lin2.parameters(),
+                'weight_decay': self.conf.training['weight_decay'], 'lr': self.conf.training['lr']
+            }, {
+                'params': self.model.temp,
+                'weight_decay': 0.0, 'lr': self.conf.training['lr']
+            }], lr=self.conf.training['lr'])
         normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
         self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 

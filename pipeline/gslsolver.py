@@ -9,6 +9,7 @@ from models.gen import EstimateAdj, prob_to_adj
 from models.idgl import IDGL, sample_anchors, diff, compute_anchor_adj
 from models.prognn import PGD, prox_operators, EstimateAdj, feature_smoothing
 from models.gt import GT
+from models.slaps import SLAPS
 import torch
 import torch.nn.functional as F
 import time
@@ -801,7 +802,7 @@ class PROGNNSolver(Solver):
         self.optimizer_adj = torch.optim.SGD(self.estimator.parameters(), momentum=0.9, lr=self.conf.training['lr_adj'])
         self.optimizer_l1 = PGD(self.estimator.parameters(), proxs=[prox_operators.prox_l1],
                                 lr=self.conf.training['lr_adj'], alphas=[self.conf.gsl['alpha']])
-        self.optimizer_nuclear = PGD(self.estimator.parameters(), proxs=[prox_operators.prox_nuclear],
+        self.optimizer_nuclear = PGD(self.estimator.parameters(), proxs=[prox_operators.prox_nuclear_cuda],
                                      lr=self.conf.training['lr_adj'], alphas=[self.conf.gsl['beta']])
 
         self.wait = 0
@@ -974,3 +975,84 @@ class GATSolver(Solver):
                                        weight_decay=self.conf.training['weight_decay'])
         self.optim2 = torch.optim.Adam(self.model.graph_parameters(), lr=self.conf.training['lr_graph'])
 
+class SLAPSSolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for slaps to train, evaluate, test in a run. SLAPS don't use the origin edges from the dataset.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("slaps"))
+
+    def learn(self, debug=False):
+        '''
+        Learning process of slaps.
+        Parameters
+        ----------
+        debug
+
+        Returns
+        -------
+
+        '''
+
+        for epoch in range(self.conf.training['n_epochs']):
+            improve = ''
+            t0 = time.time()
+            self.model.train()
+            self.optim.zero_grad()
+            
+            # forward and backward
+            output, loss_dae = self.model(self.feats)
+            if epoch < self.conf.training['n_epochs'] // self.conf.training['epoch_d']:
+                self.model.gcn_c.eval()
+                loss_train = self.conf.training['lamda'] * loss_dae
+            else:
+                loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask]) + self.conf.training['lamda'] * loss_dae 
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            self.optim.step()
+            
+            # Evaluate
+            loss_val, acc_val = self.evaluate(self.val_mask)
+
+            # save
+            if acc_val > self.result['valid']:
+                self.total_time = time.time() - self.start_time
+                improve = '*'
+                self.best_val_loss = loss_val
+                self.result['valid'] = acc_val
+                self.result['train'] = acc_train
+                self.weights = deepcopy(self.model.state_dict())
+
+            #print
+            if debug:
+                print(
+                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
+
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, 0
+    
+    def evaluate(self, test_mask):
+        self.model.eval()
+        with torch.no_grad():
+            output, _ = self.model(self.feats)
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss = self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+    def set_method(self):
+        self.model = SLAPS(self.n_nodes, self.dim_feats, self.num_targets, self.feats, self.device, self.conf).to(self.device)
+        self.optim = torch.optim.Adam([
+            {'params': self.model.gcn_c.parameters(), 'lr': self.conf.training['lr'], 'weight_decay': self.conf.training['weight_decay']},
+            {'params': self.model.gcn_dae.parameters(), 'lr': self.conf.training['lr_dae'], 'weight_decay': self.conf.training['weight_decay_dae']}
+        ])
