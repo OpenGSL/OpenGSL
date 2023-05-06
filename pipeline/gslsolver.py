@@ -12,12 +12,14 @@ from models.gt import GT
 from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
+from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, symmetrize, split_batch, dgl_graph_to_torch_sparse, GCN as GCN_sub, accuracy, normalize as normalize_sub
 import torch
 import torch.nn.functional as F
 import time
 from pipeline.solver import Solver
 from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor
 import dgl
+import copy
 
 
 class GRCNSolver(Solver):
@@ -1198,3 +1200,179 @@ class SEGSLSolver(Solver):
         self.model.load_state_dict(self.weights)
         normalized_adj = self.normalize(self.best_graph, add_loop=False)
         return self.evaluate(self.test_mask, normalized_adj)
+
+
+class SUBLIMESolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for sublime to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("sublime"))
+        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
+
+    def loss_cls(self, model, mask, features, labels):
+        logits = model(features)
+        logp = F.log_softmax(logits, 1)
+        loss = F.nll_loss(logp[mask], labels[mask], reduction='mean')
+        accu = accuracy(logp[mask], labels[mask])
+        return loss, accu
+
+    def loss_gcl(self, model, graph_learner, features, anchor_adj):
+
+        # view 1: anchor graph
+        if self.conf.maskfeat_rate_anchor:
+            mask_v1, _ = get_feat_mask(features, self.conf.maskfeat_rate_anchor)
+            features_v1 = features * (1 - mask_v1)
+        else:
+            features_v1 = copy.deepcopy(features)
+
+        z1, _ = model(features_v1, anchor_adj, 'anchor')
+
+        # view 2: learned graph
+        if self.conf.maskfeat_rate_learner:
+            mask, _ = get_feat_mask(features, self.conf.maskfeat_rate_learner)
+            features_v2 = features * (1 - mask)
+        else:
+            features_v2 = copy.deepcopy(features)
+
+        learned_adj = graph_learner(features)   # 这个learned adj是有自环的
+        if not self.conf.sparse:
+            learned_adj = symmetrize(learned_adj)
+            learned_adj = normalize_sub(learned_adj, 'sym', self.conf.sparse)
+
+        z2, _ = model(features_v2, learned_adj, 'learner')
+
+        # compute loss
+        if self.conf.contrast_batch_size:
+            node_idxs = list(range(features.shape[0]))
+            # random.shuffle(node_idxs)
+            batches = split_batch(node_idxs, self.conf.contrast_batch_size)
+            loss = 0
+            for batch in batches:
+                weight = len(batch) / features.shape[0]
+                loss += model.calc_loss(z1[batch], z2[batch]) * weight
+        else:
+            loss = model.calc_loss(z1, z2)
+
+        return loss, learned_adj
+
+    def evaluate_adj_by_cls(self, Adj):
+
+        model = GCN_sub(in_channels=self.dim_feats, hidden_channels=self.conf.hidden_dim_cls, out_channels=self.num_targets, num_layers=self.conf.n_layers_cls,
+                    dropout=self.conf.dropout_cls, dropout_adj=self.conf.dropedge_cls, Adj=Adj, sparse=self.conf.sparse)
+        optimizer = torch.optim.Adam(model.parameters(), lr=self.conf.lr_cls, weight_decay=self.conf.w_decay_cls)
+
+        bad_counter = 0
+        best_val = 0
+        best_model = None
+
+        model = model.cuda()
+
+        for epoch in range(1, self.conf.epochs_cls + 1):
+            model.train()
+            loss, accu = self.loss_cls(model, self.train_mask, self.feats, self.labels)
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+
+            if epoch % 10 == 0:
+                model.eval()
+                val_loss, accu = self.loss_cls(model, self.val_mask, self.feats, self.labels)
+                if accu > best_val:
+                    bad_counter = 0
+                    best_val = accu
+                    best_model = copy.deepcopy(model)
+                else:
+                    bad_counter += 1
+
+                if bad_counter >= self.conf.patience_cls:
+                    break
+        best_model.eval()
+        test_loss, test_accu = self.loss_cls(best_model, self.test_mask, self.feats, self.labels)
+        return best_val, test_accu, best_model
+
+    def learn(self, debug=False):
+        if self.conf.sparse:
+            anchor_adj_raw = self.adj
+        else:
+            anchor_adj_raw = self.adj.to_dense()
+
+        anchor_adj = normalize_sub(anchor_adj_raw, 'sym', self.conf.sparse)
+
+        if self.conf.sparse:
+            anchor_adj_torch_sparse = copy.deepcopy(anchor_adj)
+            anchor_adj = torch_sparse_to_dgl_graph(anchor_adj)
+
+        if self.conf.type_learner == 'fgp':
+            graph_learner = FGP_learner(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6, self.conf.sparse)
+        elif self.conf.type_learner == 'mlp':
+            graph_learner = MLP_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner)
+        elif self.conf.type_learner == 'att':
+            graph_learner = ATT_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                      self.conf.activation_learner)
+        elif self.conf.type_learner == 'gnn':
+            graph_learner = GNN_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner, anchor_adj)
+
+        model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
+                     emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
+                     dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse)
+
+        optimizer_cl = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
+        optimizer_learner = torch.optim.Adam(graph_learner.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
+
+
+        model = model.cuda()
+        graph_learner = graph_learner.cuda()
+        if not self.conf.sparse:
+            anchor_adj = anchor_adj.cuda()
+
+        for epoch in range(1, self.conf.epochs + 1):
+
+            model.train()
+            graph_learner.train()
+
+            loss, Adj = self.loss_gcl(model, graph_learner, self.feats, anchor_adj)
+
+            optimizer_cl.zero_grad()
+            optimizer_learner.zero_grad()
+            loss.backward()
+            optimizer_cl.step()
+            optimizer_learner.step()
+
+            # Structure Bootstrapping
+            if (1 - self.conf.tau) and (self.conf.c == 0 or epoch % self.conf.c == 0):
+                if self.conf.sparse:
+                    learned_adj_torch_sparse = dgl_graph_to_torch_sparse(Adj)
+                    anchor_adj_torch_sparse = anchor_adj_torch_sparse * self.conf.tau \
+                                              + learned_adj_torch_sparse * (1 - self.conf.tau)
+                    anchor_adj = torch_sparse_to_dgl_graph(anchor_adj_torch_sparse)
+                else:
+                    anchor_adj = anchor_adj * self.conf.tau + Adj.detach() * (1 - self.conf.tau)
+
+            print("Epoch {:05d} | CL Loss {:.4f}".format(epoch, loss.item()))
+
+            if epoch % self.conf.eval_freq == 0:
+                model.eval()
+                graph_learner.eval()
+                f_adj = Adj
+
+                if self.conf.sparse:
+                    f_adj.edata['w'] = f_adj.edata['w'].detach()
+                else:
+                    f_adj = f_adj.detach()
+
+                acc_val, acc_test, _ = self.evaluate_adj_by_cls(f_adj)
+                print(acc_val, acc_test)
+
+                if acc_val > self.result['valid']:
+                    self.total_time = time.time() - self.start_time
+                    improve = '*'
+                    self.result['valid'] = acc_val

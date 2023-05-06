@@ -4,8 +4,10 @@ from utils.logger import Logger
 import os
 import pandas as pd
 from data.dataset import Dataset
-from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, JKNetSolver, GPRGNNSolver
-from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, NODEFORMERSolver, SEGSLSolver
+from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, JKNetSolver, \
+    GPRGNNSolver
+from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, \
+    NODEFORMERSolver, SEGSLSolver, SUBLIMESolver
 
 
 solvers = {
@@ -25,7 +27,8 @@ solvers = {
     'slaps':SLAPSSolver,
     'gprgnn':GPRGNNSolver,
     'nodeformer': NODEFORMERSolver,
-    'segsl': SEGSLSolver
+    'segsl': SEGSLSolver,
+    'sublime': SUBLIMESolver
 }
 
 
