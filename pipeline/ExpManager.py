@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from data.dataset import Dataset
 from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, JKNetSolver, GPRGNNSolver
-from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, NODEFORMERSolver, SEGSLSolver, GSRSolver
+from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, NODEFORMERSolver, SEGSLSolver, GSRSolver, SUBLIMESolver
 
 
 solvers = {
@@ -26,7 +26,8 @@ solvers = {
     'gprgnn':GPRGNNSolver,
     'nodeformer': NODEFORMERSolver,
     'segsl': SEGSLSolver,
-    'gsr':GSRSolver
+    'gsr':GSRSolver,
+    'sublime': SUBLIMESolver
 }
 
 

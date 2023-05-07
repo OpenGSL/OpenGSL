@@ -13,12 +13,14 @@ from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
 from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
+from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 import torch
 import torch.nn.functional as F
 import time
 from pipeline.solver import Solver
 from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor
 import dgl
+import copy
 
 
 class GRCNSolver(Solver):
@@ -1065,7 +1067,7 @@ class SEGSLSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("segsl"))
-        self.normalize = normalize_sp_tensor
+        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
 
     def learn(self, debug=False):
 
@@ -1201,6 +1203,200 @@ class SEGSLSolver(Solver):
         return self.evaluate(self.test_mask, normalized_adj)
 
 
+class SUBLIMESolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for sublime to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("sublime"))
+        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
+
+    def loss_gcl(self, model, graph_learner, features, anchor_adj):
+
+        # view 1: anchor graph
+        if self.conf.maskfeat_rate_anchor:
+            mask_v1, _ = get_feat_mask(features, self.conf.maskfeat_rate_anchor)
+            features_v1 = features * (1 - mask_v1)
+        else:
+            features_v1 = copy.deepcopy(features)
+
+        z1, _ = model(features_v1, anchor_adj, 'anchor')
+
+        # view 2: learned graph
+        if self.conf.maskfeat_rate_learner:
+            mask, _ = get_feat_mask(features, self.conf.maskfeat_rate_learner)
+            features_v2 = features * (1 - mask)
+        else:
+            features_v2 = copy.deepcopy(features)
+
+        learned_adj = graph_learner(features)   # 这个learned adj是有自环的
+        if not self.conf.sparse:
+            learned_adj = (learned_adj + learned_adj.T) / 2
+            learned_adj = self.normalize(learned_adj, add_loop=False)
+
+        z2, _ = model(features_v2, learned_adj, 'learner')
+
+        # compute loss
+        if self.conf.contrast_batch_size:
+            node_idxs = list(range(features.shape[0]))
+            batches = split_batch(node_idxs, self.conf.contrast_batch_size)
+            loss = 0
+            for batch in batches:
+                weight = len(batch) / features.shape[0]
+                loss += model.calc_loss(z1[batch], z2[batch]) * weight
+        else:
+            loss = model.calc_loss(z1, z2)
+
+        return loss, learned_adj
+
+    def train_gcn(self, adj, debug=False):
+        model = GCN_SUB(nfeat=self.dim_feats, nhid=self.conf.hidden_dim_cls, nclass=self.num_targets,
+                        n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
+                        dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
+        optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr_cls, weight_decay=self.conf.w_decay_cls)
+        t = time.time()
+        improve_1 = ''
+        best_loss_val = 10
+        best_acc_val = 0
+        for epoch in range(self.conf.epochs_cls):
+            improve_2 = ''
+            t0 = time.time()
+            model.train()
+            optim.zero_grad()
+
+            # forward and backward
+            output = model(self.feats, adj)
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            optim.step()
+
+            # Evaluate
+            loss_val, acc_val = self.evaluate(model, self.val_mask, adj)
+
+            # save
+            if acc_val > best_acc_val:
+                best_acc_val = acc_val
+                best_loss_val = loss_val
+                improve_2 = '*'
+                if acc_val > self.result['valid']:
+                    self.total_time = time.time()-self.start_time
+                    improve_1 = '*'
+                    self.best_val_loss = loss_val
+                    self.result['valid'] = acc_val
+                    self.result['train'] = acc_train
+                    self.weights = deepcopy(model.state_dict())
+                    self.best_graph = deepcopy(adj)
+
+            if debug:
+                print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                    epoch+1, time.time() -t0, loss_train.item(), acc_train, loss_val, acc_val, improve_2))
+
+
+        print('Time(s) {:.4f} | Loss(val):{:.4f} | Acc(val):{:.4f} | {}'.format(time.time()-t, best_loss_val, best_acc_val, improve_1))
+
+    def evaluate(self, model, test_mask, adj):
+        model.eval()
+        with torch.no_grad():
+            output = model(self.feats, adj)
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss=self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+    def test(self):
+        model = GCN_SUB(nfeat=self.dim_feats, nhid=self.conf.hidden_dim_cls, nclass=self.num_targets,
+                        n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
+                        dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
+        model.load_state_dict(self.weights)
+        adj = self.best_graph
+        return self.evaluate(model, self.test_mask, adj)
+
+    def learn(self, debug=False):
+
+        anchor_adj = self.normalize(self.anchor_adj_raw, add_loop=False)
+
+        if self.conf.sparse:
+            anchor_adj_torch_sparse = copy.deepcopy(anchor_adj)
+            anchor_adj = torch_sparse_to_dgl_graph(anchor_adj)
+
+        for epoch in range(1, self.conf.epochs + 1):
+
+            # Contrastive Learning
+            self.model.train()
+            self.graph_learner.train()
+
+            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)
+
+            self.optimizer_cl.zero_grad()
+            self.optimizer_learner.zero_grad()
+            loss.backward()
+            self.optimizer_cl.step()
+            self.optimizer_learner.step()
+
+            # Structure Bootstrapping
+            if (1 - self.conf.tau) and (self.conf.c == 0 or epoch % self.conf.c == 0):
+                if self.conf.sparse:
+                    learned_adj_torch_sparse = dgl_graph_to_torch_sparse(Adj).to(self.device)
+                    anchor_adj_torch_sparse = anchor_adj_torch_sparse * self.conf.tau \
+                                              + learned_adj_torch_sparse * (1 - self.conf.tau)
+                    anchor_adj = torch_sparse_to_dgl_graph(anchor_adj_torch_sparse)
+                else:
+                    anchor_adj = anchor_adj * self.conf.tau + Adj.detach() * (1 - self.conf.tau)
+
+            if debug:
+                print("Epoch {:05d} | CL Loss {:.4f}".format(epoch, loss.item()))
+
+            # Evaluate via Node Classification
+            if epoch % self.conf.eval_freq == 0:
+                self.model.eval()
+                self.graph_learner.eval()
+                f_adj = Adj
+
+                if self.conf.sparse:
+                    f_adj.edata['w'] = f_adj.edata['w'].detach()
+                else:
+                    f_adj = f_adj.detach()
+
+                self.train_gcn(f_adj, debug)
+
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, self.best_graph
+
+    def set_method(self):
+        if self.conf.sparse:
+            self.anchor_adj_raw = self.adj
+        else:
+            self.anchor_adj_raw = self.adj.to_dense()
+        anchor_adj = self.normalize(self.anchor_adj_raw, add_loop=False)
+        if self.conf.type_learner == 'fgp':
+            self.graph_learner = FGP_learner(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6, self.conf.sparse)
+        elif self.conf.type_learner == 'mlp':
+            self.graph_learner = MLP_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner)
+        elif self.conf.type_learner == 'att':
+            self.graph_learner = ATT_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                      self.conf.activation_learner)
+        elif self.conf.type_learner == 'gnn':
+            self.graph_learner = GNN_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner, anchor_adj)
+        self.graph_learner = self.graph_learner.to(self.device)
+        self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
+                    emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
+                    dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse).to(self.device)
+        self.optimizer_cl = torch.optim.Adam(self.model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
+        self.optimizer_learner = torch.optim.Adam(self.graph_learner.parameters(), lr=self.conf.lr,
+                                             weight_decay=self.conf.wd)
+
 
 class GSRSolver(Solver):
     def __init__(self, conf, dataset):
@@ -1224,7 +1420,6 @@ class GSRSolver(Solver):
 
         self.feat = {'F': self.feats, 'S': emb_mat}
         self.feat_dim = {v: feat.shape[1] for v, feat in self.feat.items()}
-        
 
     def learn(self, debug=False):
         def para_copy(model_to_init, pretrained_model, paras_to_copy):
@@ -1250,7 +1445,7 @@ class GSRSolver(Solver):
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
             self.optim.step()
-            
+
             # Evaluate
             loss_val, acc_val = self.evaluate(self.val_mask)
 
@@ -1275,7 +1470,7 @@ class GSRSolver(Solver):
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         return self.result, 0
-    
+
     def evaluate(self, test_mask):
         self.model.eval()
         with torch.no_grad():
