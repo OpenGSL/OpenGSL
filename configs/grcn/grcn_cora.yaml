@@ -18,7 +18,9 @@ gsl:
   normalize: true
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
+  cora_split: false # for cora,citeseer and pubmed
+  feat_norm: false
+  homophily_control: 0.3
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
@@ -30,7 +32,7 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false
 
 # use wandb to tune hyperparams
 sweep:

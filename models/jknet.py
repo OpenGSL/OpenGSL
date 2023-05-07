@@ -79,7 +79,7 @@ class JKNet(nn.Module):
                 self.norms.append(self.norm_type(in_hidden))
 
         if (general == 'concat'):
-            self.last_layer = nn.Linear(nhid * n_layers, nclass) 
+            self.last_layer = nn.Linear(nhid * n_layers, nclass)
         else :
             self.last_layer = nn.Linear(nhid, nclass) 
         if (general == 'LSMT'):
@@ -106,10 +106,9 @@ class JKNet(nn.Module):
                 x = layer(x,adj)
             layer_outputs.append(x)
         mid = self.general_aggregation(layer_outputs)
-        x = self.last_layer( mid )
         if self.output_layer:
             x = self.output_normalization(x)
-            x = self.output_linear(x).squeeze(1)
+        x = self.last_layer(mid).squeeze(1)
         if only_z:
             return x
         else:

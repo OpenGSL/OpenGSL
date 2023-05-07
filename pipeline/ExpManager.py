@@ -33,7 +33,10 @@ solvers = {
 
 class ExpManager:
     def __init__(self, conf, method='gcn', data='cora', n_splits=1, n_runs=1, save=False, debug=False, verbose=True):
-        dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'])
+        homophily_control = None
+        if 'homophily_control' in conf.dataset:
+            homophily_control = conf.dataset['homophily_control']
+        dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'], homophily_control=homophily_control)
         self.conf = conf
         self.method = method
         self.data = data

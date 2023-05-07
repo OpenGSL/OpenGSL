@@ -8,13 +8,12 @@ from data.split import get_split
 from dgl.data.utils import generate_mask_tensor
 from utils.utils import sample_mask, set_seed, normalize_feats, accuracy
 import numpy as np
-from sklearn.metrics import roc_auc_score
-import argparse
+from data.homophily_control import get_new_adj
 
 
 class Dataset:
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, cora_split=True):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, cora_split=True, homophily_control=None):
         '''
         This class loads, preprocessed and splits data. The results are saved as "self.feats, self.adj, self.labels, self.train_masks, self.val_masks, self.test_masks".
         Noth that self.adj is undirected and has no self loops.
@@ -31,6 +30,8 @@ class Dataset:
         self.device = torch.device('cuda')
         self.prepare_data(data, feat_norm, verbose)
         self.split_data(n_splits, cora_split, verbose)
+        if homophily_control:
+            self.adj = get_new_adj(self.adj, self.labels.cpu().numpy(), homophily_control)
 
     def prepare_data(self, ds_name, feat_norm=False, verbose=True):
         '''
