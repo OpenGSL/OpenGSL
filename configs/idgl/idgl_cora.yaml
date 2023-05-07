@@ -37,6 +37,7 @@ gsl:
 dataset:
   feat_norm: true
   cora_split: false # for cora,citeseer and pubmed
+  homophily_control: 0.3
 
 # analysis
 analysis:

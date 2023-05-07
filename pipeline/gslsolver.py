@@ -636,7 +636,7 @@ class IDGLSolver(Solver):
             loss_test, acc_test, _ = self.run_epoch(mode='test', debug=debug)
         self.result['test']=acc_test
         print(acc_test)
-        return self.result
+        return self.result, self.best_graph
 
     def set_method(self):
         self.model = IDGL(self.conf, self.dim_feats, self.num_targets).to(self.device)
