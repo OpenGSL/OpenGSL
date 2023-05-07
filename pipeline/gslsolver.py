@@ -12,6 +12,7 @@ from models.gt import GT
 from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
+from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
 from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 import torch
 import torch.nn.functional as F
@@ -1419,7 +1420,6 @@ class GSRSolver(Solver):
 
         self.feat = {'F': self.feats, 'S': emb_mat}
         self.feat_dim = {v: feat.shape[1] for v, feat in self.feat.items()}
-
 
     def learn(self, debug=False):
         def para_copy(model_to_init, pretrained_model, paras_to_copy):
