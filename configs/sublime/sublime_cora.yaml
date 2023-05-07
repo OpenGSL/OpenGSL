@@ -7,7 +7,7 @@ dropout_cls: 0.5
 dropedge_cls: 0.75
 n_layers_cls: 2
 patience_cls: 10
-epochs: 4000
+epochs: 2000
 lr: 0.01
 wd: 0.0
 n_hidden: 512
@@ -26,6 +26,11 @@ maskfeat_rate_learner: 0.7
 maskfeat_rate_anchor: 0.6
 contrast_batch_size: 0
 c: 0
+
+model:
+  norm:
+    flag: false
+    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
 
 
 dataset:

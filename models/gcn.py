@@ -15,7 +15,7 @@ class GraphConvolution(nn.Module):
             self.mlp.append(nn.Linear(out_features, out_features, bias=bias))
         self.dropout = dropout
         self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
-        self.act = eval('F.'+act) if not act=='identity' else lambda x: x
+        self.act = eval('F.'+act) if not act == 'identity' else lambda x: x
         self.last_layer = last_layer
 
 
@@ -41,7 +41,8 @@ class GraphConvolution(nn.Module):
 
 class GCN(nn.Module):
 
-    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1, spmm_type=0, act='relu', input_layer=True, output_layer=True):
+    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
+                 spmm_type=0, act='relu', input_layer=True, output_layer=True):
 
         super(GCN, self).__init__()
 
@@ -51,6 +52,8 @@ class GCN(nn.Module):
         self.input_layer = input_layer
         self.output_layer = output_layer
         self.n_linear = n_linear
+        if norm is None:
+            norm = {'flag':False, 'norm_type':'LayerNorm'}
         self.norm_flag = norm['flag']
         self.norm_type = eval('nn.'+norm['norm_type'])
         self.act = eval('F.'+act) if not act == 'identity' else lambda x: x

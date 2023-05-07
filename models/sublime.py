@@ -2,6 +2,7 @@ import dgl
 import torch
 import torch.nn as nn
 from sklearn.neighbors import kneighbors_graph
+from models.gcn import GCN
 import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
@@ -15,10 +16,6 @@ def get_feat_mask(features, mask_rate):
     samples = np.random.choice(feat_node, size=int(feat_node * mask_rate), replace=False)
     mask[:, samples] = 1
     return mask.cuda(), samples
-
-
-def symmetrize(adj):  # only for non-sparse
-    return (adj + adj.T) / 2
 
 
 def split_batch(init_list, batch_size):
@@ -101,40 +98,6 @@ def cal_similarity_graph(node_embeddings):
     return similarity_graph
 
 
-def accuracy(preds, labels):
-    pred_class = torch.max(preds, 1)[1]
-    return torch.sum(torch.eq(pred_class, labels)).float() / labels.shape[0]
-
-
-def normalize(adj, mode, sparse=False):
-    # 没有加自环！
-    if not sparse:
-        if mode == "sym":
-            inv_sqrt_degree = 1. / (torch.sqrt(adj.sum(dim=1, keepdim=False)) + EOS)
-            return inv_sqrt_degree[:, None] * adj * inv_sqrt_degree[None, :]
-        elif mode == "row":
-            inv_degree = 1. / (adj.sum(dim=1, keepdim=False) + EOS)
-            return inv_degree[:, None] * adj
-        else:
-            exit("wrong norm mode")
-    else:
-        adj = adj.coalesce()
-        if mode == "sym":
-            inv_sqrt_degree = 1. / (torch.sqrt(torch.sparse.sum(adj, dim=1).values()))
-            D_value = inv_sqrt_degree[adj.indices()[0]] * inv_sqrt_degree[adj.indices()[1]]
-
-        elif mode == "row":
-            aa = torch.sparse.sum(adj, dim=1)
-            bb = aa.values()
-            inv_degree = 1. / (torch.sparse.sum(adj, dim=1).values() + EOS)
-            D_value = inv_degree[adj.indices()[0]]
-        else:
-            exit("wrong norm mode")
-        new_values = adj.values() * D_value
-
-        return torch.sparse.FloatTensor(adj.indices(), new_values, adj.size())
-
-
 def top_k(raw_graph, K):
     values, indices = raw_graph.topk(k=int(K), dim=-1)
     assert torch.max(indices) < raw_graph.shape[1]
@@ -144,23 +107,6 @@ def top_k(raw_graph, K):
     mask.requires_grad = False
     sparse_graph = raw_graph * mask
     return sparse_graph
-
-
-class GCNConv_dense(nn.Module):
-    def __init__(self, input_size, output_size):
-        super(GCNConv_dense, self).__init__()
-        self.linear = nn.Linear(input_size, output_size)
-
-    def init_para(self):
-        self.linear.reset_parameters()
-
-    def forward(self, input, A, sparse=False):
-        hidden = self.linear(input)
-        if sparse:
-            output = torch.sparse.mm(A, hidden)
-        else:
-            output = torch.matmul(A, hidden)
-        return output
 
 
 class GCNConv_dgl(nn.Module):
@@ -182,20 +128,6 @@ class Attentive(nn.Module):
 
     def forward(self, x):
         return x @ torch.diag(self.w)
-
-
-class SparseDropout(nn.Module):
-    def __init__(self, dprob=0.5):
-        super(SparseDropout, self).__init__()
-        # dprob is ratio of dropout
-        # convert to keep probability
-        self.kprob = 1 - dprob
-
-    def forward(self, x):
-        mask = ((torch.rand(x._values().size()) + (self.kprob)).floor()).type(torch.bool)
-        rc = x._indices()[:,mask]
-        val = x._values()[mask]*(1.0 / self.kprob)
-        return torch.sparse.FloatTensor(rc, val, x.shape)
 
 
 class FGP_learner(nn.Module):
@@ -379,13 +311,11 @@ class GNN_learner(nn.Module):
 
 
 class GraphEncoder(nn.Module):
-    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, dropout_adj, sparse):
+    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse):
 
         super(GraphEncoder, self).__init__()
         self.dropout = dropout
-        self.dropout_adj_p = dropout_adj
         self.sparse = sparse
-
         self.gnn_encoder_layers = nn.ModuleList()
         if sparse:
             self.gnn_encoder_layers.append(GCNConv_dgl(in_dim, hidden_dim))
@@ -393,35 +323,22 @@ class GraphEncoder(nn.Module):
                 self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, hidden_dim))
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
-            self.gnn_encoder_layers.append(GCNConv_dense(in_dim, hidden_dim))
-            for _ in range(nlayers - 2):
-                self.gnn_encoder_layers.append(GCNConv_dense(hidden_dim, hidden_dim))
-            self.gnn_encoder_layers.append(GCNConv_dense(hidden_dim, emb_dim))
-
-        if self.sparse:
-            self.dropout_adj = SparseDropout(dprob=dropout_adj)
-        else:
-            self.dropout_adj = nn.Dropout(p=dropout_adj)
+            self.model = GCN(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
+                             input_layer=False, output_layer=False, spmm_type=0)
 
         self.proj_head = nn.Sequential(nn.Linear(emb_dim, proj_dim), nn.ReLU(inplace=True),
                                            nn.Linear(proj_dim, proj_dim))
 
-    def forward(self,x, Adj_, branch=None):
+    def forward(self, x, Adj_):
 
         if self.sparse:
-            if branch == 'anchor':
-                Adj = copy.deepcopy(Adj_)
-            else:
-                Adj = Adj_
-            Adj.edata['w'] = F.dropout(Adj.edata['w'], p=self.dropout_adj_p, training=self.training)
+            for conv in self.gnn_encoder_layers[:-1]:
+                x = conv(x, Adj_)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+            x = self.gnn_encoder_layers[-1](x, Adj_)
         else:
-            Adj = self.dropout_adj(Adj_)
-
-        for conv in self.gnn_encoder_layers[:-1]:
-            x = conv(x, Adj)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.gnn_encoder_layers[-1](x, Adj)
+            x = self.model((x, Adj_, True))
         z = self.proj_head(x)
         return z, x
 
@@ -430,14 +347,28 @@ class GCL(nn.Module):
     def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, dropout_adj, sparse):
         super(GCL, self).__init__()
 
-        self.encoder = GraphEncoder(nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, dropout_adj, sparse)
+        self.encoder = GraphEncoder(nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse)
+        self.dropout_adj = dropout_adj
+        self.sparse = sparse
 
     def forward(self, x, Adj_, branch=None):
-        z, embedding = self.encoder(x, Adj_, branch)
+
+        # edge dropping
+        if self.sparse:
+            if branch == 'anchor':
+                Adj = copy.deepcopy(Adj_)
+            else:
+                Adj = Adj_
+            Adj.edata['w'] = F.dropout(Adj.edata['w'], p=self.dropout_adj, training=self.training)
+        else:
+            Adj = F.dropout(Adj_, p=self.dropout_adj, training=self.training)
+
+        # get representations
+        z, embedding = self.encoder(x, Adj)
         return z, embedding
 
     @staticmethod
-    def calc_loss(x, x_aug, temperature=0.2, sym=True):
+    def calc_loss(x, x_aug, temperature=0.2):
         batch_size, _ = x.size()
         x_abs = x.norm(dim=1)
         x_aug_abs = x_aug.norm(dim=1)
@@ -445,59 +376,49 @@ class GCL(nn.Module):
         sim_matrix = torch.einsum('ik,jk->ij', x, x_aug) / torch.einsum('i,j->ij', x_abs, x_aug_abs)   # 计算的是cos相似度
         sim_matrix = torch.exp(sim_matrix / temperature)
         pos_sim = sim_matrix[range(batch_size), range(batch_size)]
-        if sym:
-            loss_0 = pos_sim / (sim_matrix.sum(dim=0) - pos_sim)
-            loss_1 = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
+        loss_0 = pos_sim / (sim_matrix.sum(dim=0) - pos_sim)
+        loss_1 = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
 
-            loss_0 = - torch.log(loss_0).mean()
-            loss_1 = - torch.log(loss_1).mean()
-            loss = (loss_0 + loss_1) / 2.0
-            return loss
-        else:
-            # 下面一定不运行
-            loss_1 = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
-            loss_1 = - torch.log(loss_1).mean()
-            return loss_1
+        loss_0 = - torch.log(loss_0).mean()
+        loss_1 = - torch.log(loss_1).mean()
+        loss = (loss_0 + loss_1) / 2.0
+        return loss
 
 
-class GCN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, dropout_adj, Adj, sparse):
-        super(GCN, self).__init__()
+class GCN_SUB(nn.Module):
+    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, dropout_adj=0.5, sparse=0):
+        super(GCN_SUB, self).__init__()
         self.layers = nn.ModuleList()
+        self.sparse = sparse
+        self.dropout_adj_p = dropout_adj
+        self.dropout = dropout
 
         if sparse:
-            self.layers.append(GCNConv_dgl(in_channels, hidden_channels))
-            for _ in range(num_layers - 2):
-                self.layers.append(GCNConv_dgl(hidden_channels, hidden_channels))
-            self.layers.append(GCNConv_dgl(hidden_channels, out_channels))
+            self.layers.append(GCNConv_dgl(nfeat, nhid))
+            for _ in range(n_layers - 2):
+                self.layers.append(GCNConv_dgl(nhid, nhid))
+            self.layers.append(GCNConv_dgl(nhid, nclass))
         else:
-            self.layers.append(GCNConv_dense(in_channels, hidden_channels))
-            for i in range(num_layers - 2):
-                self.layers.append(GCNConv_dense(hidden_channels, hidden_channels))
-            self.layers.append(GCNConv_dense(hidden_channels, out_channels))
+            self.model = GCN(nfeat=nfeat, nhid=nhid, nclass=nclass, n_layers=n_layers, dropout=dropout,
+                             input_layer=False, output_layer=False, spmm_type=0)
 
-        self.dropout = dropout
-        self.dropout_adj_p = dropout_adj
-        self.Adj = Adj
-        self.Adj.requires_grad = False
-        self.sparse = sparse
+    def forward(self, x, Adj):
 
         if self.sparse:
-            self.dropout_adj = SparseDropout(dprob=dropout_adj)
-        else:
-            self.dropout_adj = nn.Dropout(p=dropout_adj)
-
-    def forward(self, x):
-
-        if self.sparse:
-            Adj = copy.deepcopy(self.Adj)
+            Adj = copy.deepcopy(Adj)
             Adj.edata['w'] = F.dropout(Adj.edata['w'], p=self.dropout_adj_p, training=self.training)
         else:
-            Adj = self.dropout_adj(self.Adj)
+            Adj = F.dropout(Adj, p=self.dropout_adj_p, training=self.training)
 
-        for i, conv in enumerate(self.layers[:-1]):
-            x = conv(x, Adj)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.layers[-1](x, Adj)
-        return x
+        if self.sparse:
+            for i, conv in enumerate(self.layers[:-1]):
+                x = conv(x, Adj)
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+            x = self.layers[-1](x, Adj)
+            return x
+        else:
+            return self.model((x, Adj, True))
+
+
+

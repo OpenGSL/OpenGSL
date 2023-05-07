@@ -12,7 +12,7 @@ from models.gt import GT
 from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
-from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, symmetrize, split_batch, dgl_graph_to_torch_sparse, GCN as GCN_sub, accuracy, normalize as normalize_sub
+from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 import torch
 import torch.nn.functional as F
 import time
@@ -1066,7 +1066,7 @@ class SEGSLSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("segsl"))
-        self.normalize = normalize_sp_tensor
+        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
 
     def learn(self, debug=False):
 
@@ -1215,13 +1215,6 @@ class SUBLIMESolver(Solver):
         print("Solver Version : [{}]".format("sublime"))
         self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
 
-    def loss_cls(self, model, mask, features, labels):
-        logits = model(features)
-        logp = F.log_softmax(logits, 1)
-        loss = F.nll_loss(logp[mask], labels[mask], reduction='mean')
-        accu = accuracy(logp[mask], labels[mask])
-        return loss, accu
-
     def loss_gcl(self, model, graph_learner, features, anchor_adj):
 
         # view 1: anchor graph
@@ -1242,15 +1235,14 @@ class SUBLIMESolver(Solver):
 
         learned_adj = graph_learner(features)   # 这个learned adj是有自环的
         if not self.conf.sparse:
-            learned_adj = symmetrize(learned_adj)
-            learned_adj = normalize_sub(learned_adj, 'sym', self.conf.sparse)
+            learned_adj = (learned_adj + learned_adj.T) / 2
+            learned_adj = self.normalize(learned_adj, add_loop=False)
 
         z2, _ = model(features_v2, learned_adj, 'learner')
 
         # compute loss
         if self.conf.contrast_batch_size:
             node_idxs = list(range(features.shape[0]))
-            # random.shuffle(node_idxs)
             batches = split_batch(node_idxs, self.conf.contrast_batch_size)
             loss = 0
             for batch in batches:
@@ -1261,107 +1253,108 @@ class SUBLIMESolver(Solver):
 
         return loss, learned_adj
 
-    def evaluate_adj_by_cls(self, Adj):
-
-        model = GCN_sub(in_channels=self.dim_feats, hidden_channels=self.conf.hidden_dim_cls, out_channels=self.num_targets, num_layers=self.conf.n_layers_cls,
-                    dropout=self.conf.dropout_cls, dropout_adj=self.conf.dropedge_cls, Adj=Adj, sparse=self.conf.sparse)
-        optimizer = torch.optim.Adam(model.parameters(), lr=self.conf.lr_cls, weight_decay=self.conf.w_decay_cls)
-
-        bad_counter = 0
-        best_val = 0
-        best_model = None
-
-        model = model.cuda()
-
-        for epoch in range(1, self.conf.epochs_cls + 1):
+    def train_gcn(self, adj, debug=False):
+        model = GCN_SUB(nfeat=self.dim_feats, nhid=self.conf.hidden_dim_cls, nclass=self.num_targets,
+                        n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
+                        dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
+        optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr_cls, weight_decay=self.conf.w_decay_cls)
+        t = time.time()
+        improve_1 = ''
+        best_loss_val = 10
+        best_acc_val = 0
+        for epoch in range(self.conf.epochs_cls):
+            improve_2 = ''
+            t0 = time.time()
             model.train()
-            loss, accu = self.loss_cls(model, self.train_mask, self.feats, self.labels)
-            optimizer.zero_grad()
-            loss.backward()
+            optim.zero_grad()
 
-            optimizer.step()
+            # forward and backward
+            output = model(self.feats, adj)
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            optim.step()
 
-            if epoch % 10 == 0:
-                model.eval()
-                val_loss, accu = self.loss_cls(model, self.val_mask, self.feats, self.labels)
-                if accu > best_val:
-                    bad_counter = 0
-                    best_val = accu
-                    best_model = copy.deepcopy(model)
-                else:
-                    bad_counter += 1
+            # Evaluate
+            loss_val, acc_val = self.evaluate(model, self.val_mask, adj)
 
-                if bad_counter >= self.conf.patience_cls:
-                    break
-        best_model.eval()
-        test_loss, test_accu = self.loss_cls(best_model, self.test_mask, self.feats, self.labels)
-        return best_val, test_accu, best_model
+            # save
+            if acc_val > best_acc_val:
+                best_acc_val = acc_val
+                best_loss_val = loss_val
+                improve_2 = '*'
+                if acc_val > self.result['valid']:
+                    self.total_time = time.time()-self.start_time
+                    improve_1 = '*'
+                    self.best_val_loss = loss_val
+                    self.result['valid'] = acc_val
+                    self.result['train'] = acc_train
+                    self.weights = deepcopy(model.state_dict())
+                    self.best_graph = deepcopy(adj)
+
+            if debug:
+                print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                    epoch+1, time.time() -t0, loss_train.item(), acc_train, loss_val, acc_val, improve_2))
+
+
+        print('Time(s) {:.4f} | Loss(val):{:.4f} | Acc(val):{:.4f} | {}'.format(time.time()-t, best_loss_val, best_acc_val, improve_1))
+
+    def evaluate(self, model, test_mask, adj):
+        model.eval()
+        with torch.no_grad():
+            output = model(self.feats, adj)
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss=self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+    def test(self):
+        model = GCN_SUB(nfeat=self.dim_feats, nhid=self.conf.hidden_dim_cls, nclass=self.num_targets,
+                        n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
+                        dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
+        model.load_state_dict(self.weights)
+        adj = self.best_graph
+        return self.evaluate(model, self.test_mask, adj)
 
     def learn(self, debug=False):
-        if self.conf.sparse:
-            anchor_adj_raw = self.adj
-        else:
-            anchor_adj_raw = self.adj.to_dense()
 
-        anchor_adj = normalize_sub(anchor_adj_raw, 'sym', self.conf.sparse)
+        anchor_adj = self.normalize(self.anchor_adj_raw, add_loop=False)
 
         if self.conf.sparse:
             anchor_adj_torch_sparse = copy.deepcopy(anchor_adj)
             anchor_adj = torch_sparse_to_dgl_graph(anchor_adj)
 
-        if self.conf.type_learner == 'fgp':
-            graph_learner = FGP_learner(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6, self.conf.sparse)
-        elif self.conf.type_learner == 'mlp':
-            graph_learner = MLP_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                 self.conf.activation_learner)
-        elif self.conf.type_learner == 'att':
-            graph_learner = ATT_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                      self.conf.activation_learner)
-        elif self.conf.type_learner == 'gnn':
-            graph_learner = GNN_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                 self.conf.activation_learner, anchor_adj)
-
-        model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
-                     emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
-                     dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse)
-
-        optimizer_cl = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
-        optimizer_learner = torch.optim.Adam(graph_learner.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
-
-
-        model = model.cuda()
-        graph_learner = graph_learner.cuda()
-        if not self.conf.sparse:
-            anchor_adj = anchor_adj.cuda()
-
         for epoch in range(1, self.conf.epochs + 1):
 
-            model.train()
-            graph_learner.train()
+            # Contrastive Learning
+            self.model.train()
+            self.graph_learner.train()
 
-            loss, Adj = self.loss_gcl(model, graph_learner, self.feats, anchor_adj)
+            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)
 
-            optimizer_cl.zero_grad()
-            optimizer_learner.zero_grad()
+            self.optimizer_cl.zero_grad()
+            self.optimizer_learner.zero_grad()
             loss.backward()
-            optimizer_cl.step()
-            optimizer_learner.step()
+            self.optimizer_cl.step()
+            self.optimizer_learner.step()
 
             # Structure Bootstrapping
             if (1 - self.conf.tau) and (self.conf.c == 0 or epoch % self.conf.c == 0):
                 if self.conf.sparse:
-                    learned_adj_torch_sparse = dgl_graph_to_torch_sparse(Adj)
+                    learned_adj_torch_sparse = dgl_graph_to_torch_sparse(Adj).to(self.device)
                     anchor_adj_torch_sparse = anchor_adj_torch_sparse * self.conf.tau \
                                               + learned_adj_torch_sparse * (1 - self.conf.tau)
                     anchor_adj = torch_sparse_to_dgl_graph(anchor_adj_torch_sparse)
                 else:
                     anchor_adj = anchor_adj * self.conf.tau + Adj.detach() * (1 - self.conf.tau)
 
-            print("Epoch {:05d} | CL Loss {:.4f}".format(epoch, loss.item()))
+            if debug:
+                print("Epoch {:05d} | CL Loss {:.4f}".format(epoch, loss.item()))
 
+            # Evaluate via Node Classification
             if epoch % self.conf.eval_freq == 0:
-                model.eval()
-                graph_learner.eval()
+                self.model.eval()
+                self.graph_learner.eval()
                 f_adj = Adj
 
                 if self.conf.sparse:
@@ -1369,10 +1362,36 @@ class SUBLIMESolver(Solver):
                 else:
                     f_adj = f_adj.detach()
 
-                acc_val, acc_test, _ = self.evaluate_adj_by_cls(f_adj)
-                print(acc_val, acc_test)
+                self.train_gcn(f_adj, debug)
 
-                if acc_val > self.result['valid']:
-                    self.total_time = time.time() - self.start_time
-                    improve = '*'
-                    self.result['valid'] = acc_val
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, self.best_graph
+
+    def set_method(self):
+        if self.conf.sparse:
+            self.anchor_adj_raw = self.adj
+        else:
+            self.anchor_adj_raw = self.adj.to_dense()
+        anchor_adj = self.normalize(self.anchor_adj_raw, add_loop=False)
+        if self.conf.type_learner == 'fgp':
+            self.graph_learner = FGP_learner(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6, self.conf.sparse)
+        elif self.conf.type_learner == 'mlp':
+            self.graph_learner = MLP_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner)
+        elif self.conf.type_learner == 'att':
+            self.graph_learner = ATT_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                      self.conf.activation_learner)
+        elif self.conf.type_learner == 'gnn':
+            self.graph_learner = GNN_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
+                                 self.conf.activation_learner, anchor_adj)
+        self.graph_learner = self.graph_learner.to(self.device)
+        self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
+                    emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
+                    dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse).to(self.device)
+        self.optimizer_cl = torch.optim.Adam(self.model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
+        self.optimizer_learner = torch.optim.Adam(self.graph_learner.parameters(), lr=self.conf.lr,
+                                             weight_decay=self.conf.wd)
