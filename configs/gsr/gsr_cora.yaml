@@ -1,0 +1,50 @@
+model:
+  n_hidden: 64
+  dropout: 0.5
+  activation: 'Relu'
+  decoder_layer: 2
+  decoder_n_hidden: 48
+
+  nce_k: 16382
+  nce_t: 0.07
+
+refine_graph:
+  rm_ratio: 0.0
+  add_ratio: 0.25
+  cos_batch_size: 10000
+  fsim_weight: 0.0
+  fsim_norm: True
+
+
+dataset:
+  feat_norm: false
+  cora_split: true # for cora,citeseer and pubmed
+
+deepwalk:
+  num_walks: 12
+  window_size: 11
+  walk_length: 100
+  n_hidden: 64
+  num_workers: 32
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-3
+  weight_decay: 5e-4
+
+  n_epochs: 1000
+    
+  gsr_lr: 1e-3
+  gsr_weight_decay: 5e-4
+  gsr_epochs: 50
+
+  intra_weight: 0.75
+  momentum_factor: 0.999
+
+  gsl_num_workers: 0
+  gsl_batch_size: 512
+  fan_out: '20_40'
+
+analysis:
+  flag: false
+  project: gsl
