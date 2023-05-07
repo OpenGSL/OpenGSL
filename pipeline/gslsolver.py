@@ -10,6 +10,8 @@ from models.idgl import IDGL, sample_anchors, diff, compute_anchor_adj
 from models.prognn import PGD, prox_operators, EstimateAdj, feature_smoothing
 from models.gt import GT
 from models.slaps import SLAPS
+from models.nodeformer import NodeFormer, adj_mul
+from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
 from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
 import torch
 import torch.nn.functional as F
@@ -110,7 +112,7 @@ class GRCNSolver(Solver):
 class GAUGSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Create a solver for gaug to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -305,7 +307,7 @@ class GAUGSolver(Solver):
 class GENSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Create a solver for gen to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -429,7 +431,7 @@ class GENSolver(Solver):
 class IDGLSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Create a solver for digl to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -642,7 +644,7 @@ class IDGLSolver(Solver):
 class PROGNNSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Create a solver for prognn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -812,7 +814,7 @@ class PROGNNSolver(Solver):
 class GTSolver(Solver):
     def __init__(self, conf, dataset):
         '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Create a solver for gt to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
         Parameters
         ----------
         conf : config file
@@ -844,7 +846,6 @@ class GTSolver(Solver):
 
             # Evaluate
             loss_val, acc_val, _ = self.evaluate(self.val_mask)
-            loss_test, acc_test, _ = self.evaluate(self.test_mask)
 
             # save
             if acc_val > self.result['valid']:
@@ -888,93 +889,6 @@ class GTSolver(Solver):
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                  weight_decay=self.conf.training['weight_decay'])
 
-
-class GATSolver(Solver):
-    def __init__(self, conf, dataset):
-        '''
-        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
-        Parameters
-        ----------
-        conf : config file
-        dataset: dataset object containing all things about dataset
-        '''
-        super().__init__(conf, dataset)
-        print("Solver Version : [{}]".format("grcn"))
-        edge_index = self.adj.coalesce().indices().cpu()
-        loop_edge_index = torch.stack([torch.arange(self.n_nodes), torch.arange(self.n_nodes)])
-        edges = torch.cat([edge_index, loop_edge_index], dim=1)
-        self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(self.device).coalesce()
-
-
-    def learn(self, debug=False):
-        '''
-        Learning process of GRCN.
-        Parameters
-        ----------
-        debug
-
-        Returns
-        -------
-
-        '''
-
-        for epoch in range(self.conf.training['n_epochs']):
-            improve = ''
-            t0 = time.time()
-            self.model.train()
-            self.optim1.zero_grad()
-            self.optim2.zero_grad()
-
-            # forward and backward
-            output, _ = self.model(self.feats, self.adj)
-            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
-            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
-            loss_train.backward()
-            self.optim1.step()
-            self.optim2.step()
-
-            # Evaluate
-            loss_val, acc_val, adj = self.evaluate(self.val_mask)
-
-            # save
-            if acc_val > self.result['valid']:
-                self.total_time = time.time() - self.start_time
-                improve = '*'
-                self.best_val_loss = loss_val
-                self.result['valid'] = acc_val
-                self.result['train'] = acc_train
-                self.weights = deepcopy(self.model.state_dict())
-                if self.conf.analysis['save_graph']:
-                    self.best_graph = deepcopy(adj.to_dense())
-
-            # print
-
-            if debug:
-                print(
-                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
-                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
-
-        print('Optimization Finished!')
-        print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test, _ = self.test()
-        self.result['test'] = acc_test
-        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph
-
-    def evaluate(self, test_mask):
-        self.model.eval()
-        with torch.no_grad():
-            output, adj = self.model(self.feats, self.adj)
-        logits = output[test_mask]
-        labels = self.labels[test_mask]
-        loss=self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj
-
-    def set_method(self):
-        self.model = GRCN(self.n_nodes, self.dim_feats, self.num_targets, self.device, self.conf).to(self.device)
-        self.optim1 = torch.optim.Adam(self.model.base_parameters(), lr=self.conf.training['lr'],
-                                       weight_decay=self.conf.training['weight_decay'])
-        self.optim2 = torch.optim.Adam(self.model.graph_parameters(), lr=self.conf.training['lr_graph'])
 
 class SLAPSSolver(Solver):
     def __init__(self, conf, dataset):
@@ -1057,6 +971,235 @@ class SLAPSSolver(Solver):
             {'params': self.model.gcn_c.parameters(), 'lr': self.conf.training['lr'], 'weight_decay': self.conf.training['weight_decay']},
             {'params': self.model.gcn_dae.parameters(), 'lr': self.conf.training['lr_dae'], 'weight_decay': self.conf.training['weight_decay_dae']}
         ])
+
+
+class NODEFORMERSolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for grcn to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("nodeformer"))
+        edge_index = self.adj.coalesce().indices().cpu()
+        loop_edge_index = torch.stack([torch.arange(self.n_nodes), torch.arange(self.n_nodes)])
+        adj = torch.cat([edge_index, loop_edge_index], dim=1).to(self.device)
+        self.adjs = []
+        self.adjs.append(adj)
+        for i in range(conf.model['rb_order'] - 1):  # edge_index of high order adjacency
+            adj = adj_mul(adj, adj, self.n_nodes)
+            self.adjs.append(adj)
+
+    def set_method(self):
+        self.model = NodeFormer(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, num_layers=self.conf.model['n_layers'], dropout=self.conf.model['dropout'],
+                           num_heads=self.conf.model['n_heads'], use_bn=self.conf.model['use_bn'], nb_random_features=self.conf.model['M'],
+                           use_gumbel=self.conf.model['use_gumbel'], use_residual=self.conf.model['use_residual'], use_act=self.conf.model['use_act'],
+                           use_jk=self.conf.model['use_jk'],
+                           nb_gumbel_sample=self.conf.model['K'], rb_order=self.conf.model['rb_order'], rb_trans=self.conf.model['rb_trans']).to(self.device)
+        self.model.reset_parameters()
+        self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=self.conf.training['weight_decay'], lr=self.conf.training['lr'])
+
+    def learn(self, debug=False):
+
+        for epoch in range(self.conf.training['n_epochs']):
+            improve = ''
+            t0 = time.time()
+            self.model.train()
+            self.optim.zero_grad()
+
+            # forward and backward
+            output, link_loss = self.model(self.feats, self.adjs, self.conf.model['tau'])
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(),
+                                    output[self.train_mask].detach().cpu().numpy())
+            loss_train -= self.conf.training['lambda'] * sum(link_loss) / len(link_loss)
+            loss_train.backward()
+            self.optim.step()
+
+            # Evaluate
+            loss_val, acc_val, = self.evaluate(self.val_mask)
+
+            # save
+            if acc_val > self.result['valid']:
+                improve = '*'
+                self.weights = deepcopy(self.model.state_dict())
+                self.total_time = time.time() - self.start_time
+                self.best_val_loss = loss_val
+                self.result['valid'] = acc_val
+                self.result['train'] = acc_train
+
+            # print
+            if debug:
+                print(
+                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
+
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, 0
+
+    def evaluate(self, test_mask):
+        self.model.eval()
+        with torch.no_grad():
+            output, _ = self.model(self.feats, self.adjs, self.conf.model['tau'])
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss=self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+
+class SEGSLSolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for segsl to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("segsl"))
+        self.normalize = normalize_sp_tensor
+
+    def learn(self, debug=False):
+
+        adj = self.adj.to_dense()
+        adj.fill_diagonal_(1)
+        adj = adj.to_sparse()
+
+        for iter in range(self.conf.training['n_iters']):
+            logits = self.train_gcn(iter, adj, debug)
+            adj = self.structure_learning(logits, adj)
+
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        loss_test, acc_test, _, _ = self.test()
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result, self.best_graph
+
+    def train_gcn(self, iter, adj, debug=False):
+        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(),
+                                      lr=self.conf.training['lr'],
+                                      weight_decay=self.conf.training['weight_decay'])
+
+        if debug:
+            print('==== Iteration {:04d} ===='.format(iter+1))
+        t = time.time()
+        improve_1 = ''
+        best_loss_val = 10
+        best_acc_val = 0
+        normalized_adj = self.normalize(adj, add_loop=False)
+        for epoch in range(self.conf.training['n_epochs']):
+            improve_2 = ''
+            t0 = time.time()
+            self.model.train()
+            self.optim.zero_grad()
+
+            # forward and backward
+            hidden_output, output = self.model((self.feats, normalized_adj, False))
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            self.optim.step()
+
+            # Evaluate
+            loss_val, acc_val, hidden_output, output = self.evaluate(self.val_mask, normalized_adj)
+
+            # save
+            if acc_val > best_acc_val:
+                best_acc_val = acc_val
+                best_loss_val = loss_val
+                improve_2 = '*'
+                if acc_val > self.result['valid']:
+                    self.total_time = time.time()-self.start_time
+                    improve_1 = '*'
+                    self.best_val_loss = loss_val
+                    self.result['valid'] = acc_val
+                    self.result['train'] = acc_train
+                    self.best_iter = iter+1
+                    self.weights = deepcopy(self.model.state_dict())
+                    self.best_graph = deepcopy(adj)
+
+            # print
+            if debug:
+                print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                    epoch+1, time.time() -t0, loss_train.item(), acc_train, loss_val, acc_val, improve_2))
+
+        print('Iteration {:04d} | Time(s) {:.4f} | Loss(val):{:.4f} | Acc(val):{:.4f} | {}'.format(iter+1,time.time()-t, best_loss_val, best_acc_val, improve_1))
+
+        return output
+
+    def structure_learning(self, logits, adj):
+        edge_index = adj.coalesce().indices().t()
+
+        k = knn_maxE1(edge_index, logits)  # edge index对称有自环
+        edge_index_2 = add_knn(k, logits, edge_index)
+        weight = get_weight(logits, edge_index_2)
+        adj_matrix = get_adj_matrix(self.n_nodes, edge_index_2, weight)
+
+        code_tree = PartitionTree(adj_matrix=np.array(adj_matrix))
+        code_tree.build_coding_tree(self.conf.gsl['se'])
+
+        community, isleaf = get_community(code_tree)
+        new_edge_index = reshape(community, code_tree, isleaf,
+                                 self.conf.gsl['k'])
+        new_edge_index_2 = reshape(community, code_tree, isleaf,
+                                   self.conf.gsl['k'])
+        new_edge_index = torch.concat(
+            (new_edge_index.t(), new_edge_index_2.t()), dim=0)
+        new_edge_index, unique_idx = torch.unique(
+            new_edge_index, return_counts=True, dim=0)
+        new_edge_index = new_edge_index[unique_idx != 1].t()
+        add_num = int(new_edge_index.shape[1])
+
+        new_edge_index = torch.concat(
+            (new_edge_index.t(), edge_index.cpu()), dim=0)
+        new_edge_index = torch.unique(new_edge_index, dim=0)
+        new_edge_index = new_edge_index.t()
+        new_weight = get_weight(logits, new_edge_index.t())
+        _, delete_idx = torch.topk(new_weight,
+                                   k=add_num,
+                                   largest=False)
+        delete_mask = torch.ones(
+            new_edge_index.t().shape[0]).bool()
+        delete_mask[delete_idx] = False
+        new_edge_index = new_edge_index.t()[delete_mask].t()  # 得到新的edge_index了
+
+        graph = dgl.graph((new_edge_index[0], new_edge_index[1]),
+                          num_nodes=self.n_nodes).to(self.device)
+        graph = dgl.remove_self_loop(graph)
+        graph = dgl.add_self_loop(graph)
+        adj = graph.adj().to(self.device)
+        return adj
+
+    def evaluate(self, test_mask, normalized_adj):
+        self.model.eval()
+        with torch.no_grad():
+            hidden_output, output = self.model((self.feats, normalized_adj, False))
+        logits = output[test_mask]
+        labels = self.labels[test_mask]
+        loss=self.loss_fn(logits, labels)
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), hidden_output, output
+
+    def set_method(self):
+        self.best_iter = 0
+
+    def test(self):
+        self.model.load_state_dict(self.weights)
+        normalized_adj = self.normalize(self.best_graph, add_loop=False)
+        return self.evaluate(self.test_mask, normalized_adj)
+
 
 
 class GSRSolver(Solver):

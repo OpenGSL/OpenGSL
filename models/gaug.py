@@ -2,7 +2,7 @@ from .gcn import GCN
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import Pyro4 as pyro
+import pyro as pyro
 from utils.utils import normalize
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score

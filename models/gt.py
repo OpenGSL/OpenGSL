@@ -151,7 +151,7 @@ class GT(nn.Module):
             x_res, homophily = layer(x_res, graph, labels, graph_analysis)
             x = x + x_res
             if self.ff:
-                x_res = self.norms_1[i](x)
+                x_res = self.norms_2[i](x)
                 x_res = self.ffns[i](x_res)
                 x = x + x_res
             if i == self.n_layers - 1:

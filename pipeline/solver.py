@@ -97,7 +97,7 @@ class Solver:
             loss_val, acc_val = self.evaluate(self.val_mask)
 
             # save
-            if loss_val < self.best_val_loss:
+            if acc_val > self.result['valid']:
                 improve = '*'
                 self.total_time = time.time() - self.start_time
                 self.best_val_loss = loss_val
