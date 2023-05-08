@@ -42,7 +42,7 @@ class GraphConvolution(nn.Module):
 class GCN(nn.Module):
 
     def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
-                 spmm_type=0, act='relu', input_layer=True, output_layer=True):
+                 spmm_type=0, act='relu', input_layer=False, output_layer=False):
 
         super(GCN, self).__init__()
 

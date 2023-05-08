@@ -14,11 +14,12 @@ from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
 from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
 from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
+from models.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 import torch
 import torch.nn.functional as F
 import time
 from pipeline.solver import Solver
-from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor
+from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor, sparse_tensor_to_scipy_sparse, sparse_normalize, sparse_mx_to_torch_sparse_tensor
 import dgl
 import copy
 
@@ -1582,3 +1583,148 @@ class GSRSolver(Solver):
             if debug:
                 print("Epoch {:05d} | Batch {:05d} | Time {:.4f} | intra_loss {:.4f} | inter_loss {:.4f} | overall_loss {:.4f}".format(
                     epoch_id, step, time.time() - t0, intra_loss.item(), inter_loss.item(), loss.item()))
+
+
+class STABLESolver(Solver):
+    def __init__(self, conf, dataset):
+        '''
+        Create a solver for stable to train, evaluate, test in a run. Some operations are conducted during initialization instead of "set_method" to avoid repetitive computations.
+        Parameters
+        ----------
+        conf : config file
+        dataset: dataset object containing all things about dataset
+        '''
+        super().__init__(conf, dataset)
+        print("Solver Version : [{}]".format("stable"))
+        self.adj = sparse_tensor_to_scipy_sparse(self.adj)
+        self.processed_adj = preprocess_adj(self.feats.cpu().numpy(), self.adj, threshold=self.conf.jt)
+
+    def pretrain(self, debug=False):
+
+        # generate 2 augment views
+        adj_delete = self.adj - self.processed_adj
+        aug_adj1 = aug_random_edge(self.processed_adj, adj_delete=adj_delete, recover_percent=self.conf.recover_percent)  # random drop edges
+        aug_adj2 = aug_random_edge(self.processed_adj, adj_delete=adj_delete, recover_percent=self.conf.recover_percent)  # random drop edges
+        sp_adj = sparse_normalize(self.processed_adj+(sp.eye(self.n_nodes) * self.conf.beta),
+                                  add_loop=False)
+        sp_aug_adj1 = sparse_normalize(aug_adj1 + (sp.eye(self.n_nodes) * self.conf.beta),
+                                  add_loop=False)
+        sp_aug_adj2 = sparse_normalize(aug_adj2 + (sp.eye(self.n_nodes) * self.conf.beta),
+                                  add_loop=False)
+        sp_adj = sparse_mx_to_torch_sparse_tensor(sp_adj).to(self.device)
+        sp_aug_adj1 = sparse_mx_to_torch_sparse_tensor(sp_aug_adj1).to(self.device)
+        sp_aug_adj2 = sparse_mx_to_torch_sparse_tensor(sp_aug_adj2).to(self.device)
+
+        # contrastive learning
+        weights = None
+        wait = 0
+        best = 1e9
+        best_t = 0
+        b_xent = torch.nn.BCEWithLogitsLoss()
+        for epoch in range(self.conf.pretrain['n_epochs']):
+            self.model.train()
+            self.optim.zero_grad()
+
+            idx = np.random.permutation(self.n_nodes)
+            shuf_fts = self.feats.unsqueeze(0)[:, idx, :]
+
+            lbl_1 = torch.ones(1, self.n_nodes)
+            lbl_2 = torch.zeros(1, self.n_nodes)
+            lbl = torch.cat((lbl_1, lbl_2), 1).to(self.device)
+
+            logits = self.model(self.feats.unsqueeze(0), shuf_fts, sp_adj, sp_aug_adj1, sp_aug_adj2)
+            loss = b_xent(logits, lbl)
+            if debug:
+                print(loss)
+
+            if loss < best:
+                best = loss
+                best_t = epoch
+                wait = 0
+                weights = copy.deepcopy(self.model.state_dict())
+            else:
+                wait+=1
+            if wait == self.conf.pretrain['patience']:
+                print('Early stopping!')
+                break
+
+            loss.backward()
+            self.optim.step()
+
+        print('Loading {}th epoch'.format(best_t))
+        self.model.load_state_dict(weights)
+
+        return self.model.embed(self.feats.unsqueeze(0), sp_adj)
+
+    def train_gcn(self, feats, adj, debug=False):
+        def evaluate(model, test_mask):
+            model.eval()
+            with torch.no_grad():
+                output = model((feats, adj, True))
+            logits = output[test_mask]
+            labels = self.labels[test_mask]
+            loss = self.loss_fn(logits, labels)
+            return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
+
+        def test(model):
+            return evaluate(model, self.test_mask)
+
+
+        model = GCN(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
+        optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.weight_decay)
+        improve= ''
+        best_loss_val = 10
+        for epoch in range(self.conf.n_epochs):
+            t0 = time.time()
+            model.train()
+            optim.zero_grad()
+
+            # forward and backward
+            output = model((feats, adj, True))
+            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
+            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
+            loss_train.backward()
+            optim.step()
+
+            # Evaluate
+            loss_val, acc_val = evaluate(model, self.val_mask)
+
+            # save
+            if acc_val > self.result['valid']:
+                improve = '*'
+                self.total_time = time.time() - self.start_time
+                best_loss_val = loss_val
+                self.result['valid'] = acc_val
+                self.result['train'] = acc_train
+                weights = deepcopy(model.state_dict())
+
+            if debug:
+                print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                    epoch+1, time.time() -t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
+
+        print('Optimization Finished!')
+        print('Time(s): {:.4f}'.format(self.total_time))
+        model.load_state_dict(weights)
+        loss_test, acc_test = test(model)
+        self.result['test'] = acc_test
+        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        return self.result
+
+    def learn(self, debug=False):
+        embeds = self.pretrain(debug)
+        embeds = embeds.squeeze(dim=0)
+
+        # prunue the graph
+        adj_clean = preprocess_adj(embeds.cpu().numpy(), self.adj, jaccard=False, threshold=self.conf.cos)
+        adj_clean = sparse_mx_to_torch_sparse_tensor(adj_clean).to(self.device).to_dense()
+        # add k neighbors
+        get_reliable_neighbors(adj_clean, embeds, k=self.conf.k, degree_threshold=self.conf.threshold)
+        # 得到的是0-1 无自环的图
+
+        normalized_adj_clean = normalize(adj_clean)   # 未使用论文中对归一化的改进
+        result = self.train_gcn(embeds, normalized_adj_clean)
+        return result, adj_clean
+
+    def set_method(self):
+        self.model = DGI(self.dim_feats, self.conf.n_embed, 'prelu').to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.pretrain['lr'], weight_decay=self.conf.pretrain['weight_decay'])

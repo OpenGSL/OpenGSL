@@ -2,11 +2,11 @@ model:
   n_layers: 2
   act: relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 64
-  dropout: 0
-  input_dropout: 0
+  dropout: 0.2
+  input_dropout: 0.2
   norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
   n_heads: 8
-  ff: false
+  ff: true
   hidden_dim_multiplier: 1
 
 dataset:
@@ -16,9 +16,9 @@ dataset:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 3e-5
-  n_epochs: 10
-  weight_decay: 0
+  lr: 1e-3
+  n_epochs: 1000
+  weight_decay: 5e-3
 
 # analysis
 analysis:
