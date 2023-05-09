@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                       'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                       'gprgnn', 'nodeformer', 'segsl', 'gsr', 'sublime',
-                                                                      'stable'], help="Select methods")
+                                                                      'stable', 'cogsl'], help="Select methods")
     parser.add_argument('--config', type=str, default='configs/gcn/gcn_template.yaml', help="Config file used for specific model training.")
     parser.add_argument('--n_runs', type=int, default=1,
                         help="number of exps per data split")
