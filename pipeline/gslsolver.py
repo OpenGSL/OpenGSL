@@ -22,6 +22,9 @@ from pipeline.solver import Solver
 from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor, sparse_tensor_to_scipy_sparse, sparse_normalize, sparse_mx_to_torch_sparse_tensor
 import dgl
 import copy
+import wandb
+import os
+from os.path import dirname
 
 
 class GRCNSolver(Solver):
@@ -824,7 +827,7 @@ class GTSolver(Solver):
         dataset: dataset object containing all things about dataset
         '''
         super().__init__(conf, dataset)
-        print("Solver Version : [{}]".format("grcn"))
+        print("Solver Version : [{}]".format("gt"))
         # prepare dgl graph
         edges = self.adj.coalesce().indices().cpu()
         self.graph = dgl.graph((edges[0], edges[1]), num_nodes=self.n_nodes, idtype=torch.int)
@@ -832,6 +835,17 @@ class GTSolver(Solver):
 
 
     def learn(self, debug=False):
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            path = os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir'], 'wandb')
+            if not os.path.exists(path):
+                os.makedirs(path)
+            wandb.init(config=self.conf,
+                       project=self.conf.analysis['project'],
+                       dir=os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir']))
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
 
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
@@ -860,6 +874,13 @@ class GTSolver(Solver):
                 self.result['train'] = acc_train
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
+
             if debug:
                 print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
                     epoch+1, time.time() -t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
@@ -869,6 +890,9 @@ class GTSolver(Solver):
         loss_test, acc_test, homo_heads = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask, graph_analysis=False):
@@ -1672,9 +1696,9 @@ class STABLESolver(Solver):
 
         model = GCN(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
         optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.weight_decay)
-        improve= ''
         best_loss_val = 10
         for epoch in range(self.conf.n_epochs):
+            improve = ''
             t0 = time.time()
             model.train()
             optim.zero_grad()
@@ -1722,7 +1746,7 @@ class STABLESolver(Solver):
         # 得到的是0-1 无自环的图
 
         normalized_adj_clean = normalize(adj_clean)   # 未使用论文中对归一化的改进
-        result = self.train_gcn(embeds, normalized_adj_clean)
+        result = self.train_gcn(embeds, normalized_adj_clean, debug)
         return result, adj_clean
 
     def set_method(self):

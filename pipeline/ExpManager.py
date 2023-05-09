@@ -8,6 +8,7 @@ from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LIN
     GPRGNNSolver
 from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, \
     NODEFORMERSolver, SEGSLSolver, GSRSolver, SUBLIMESolver, STABLESolver
+import argparse
 
 
 solvers = {
@@ -40,7 +41,8 @@ class ExpManager:
         if 'homophily_control' in conf.dataset:
             homophily_control = conf.dataset['homophily_control']
         dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'], homophily_control=homophily_control)
-        self.conf = conf
+        # self.conf = conf
+        self.conf = argparse.Namespace(**vars(conf), **{'data':data, 'method':method})
         self.method = method
         self.data = data
         self.device = torch.device('cuda')
@@ -65,7 +67,7 @@ class ExpManager:
         self.debug = debug
 
         Solver0 = solvers[method]
-        self.solver = Solver0(conf, dataset)
+        self.solver = Solver0(self.conf, dataset)
 
     def run(self):
         total_runs = self.n_runs * self.n_splits
