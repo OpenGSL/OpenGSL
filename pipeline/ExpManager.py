@@ -31,7 +31,8 @@ solvers = {
     'segsl': SEGSLSolver,
     'gsr':GSRSolver,
     'sublime': SUBLIMESolver,
-    'stable': STABLESolver
+    'stable': STABLESolver,
+    'cogsl':CoGSLSolver
 }
 
 

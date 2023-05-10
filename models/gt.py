@@ -78,7 +78,6 @@ class TransformerAttentionModule(nn.Module):
         return homophily
 
 
-
 class FeedForwardModule(nn.Module):
     def __init__(self, dim, hidden_dim_multiplier, dropout, act):
         super().__init__()

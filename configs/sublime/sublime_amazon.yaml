@@ -1,31 +1,31 @@
-sparse: false
+sparse: true
 epochs_cls: 200
-lr_cls: 0.001
+lr_cls: 0.01
 w_decay_cls: 0.0005
 hidden_dim_cls: 32
 dropout_cls: 0.5
-dropedge_cls: 0.75
+dropedge_cls: 0.25
 n_layers_cls: 2
 patience_cls: 10
-epochs: 4000
-lr: 0.01
+epochs: 1500
+lr: 0.001
 wd: 0.0
-n_hidden: 512
-n_embed: 256
-n_proj: 256
+n_hidden: 128
+n_embed: 64
+n_proj: 64
 dropout: 0.5
 dropedge_rate: 0.5
 n_layers: 2
-type_learner: fgp
-k: 30
+type_learner: mlp
+k: 10
 sim_function: cosine
 activation_learner: relu
-eval_freq: 50
-tau: 0.9999
-maskfeat_rate_learner: 0.7
-maskfeat_rate_anchor: 0.6
-contrast_batch_size: 0
-c: 0
+eval_freq: 20
+tau: 0.999
+maskfeat_rate_learner: 0.4
+maskfeat_rate_anchor: 0.4
+contrast_batch_size: 2000
+c: 50
 
 model:
   norm:

@@ -416,7 +416,7 @@ class GCN_SUB(nn.Module):
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
             x = self.layers[-1](x, Adj)
-            return x
+            return x.squeeze(1)
         else:
             return self.model((x, Adj, True))
 

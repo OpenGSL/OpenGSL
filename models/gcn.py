@@ -107,6 +107,6 @@ class GCN(nn.Module):
             x = self.output_normalization(x)
             x = self.output_linear(x).squeeze(1)
         if only_z:
-            return x
+            return x.squeeze(1)
         else:
-            return mid, x
+            return mid, x.squeeze(1)
