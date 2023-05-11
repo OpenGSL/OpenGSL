@@ -15,6 +15,8 @@ dataset:
   load_graph: false
   normalize: true
   add_loop: true
+  sparse: true
+#  homophily_control: 0.8
 
 # analysis
 analysis:

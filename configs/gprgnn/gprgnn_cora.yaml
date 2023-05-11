@@ -17,6 +17,7 @@ dataset:
   load_graph: false
   normalize: true
   add_loop: true
+  sparse: true
 
 # analysis
 analysis:

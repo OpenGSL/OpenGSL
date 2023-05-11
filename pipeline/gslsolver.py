@@ -1114,9 +1114,7 @@ class SEGSLSolver(Solver):
 
     def train_gcn(self, iter, adj, debug=False):
         self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+                         self.conf.model['dropout'], self.conf.model['input_dropout']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
@@ -1184,14 +1182,14 @@ class SEGSLSolver(Solver):
                                  self.conf.gsl['k'])
         new_edge_index_2 = reshape(community, code_tree, isleaf,
                                    self.conf.gsl['k'])
-        new_edge_index = torch.concat(
+        new_edge_index = torch.cat(
             (new_edge_index.t(), new_edge_index_2.t()), dim=0)
         new_edge_index, unique_idx = torch.unique(
             new_edge_index, return_counts=True, dim=0)
         new_edge_index = new_edge_index[unique_idx != 1].t()
         add_num = int(new_edge_index.shape[1])
 
-        new_edge_index = torch.concat(
+        new_edge_index = torch.cat(
             (new_edge_index.t(), edge_index.cpu()), dim=0)
         new_edge_index = torch.unique(new_edge_index, dim=0)
         new_edge_index = new_edge_index.t()

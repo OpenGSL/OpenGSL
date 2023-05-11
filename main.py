@@ -15,7 +15,8 @@ def main(args):
     else:
         conf = None
 
-    a = ExpManager(conf, method=args.method, data=args.data, n_splits=args.n_splits, n_runs=args.n_runs, save=args.save, debug=args.debug, verbose=args.verbose)
+    a = ExpManager(conf, method=args.method, data=args.data, n_splits=args.n_splits, n_runs=args.n_runs, save=args.save,
+                   debug=args.debug, verbose=args.verbose)
     a.run()
 
 
@@ -25,7 +26,8 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, default='cora',
                         choices=['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho',
                                  'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
-                                 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94'], help='dataset')
+                                 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
+                                 'blogcatalog', 'flickr'], help='dataset')
     parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                       'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                       'gprgnn', 'nodeformer', 'segsl', 'gsr', 'sublime',

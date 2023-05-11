@@ -2,7 +2,7 @@
 load data via pyg
 '''
 
-from torch_geometric.datasets import Planetoid, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor
+from torch_geometric.datasets import Planetoid, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor, AttributedGraphDataset
 
 
 def pyg_load_dataset(name, path='./data/'):
@@ -19,7 +19,9 @@ def pyg_load_dataset(name, path='./data/'):
            'cornell': 'Cornell',
            'texas': 'Texas',
            'wisconsin': 'Wisconsin',
-           'actor': 'Actor'}
+           'actor': 'Actor',
+           'blogcatalog':'blogcatalog',
+           'flickr':'flickr'}
     name = dic[name]
 
     if name in ["Cora", "CiteSeer", "PubMed"]:
@@ -36,6 +38,8 @@ def pyg_load_dataset(name, path='./data/'):
         dataset = WebKB(root=path+name, name=name)
     elif name == 'Actor':
         dataset = Actor(root=path+name)
+    elif name in ['blogcatalog', 'flickr']:
+        dataset = AttributedGraphDataset(root=path+name, name=name)
     else:
         exit("wrong dataset")
     return dataset

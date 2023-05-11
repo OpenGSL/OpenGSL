@@ -3,7 +3,7 @@ from models.gcn import GCN
 from models.jknet import JKNet
 from pipeline.solver import Solver
 import torch
-from utils.utils import normalize_sp_tensor
+from utils.utils import normalize_sp_tensor, normalize
 from data.homophily_control import get_new_adj
 
 
@@ -18,8 +18,11 @@ class SGCSolver(Solver):
         self.model = SGC(self.dim_feats, self.num_targets, self.conf.model['n_layers']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                            weight_decay=self.conf.training['weight_decay'])
-        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 class GCNSolver(Solver):
@@ -36,8 +39,11 @@ class GCNSolver(Solver):
                     self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
-        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 class LPASolver(Solver):
@@ -113,8 +119,11 @@ class APPNPSolver(Solver):
                       K=self.conf.model['K'], alpha=self.conf.model['alpha']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                  weight_decay=self.conf.training['weight_decay'])
-        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 class JKNetSolver(Solver):
@@ -132,8 +141,11 @@ class JKNetSolver(Solver):
                            self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
-        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 class GPRGNNSolver(Solver):
@@ -156,8 +168,11 @@ class GPRGNNSolver(Solver):
                 'params': self.model.temp,
                 'weight_decay': 0.0, 'lr': self.conf.training['lr']
             }], lr=self.conf.training['lr'])
-        normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 

@@ -3,12 +3,12 @@ model:
   dropout: 0.5
   dprate: 0.5
   K: 10
-  alpha: 0.5
+  alpha: 0.1
   init: 'PPR'
 
 training:
-  lr: 5e-2
-  weight_decay: 0
+  lr: 1e-2
+  weight_decay: 5e-7
   n_epochs: 1000
 
 dataset:
@@ -17,6 +17,7 @@ dataset:
   load_graph: false
   normalize: true
   add_loop: true
+  sparse: false
 
 # analysis
 analysis:

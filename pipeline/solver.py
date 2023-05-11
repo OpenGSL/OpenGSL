@@ -20,7 +20,7 @@ class Solver:
         self.model = None
 
         self.feats = dataset.feats
-        self.adj = dataset.adj
+        self.adj = dataset.adj if self.conf.dataset['sparse'] else dataset.adj.to_dense()
         self.labels = dataset.labels
         self.train_masks = dataset.train_masks
         self.val_masks = dataset.val_masks
