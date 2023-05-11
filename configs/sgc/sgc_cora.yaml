@@ -11,6 +11,7 @@ dataset:
   feat_norm: true
   normalize: true
   add_loop: true
+  sparse: true
 
 analysis:
   flag: false

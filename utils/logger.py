@@ -21,6 +21,7 @@ class Logger(object):
             print(f'Highest Train: {result[0]:.2f}')
             print(f'Highest Valid: {result[1]:.2f}')
             print(f'   Final Test: {result[2]:.2f}')
+            return  result[2]
         else:
             best_result = 100 * torch.tensor(self.results)
 
@@ -31,3 +32,4 @@ class Logger(object):
             print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}')
             r = best_result[:, 2]
             print(f'   Final Test: {r.mean():.2f} ± {r.std():.2f}')
+            return r.mean(), r.std()
