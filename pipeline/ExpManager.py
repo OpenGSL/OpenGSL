@@ -60,10 +60,10 @@ class ExpManager:
         if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
             assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
             self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)
-        if 'load_graph' in self.conf.dataset and self.conf.dataset['load_graph']:
-            assert 'load_graph_path' in self.conf.analysis and self.conf.dataset[
+        if 'load_graph' in self.conf.analysis and self.conf.analysis['load_graph']:
+            assert 'load_graph_path' in self.conf.analysis and self.conf.analysis[
                 'load_graph_path'] is not None, 'Specify the path to load graph'
-            self.load_graph_path = self.conf.dataset['load_graph_path']
+            self.load_graph_path = self.conf.analysis['load_graph_path']
         assert self.save_graph_path is None or self.load_graph_path is None, 'GNN does not save graph, GSL does not load graph'
         self.debug = debug
 
@@ -84,6 +84,8 @@ class ExpManager:
                 # load graph
                 if self.load_graph_path:
                     self.solver.adj = torch.load(os.path.join(self.load_graph_path,'{}_{}_{}.pth'.format(self.data, i, self.train_seeds[idx]))).to_sparse().to(self.device)
+                    # print(self.solver.adj)
+                    # exit(0)
 
                 # run an exp
                 result, graph = self.solver.run_exp(split=i, debug=self.debug)

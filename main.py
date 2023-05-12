@@ -6,6 +6,8 @@ import ruamel.yaml as yaml
 def main(args):
     from pipeline.ExpManager import ExpManager
 
+    print(args)
+
     # load config
     if args.config != '':
         conf = open(args.config, "r").read()

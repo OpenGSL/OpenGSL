@@ -5,7 +5,7 @@ from copy import deepcopy
 from models.gcn import GCN
 from models.grcn import GRCN
 from models.gaug import GAug, eval_edge_pred, MultipleOptimizer
-from models.gen import EstimateAdj, prob_to_adj
+from models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
 from models.idgl import IDGL, sample_anchors, diff, compute_anchor_adj
 from models.prognn import PGD, prox_operators, EstimateAdj, feature_smoothing
 from models.gt import GT
@@ -426,7 +426,7 @@ class GENSolver(Solver):
                          self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
                          self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
                          self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
-        self.estimator = EstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
+        self.estimator = GENEstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
@@ -1315,7 +1315,9 @@ class SUBLIMESolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.weights = deepcopy(model.state_dict())
-                    self.best_graph = deepcopy(adj)
+                    current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
+                    self.best_graph = deepcopy(current_adj)
+                    self.best_graph_test = deepcopy(adj)
 
             if debug:
                 print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
@@ -1338,7 +1340,7 @@ class SUBLIMESolver(Solver):
                         n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
                         dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
         model.load_state_dict(self.weights)
-        adj = self.best_graph
+        adj = self.best_graph_test
         return self.evaluate(model, self.test_mask, adj)
 
     def learn(self, debug=False):
@@ -1355,7 +1357,7 @@ class SUBLIMESolver(Solver):
             self.model.train()
             self.graph_learner.train()
 
-            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)
+            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)   # Adj是有自环且normalized
 
             self.optimizer_cl.zero_grad()
             self.optimizer_learner.zero_grad()

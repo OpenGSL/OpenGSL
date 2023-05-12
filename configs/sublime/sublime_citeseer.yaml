@@ -27,19 +27,17 @@ maskfeat_rate_anchor: 0.8
 contrast_batch_size: 0
 c: 0
 
-model:
-  norm:
-    flag: false
-    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
 
 
 dataset:
-  feat_norm: false
-  cora_split: true
+  feat_norm: false   # sublime does not normalize feats
+  cora_split: false
   load_graph: false
+  sparse: true
 
 # analysis
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph
