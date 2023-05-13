@@ -848,14 +848,11 @@ class GTSolver(Solver):
 
     def learn(self, debug=False):
         if 'analysis' in self.conf and self.conf.analysis['flag']:
-            path = os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir'], 'wandb')
-            if not os.path.exists(path):
-                os.makedirs(path)
-            wandb.init(config=self.conf,
-                       project=self.conf.analysis['project'],
-                       dir=os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir']))
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+                wandb.define_metric("acc_val", summary="max")
             wandb.define_metric("loss_val", summary="min")
-            wandb.define_metric("acc_val", summary="max")
             wandb.define_metric("loss_train", summary="min")
             wandb.define_metric("acc_train", summary="max")
 
@@ -904,7 +901,8 @@ class GTSolver(Solver):
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         if 'analysis' in self.conf and self.conf.analysis['flag']:
             wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
-            wandb.finish()
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask, graph_analysis=False):

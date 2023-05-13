@@ -19,7 +19,10 @@ def main(args):
 
     a = ExpManager(conf, method=args.method, data=args.data, n_splits=args.n_splits, n_runs=args.n_runs, save=args.save,
                    debug=args.debug, verbose=args.verbose)
-    a.run()
+    if 'sweep' in conf.analysis and conf.analysis['sweep']:
+        a.sweep()
+    else:
+        a.run()
 
 
 

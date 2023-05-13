@@ -9,6 +9,7 @@ from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LIN
 from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, \
     NODEFORMERSolver, SEGSLSolver, GSRSolver, SUBLIMESolver, STABLESolver, CoGSLSolver
 import argparse
+import wandb
 
 
 solvers = {
@@ -45,6 +46,11 @@ class ExpManager:
         dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'], homophily_control=homophily_control)
         # self.conf = conf
         self.conf = argparse.Namespace(**vars(conf), **{'data': data, 'method': method})
+        self.sweep_flag = self.conf.analysis['sweep']
+        if self.sweep_flag:
+            self.conf.analysis['flag'] = True
+            assert self.conf.analysis['sweep_id'] is not None, 'Specify the sweep id'
+            assert n_runs == 1, 'Sweep only supports 1 run'
         self.method = method
         self.data = data
         self.device = torch.device('cuda')
@@ -100,6 +106,25 @@ class ExpManager:
         self.acc_save, self.std_save = logger.print_statistics()
         self.save()
 
+    def sweep(self):
+        def one_sweep():
+            wandb.init()
+            print(self.conf)
+            print(wandb.config)
+            self.update_conf(wandb.config)
+            print(self.conf)
+            set_seed(42)
+            if self.load_graph_path:
+                self.solver.adj = torch.load(os.path.join(self.load_graph_path, '{}_{}_{}.pth'.format(
+                    self.data, 0, 0))).to_sparse().to(self.device)
+            result, graph = self.solver.run_exp(split=0, debug=self.debug)
+            acc_val = result['valid']
+            wandb.finish()
+
+        wandb.agent(self.conf.analysis['sweep_id'], function=one_sweep, count=self.conf.analysis['count'])
+
+
+
     def save(self):
         # save results
         if self.save_path:
@@ -115,3 +140,20 @@ class ExpManager:
                     [[self.method, self.data, text]],
                     columns=['model', 'data', 'acc'])
                 records.to_csv('results/performance.csv', index=False)
+
+    def update_conf(self, config):
+        '''
+        Set the config file according to wandb controler in sweep mode.
+        Returns
+        -------
+        '''
+        conf = vars(self.conf)
+        for k, v in conf.items():
+            if isinstance(v, dict):
+                for kk, vv in v.items():
+                    if kk in config.keys():
+                        v[kk] = config[kk]
+            else:
+                if k in config.keys():
+                    conf[k] = config[k]
+        self.conf = argparse.Namespace(**conf)
