@@ -6,13 +6,14 @@ model:
   input_dropout: 0.2
   norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
   n_heads: 8
-  ff: true
+  ff: false
   hidden_dim_multiplier: 1
 
 dataset:
   feat_norm: true
-  cora_split: false # for cora,citeseer and pubmed
+  cora_split: false
   load_graph: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space

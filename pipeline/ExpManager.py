@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from data.dataset import Dataset
 from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, JKNetSolver, \
-    GPRGNNSolver
+    GPRGNNSolver, LPASolver
 from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, \
     NODEFORMERSolver, SEGSLSolver, GSRSolver, SUBLIMESolver, STABLESolver, CoGSLSolver
 import argparse
@@ -15,6 +15,7 @@ solvers = {
     'gcn':GCNSolver,
     'sgc':SGCSolver,
     'mlp':MLPSolver,
+    'lpa': LPASolver,
     'link':LINKSolver,
     'linkx':LINKXSolver,
     'appnp':APPNPSolver,
@@ -56,7 +57,7 @@ class ExpManager:
         self.save_graph_path = None
         self.load_graph_path = None
         if save:
-            self.save_path = 'results/1.csv'
+            self.save_path = 'results/performance.csv'
         if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
             assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
             self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)

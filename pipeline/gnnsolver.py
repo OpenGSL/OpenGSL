@@ -22,7 +22,7 @@ class SGCSolver(Solver):
             self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
 
 class GCNSolver(Solver):
@@ -43,7 +43,7 @@ class GCNSolver(Solver):
             self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
 
 class LPASolver(Solver):
@@ -56,7 +56,7 @@ class LPASolver(Solver):
     def set_method(self):
         self.model = LPA(self.conf.model['n_layers'], self.conf.model['alpha']).to(self.device)
         normalize = normalize_sp_tensor if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = normalize(self.adj, self.conf.dataset['add_loop'])
 
     def learn(self, split=None, debug=False):
         y_pred = self.model(self.input_distributer())
@@ -123,7 +123,7 @@ class APPNPSolver(Solver):
             self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
 
 class JKNetSolver(Solver):
@@ -145,7 +145,7 @@ class JKNetSolver(Solver):
             self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
 
 class GPRGNNSolver(Solver):
@@ -172,7 +172,7 @@ class GPRGNNSolver(Solver):
             self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+        self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
 
 
 

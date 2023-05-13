@@ -3,6 +3,7 @@ from sklearn.metrics.pairwise import cosine_similarity as cos
 import numpy as np
 from copy import deepcopy
 from models.gcn import GCN
+from models.gnn_modules import APPNP
 from models.grcn import GRCN
 from models.gaug import GAug, eval_edge_pred, MultipleOptimizer
 from models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
@@ -422,10 +423,15 @@ class GENSolver(Solver):
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        if self.conf.model['type']=='gcn':
+            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        elif self.conf.model['type']=='appnp':
+            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
         self.estimator = GENEstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
@@ -621,7 +627,7 @@ class IDGLSolver(Solver):
                 self.result['train'] = acc_train
                 self.result['valid'] = acc_val
                 improve = '*'
-                self.best_graph = adj.clone().detach()
+                self.best_graph = deepcopy(adj.clone().detach())
             else:
                 wait += 1
                 if wait == self.conf.training['patience']:
@@ -801,10 +807,15 @@ class PROGNNSolver(Solver):
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        if self.conf.model['type'] == 'gcn':
+            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        else:
+            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
         self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],

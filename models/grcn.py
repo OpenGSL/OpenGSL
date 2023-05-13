@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
+from .gnn_modules import APPNP
 
 
 class GCNConv_diag(torch.nn.Module):
@@ -28,10 +29,15 @@ class GRCN(torch.nn.Module):
         super(GRCN, self).__init__()
         self.num_nodes = num_nodes
         self.num_features = num_features
-        self.conv_task = GCN(num_features, conf.model['n_hidden'], num_classes, conf.model['n_layers'],
-                             conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
-                             conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
-                             conf.model['input_layer'], conf.model['output_layer'])
+        if conf.model['type'] == 'gcn':
+            self.conv_task = GCN(num_features, conf.model['n_hidden'], num_classes, conf.model['n_layers'],
+                                 conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
+                                 conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
+                                 conf.model['input_layer'], conf.model['output_layer'])
+        else:
+            self.conv_task = APPNP(num_features, conf.model['n_hidden'], num_classes,
+                               dropout=conf.model['dropout'], K=conf.model['K'],
+                               alpha=conf.model['alpha'], spmm_type=1)
         self.model_type = conf.gsl['model_type']
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNConv_diag(num_features)

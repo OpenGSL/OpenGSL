@@ -148,13 +148,14 @@ class LINKX(nn.Module):
 
 
 class APPNP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, dropout=.5, K=10, alpha=.1):
+    def __init__(self, in_channels, hidden_channels, out_channels, dropout=.5, K=10, alpha=.1, spmm_type=0):
         super(APPNP, self).__init__()
         self.lin1 = nn.Linear(in_channels, hidden_channels)
         self.lin2 = nn.Linear(hidden_channels, out_channels)
         self.dropout = dropout
         self.K = K
         self.alpha = alpha
+        self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
 
     def reset_parameters(self):
         self.lin1.reset_parameters()
@@ -164,15 +165,19 @@ class APPNP(nn.Module):
         # adj is normalized and sparse
         x=input[0]
         adj=input[1]
+        only_z = input[2] if len(input)>2 else True
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.lin2(x)
         z = x
         for i in range(self.K):
-            z = (1-self.alpha)*torch.spmm(adj,z)+self.alpha*x
+            z = (1-self.alpha)*self.spmm(adj,z)+self.alpha*x
         # x = self.prop1(x, edge_index)
-        return z.squeeze(1)
+        if only_z:
+            return z.squeeze(1)
+        else:
+            return z, z.squeeze(1)
 
 
 class GPRGNN(nn.Module):

@@ -1,12 +1,17 @@
 model:
-  n_layers: 3
+  n_layers: 2
   alpha: 0.9
 
 dataset:
   cora_split: false
   feat_norm: true
-  normalize: true
+  normalize: false
   add_loop: false
+  sparse: true
 
 analysis:
   flag: false
+  project: gsl
+  save_graph: false
+  load_graph: true
+  load_graph_path: results/graph/idgl
