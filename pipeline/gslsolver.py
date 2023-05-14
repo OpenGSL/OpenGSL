@@ -1879,7 +1879,6 @@ class CoGSLSolver(Solver):
         self.best_acc_val = 0
         self.best_loss_val = 1e9
         self.best_test = 0
-        self.best_v = None
         self.best_v_cls_weight = None
         torch.autograd.set_detect_anomaly(True)
 
@@ -1926,7 +1925,7 @@ class CoGSLSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.cls.encoder_v.state_dict())
-                self.best_v = views[0]
+                self.best_graph = views[0]
             print("EPOCH ",epoch, "\tCUR_LOSS_VAL ", loss_val, "\tCUR_ACC_Val ", acc_val, "\tBEST_ACC_VAL ", self.best_acc_val)
         self.total_time = time.time() - self.start_time
         print('Optimization Finished!')
@@ -1936,7 +1935,7 @@ class CoGSLSolver(Solver):
         self.result['test'] = acc_test
         #print("Test_Macro: ", test_f1_macro, "\tTest_Micro: ", test_f1_micro, "\tAUC: ", auc)
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, 0
+        return self.result, self.best_graph.to_dense()
 
 
     def evaluate(self, test_mask):
@@ -1982,7 +1981,7 @@ class CoGSLSolver(Solver):
     def test(self):
         self.model.cls.encoder_v.load_state_dict(self.weights)
         self.model.eval()
-        self.view = self.best_v
+        self.view = self.best_graph
 
         return self.evaluate(self.test_mask)
 
