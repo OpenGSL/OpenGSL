@@ -27,8 +27,8 @@ gsl:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
   gae: true
-  alpha: 1
-  temperature: 1.2
+  alpha: 0.05
+  temperature: 0.3
 
 dataset:
   feat_norm: true
@@ -39,11 +39,11 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
-  warmup: 0
+  warmup: 9
   patience: 100
-  pretrain_ep: 160
-  pretrain_nc: 30
-  beta: 0.8
+  pretrain_ep: 5
+  pretrain_nc: 300
+  beta: 2.5
 
 # analysis
 analysis:

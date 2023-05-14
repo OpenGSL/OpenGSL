@@ -46,8 +46,7 @@ class ExpManager:
         dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'], homophily_control=homophily_control)
         # self.conf = conf
         self.conf = argparse.Namespace(**vars(conf), **{'data': data, 'method': method})
-        self.sweep_flag = self.conf.analysis['sweep']
-        if self.sweep_flag:
+        if 'sweep' in self.conf.analysis and self.conf.analysis['sweep']:
             self.conf.analysis['flag'] = True
             assert self.conf.analysis['sweep_id'] is not None, 'Specify the sweep id'
             assert n_runs == 1, 'Sweep only supports 1 run'
@@ -109,16 +108,17 @@ class ExpManager:
     def sweep(self):
         def one_sweep():
             wandb.init()
-            print(self.conf)
-            print(wandb.config)
+            # print(self.conf)
+            # print(wandb.config)
             self.update_conf(wandb.config)
-            print(self.conf)
+            # print(self.conf)
             set_seed(42)
             if self.load_graph_path:
                 self.solver.adj = torch.load(os.path.join(self.load_graph_path, '{}_{}_{}.pth'.format(
                     self.data, 0, 0))).to_sparse().to(self.device)
             result, graph = self.solver.run_exp(split=0, debug=self.debug)
             acc_val = result['valid']
+            wandb.log({'acc_val_max': acc_val})
             wandb.finish()
 
         wandb.agent(self.conf.analysis['sweep_id'], function=one_sweep, count=self.conf.analysis['count'])

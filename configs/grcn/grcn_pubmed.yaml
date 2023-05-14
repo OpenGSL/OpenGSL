@@ -1,4 +1,5 @@
 model:
+  type: gcn
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
@@ -32,6 +33,9 @@ training:
 
 analysis:
   flag: false
-  project: gsl
-  save_graph: true
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/iky8ecp8
+  project: gsl-benchmark
+  save_graph: false
   save_graph_path: results/graph
+  count: 300

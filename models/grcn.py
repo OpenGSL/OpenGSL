@@ -36,7 +36,7 @@ class GRCN(torch.nn.Module):
                                  conf.model['input_layer'], conf.model['output_layer'])
         else:
             self.conv_task = APPNP(num_features, conf.model['n_hidden'], num_classes,
-                               dropout=conf.model['dropout'], K=conf.model['K'],
+                               dropout=conf.model['dropout'], K=conf.model['K_APPNP'],
                                alpha=conf.model['alpha'], spmm_type=1)
         self.model_type = conf.gsl['model_type']
         if conf.gsl['model_type'] == 'diag':
