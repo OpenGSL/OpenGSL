@@ -3,14 +3,14 @@ model:
 
 training:
   n_epochs: 100
-  lr: 0.1
-  weight_decay: 1e-3
+  lr: 0.01
+  weight_decay: 0.1
 
 dataset:
   feat_norm: true
   cora_split: false
-  normalize: true
-  add_loop: true
+  normalize: false
+  add_loop: false
   sparse: true
 
 
@@ -19,4 +19,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/idgl
+  load_graph_path: results/graph/sublime

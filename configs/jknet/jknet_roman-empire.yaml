@@ -3,7 +3,7 @@ model:
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
   general: concat #[concat, maxpool]
-  n_hidden: 64
+  n_hidden: 128
   dropout: 0.5
   input_dropout: 0
   norm:
@@ -15,21 +15,21 @@ model:
 
 dataset:
   cora_split: false
-  feat_norm: true
+  feat_norm: false
   add_loop: true
   normalize: true
-  sparse: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
-  n_epochs: 400
-  weight_decay: 5e-7
+  lr: 1e-1
+  n_epochs: 500
+  weight_decay: 5e-5
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: true
-  load_graph_path: results/graph/prognn
+  load_graph: false
+  load_graph_path: results/graph/gaug

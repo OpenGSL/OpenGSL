@@ -50,8 +50,10 @@ dataset:
   pyg: False
   big: False
   batch: 0
+  sparse: true
 
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph

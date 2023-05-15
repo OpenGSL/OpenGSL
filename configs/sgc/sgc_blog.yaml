@@ -11,7 +11,9 @@ dataset:
   feat_norm: true
   normalize: true
   add_loop: true
-  sparse: true
+  sparse: false
 
 analysis:
   flag: false
+  load_graph: true
+  load_graph_path: results/graph/prognn

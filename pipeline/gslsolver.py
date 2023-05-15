@@ -452,7 +452,7 @@ class GENSolver(Solver):
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
-        self.estimator = GENEstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
+        self.estimator = GENEstimateAdj(self.n_classes, self.adj, self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])

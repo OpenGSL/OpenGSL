@@ -1,27 +1,27 @@
 model:
   n_hidden: 64
-  dropout: 0.5
+  dropout: 0
   dprate: 0.5
-  K: 10
-  alpha: 0.1
+  K: 6
+  alpha: 0.9
   init: 'PPR'
 
 training:
-  lr: 1e-2
-  weight_decay: 5e-7
-  n_epochs: 1000
+  lr: 1e-1
+  weight_decay: 5e-5
+  n_epochs: 500
 
 dataset:
-  feat_norm: true
+  feat_norm: false
   cora_split: false
   normalize: true
   add_loop: true
-  sparse: false
+  sparse: true
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: true
-  load_graph_path: results/graph/prognn
+  load_graph: false
+  load_graph_path: results/graph/gaug

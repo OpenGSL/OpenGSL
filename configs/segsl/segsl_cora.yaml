@@ -23,7 +23,7 @@ dataset:
   sparse: true
 
 training:
-  n_iters: 2
+  n_iters: 10
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-2
   n_epochs: 200
