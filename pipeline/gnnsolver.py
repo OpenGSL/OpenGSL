@@ -1,4 +1,4 @@
-from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN
+from models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT
 from models.gcn import GCN
 from models.jknet import JKNet
 from pipeline.solver import Solver
@@ -173,6 +173,22 @@ class GPRGNNSolver(Solver):
         else:
             self.normalize = lambda x, y: x
         self.normalized_adj = self.normalize(self.adj, self.conf.dataset['add_loop'])
+
+
+class GATSolver(Solver):
+    def __init__(self, conf, dataset):
+        super().__init__(conf, dataset)
+
+    def input_distributer(self):
+        return self.feats, self.edge_index
+
+    def set_method(self):
+        self.model = GAT(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                         n_heads=self.conf.model['n_heads'], dropout=self.conf.model['dropout']).to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                           weight_decay=self.conf.training['weight_decay'])
+        # prepare edge index
+        self.edge_index = self.adj.coalesce().indices()
 
 
 

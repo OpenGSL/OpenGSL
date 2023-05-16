@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from torch.nn.functional import one_hot
-from torch_sparse import SparseTensor
+from torch_geometric.nn import GATConv, GATv2Conv
 
 
 class SGC(nn.Module):
@@ -234,3 +234,25 @@ class GPRGNN(nn.Module):
             x = torch.spmm(adj,x)
             z = z + self.temp[i+1]*x
         return z.squeeze(1)
+
+
+class GAT(nn.Module):
+    def __init__(self, n_feat, n_hidden, n_class, n_layers, n_heads, dropout):
+        super(GAT, self).__init__()
+        self.convs = nn.ModuleList()
+        self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads, dropout=dropout))
+        for i in range(n_layers-2):
+            self.convs.append(GATConv(n_hidden*n_heads, n_hidden, heads=n_heads, dropout=dropout))
+        self.convs.append((GATConv(n_hidden*n_heads, n_class, concat=False, dropout=dropout)))
+        self.dropout = dropout
+
+    def forward(self, input):
+        x = input[0]
+        edge_index = input[1]
+
+        for i in range(len(self.convs)-1):
+            x = self.convs[i](x, edge_index)
+            x = F.elu(x)
+            x = F.dropout(x, training=self.training, p=self.dropout)
+        x = self.convs[-1](x, edge_index)
+        return x

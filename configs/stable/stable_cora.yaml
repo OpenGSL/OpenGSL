@@ -5,7 +5,7 @@ pretrain:
   patience: 20
 
 n_epochs: 200
-n_hidden: 16
+n_hidden: 64
 n_layers: 2
 dropout: 0.5
 lr: 1e-2
@@ -23,6 +23,7 @@ dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: false
   load_graph: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
@@ -34,4 +35,5 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph

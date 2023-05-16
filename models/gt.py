@@ -13,7 +13,7 @@ from utils.utils import get_homophily
 
 
 class TransformerAttentionModule(nn.Module):
-    def __init__(self, dim, num_heads, dropout):
+    def __init__(self, dim, dim_out, num_heads, dropout):
         super().__init__()
 
         assert dim % num_heads == 0, 'Dimension mismatch: hidden_dim should be a multiple of num_heads.'
@@ -25,7 +25,7 @@ class TransformerAttentionModule(nn.Module):
         self.attn_key = nn.Linear(in_features=dim, out_features=dim)
         self.attn_value = nn.Linear(in_features=dim, out_features=dim)
 
-        self.output_linear = nn.Linear(in_features=dim, out_features=dim)
+        self.output_linear = nn.Linear(in_features=dim, out_features=dim_out)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, graph, labels=None, graph_analysis=False):
@@ -101,7 +101,7 @@ class FeedForwardModule(nn.Module):
 
 class GT(nn.Module):
 
-    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm_type='LayerNorm', num_heads=8, act='relu', input_layer=True, output_layer=True, ff=True, hidden_dim_multiplier=2):
+    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm_type='LayerNorm', num_heads=8, act='relu', input_layer=True, output_layer=True, ff=False, hidden_dim_multiplier=2):
 
         super(GT, self).__init__()
         self.nfeat = nfeat
@@ -132,7 +132,7 @@ class GT(nn.Module):
                 out_hidden = nclass
             else:
                 out_hidden = nhid
-            self.trans.append(TransformerAttentionModule(in_hidden, num_heads, dropout))
+            self.trans.append(TransformerAttentionModule(in_hidden, out_hidden, num_heads, dropout))
             self.norms_1.append(self.norm_type(in_hidden))
             if self.ff:
                 self.ffns.append(FeedForwardModule(in_hidden, hidden_dim_multiplier, dropout, act))
