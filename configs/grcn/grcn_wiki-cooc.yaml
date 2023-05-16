@@ -15,7 +15,7 @@ model:
 
 gsl:
   model_type: diag
-  K: 100
+  K: 5
   normalize: true
 
 dataset:
@@ -26,7 +26,7 @@ dataset:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
+  lr: 1e-1
   n_epochs: 500
   weight_decay: 5e-7
   lr_graph: 1e-3
@@ -34,8 +34,8 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
   save_graph_path: results/graph
-  sweep: true
+  sweep: false
   sweep_id: yotsugi/gsl-benchmark/ewt86l94
   count: 100
