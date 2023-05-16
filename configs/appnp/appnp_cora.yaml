@@ -13,7 +13,7 @@ dataset:
   feat_norm: true
   cora_split: false
   normalize: false
-  add_loop: true
+  add_loop: false
   sparse: true
 #  homophily_control: 0.8
 
@@ -23,4 +23,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/idgl
+  load_graph_path: results/graph/sublime

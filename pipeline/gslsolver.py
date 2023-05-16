@@ -58,6 +58,15 @@ class GRCNSolver(Solver):
 
         '''
 
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
+
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
             t0 = time.time()
@@ -88,6 +97,12 @@ class GRCNSolver(Solver):
                     self.best_graph = deepcopy(adj.to_dense())
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
 
             if debug:
                 print(
@@ -99,6 +114,10 @@ class GRCNSolver(Solver):
         loss_test, acc_test, _ = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, self.best_graph
 
     def evaluate(self, test_mask):
@@ -186,6 +205,7 @@ class GAUGSolver(Solver):
                 self.result['train'] = acc_train
                 improve = '*'
                 self.weights = deepcopy(self.model.state_dict())
+                self.best_graph = self.adj
 
             # print
             if debug:
@@ -432,7 +452,7 @@ class GENSolver(Solver):
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
-        self.estimator = GENEstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
+        self.estimator = GENEstimateAdj(self.n_classes, self.adj, self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
@@ -848,14 +868,11 @@ class GTSolver(Solver):
 
     def learn(self, debug=False):
         if 'analysis' in self.conf and self.conf.analysis['flag']:
-            path = os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir'], 'wandb')
-            if not os.path.exists(path):
-                os.makedirs(path)
-            wandb.init(config=self.conf,
-                       project=self.conf.analysis['project'],
-                       dir=os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir']))
-            wandb.define_metric("loss_val", summary="min")
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
             wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
             wandb.define_metric("loss_train", summary="min")
             wandb.define_metric("acc_train", summary="max")
 
@@ -904,7 +921,8 @@ class GTSolver(Solver):
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         if 'analysis' in self.conf and self.conf.analysis['flag']:
             wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
-            wandb.finish()
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask, graph_analysis=False):
@@ -1042,6 +1060,14 @@ class NODEFORMERSolver(Solver):
         self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=self.conf.training['weight_decay'], lr=self.conf.training['lr'])
 
     def learn(self, debug=False):
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
 
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
@@ -1071,6 +1097,13 @@ class NODEFORMERSolver(Solver):
                 self.result['train'] = acc_train
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
+
             if debug:
                 print(
                     "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
@@ -1081,6 +1114,10 @@ class NODEFORMERSolver(Solver):
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask):
@@ -1104,7 +1141,7 @@ class SEGSLSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("segsl"))
-        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
+        self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
 
     def learn(self, debug=False):
 

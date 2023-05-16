@@ -3,8 +3,8 @@ model:
 
 training:
   n_epochs: 1000
-  lr: 0.1
-  weight_decay: 0   # 1.3026973714043257e-05, 2.3545587233182368e-05, 7.403929623323868e-05 for cora, citeseer, pubmed
+  lr: 1e-1
+  weight_decay: 5e-7
 
 dataset:
   cora_split: false
@@ -15,3 +15,7 @@ dataset:
 
 analysis:
   flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/gaug

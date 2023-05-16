@@ -5,7 +5,7 @@ model:
 
 training:
   n_epochs: 100
-  lr: 0.1
+  lr: 1e-2
   weight_decay: 1e-3
 
 dataset:
@@ -20,4 +20,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/idgl
+  load_graph_path: results/graph/sublime
