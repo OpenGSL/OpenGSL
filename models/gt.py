@@ -101,7 +101,9 @@ class FeedForwardModule(nn.Module):
 
 class GT(nn.Module):
 
-    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm_type='LayerNorm', num_heads=8, act='relu', input_layer=True, output_layer=True, ff=False, hidden_dim_multiplier=2):
+    def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm_type='LayerNorm',
+                 num_heads=8, act='relu', input_layer=False, output_layer=False, ff=False, hidden_dim_multiplier=2,
+                 use_norm=False, use_redisual=False):
 
         super(GT, self).__init__()
         self.nfeat = nfeat
@@ -109,6 +111,8 @@ class GT(nn.Module):
         self.n_layers = n_layers
         self.input_layer = input_layer
         self.output_layer = output_layer
+        self.use_norm = use_norm
+        self.use_residual = use_redisual
         self.ff = ff
         self.norm_type = eval('nn.' + norm_type)
         self.act = eval('F.' + act) if not act == 'identity' else lambda x: x
@@ -119,10 +123,12 @@ class GT(nn.Module):
             self.output_linear = nn.Linear(in_features=nhid, out_features=nclass)
             self.output_normalization = self.norm_type(nhid)
         self.trans = nn.ModuleList()
-        self.norms_1 = nn.ModuleList()
+        if self.use_norm:
+            self.norms_1 = nn.ModuleList()
         if self.ff:
             self.ffns = nn.ModuleList()
-            self.norms_2 = nn.ModuleList()
+            if self.use_norm:
+                self.norms_2 = nn.ModuleList()
         for i in range(n_layers):
             if i == 0 and not self.input_layer:
                 in_hidden = nfeat
@@ -133,10 +139,12 @@ class GT(nn.Module):
             else:
                 out_hidden = nhid
             self.trans.append(TransformerAttentionModule(in_hidden, out_hidden, num_heads, dropout))
-            self.norms_1.append(self.norm_type(in_hidden))
+            if self.use_norm:
+                self.norms_1.append(self.norm_type(in_hidden))
             if self.ff:
                 self.ffns.append(FeedForwardModule(in_hidden, hidden_dim_multiplier, dropout, act))
-                self.norms_2.append(self.norm_type(in_hidden))
+                if self.use_norm:
+                    self.norms_2.append(self.norm_type(in_hidden))
 
     def forward(self, x, graph, labels=None, graph_analysis=False):
         if self.input_layer:
@@ -146,22 +154,25 @@ class GT(nn.Module):
 
         homo_heads = []
         for i, layer in enumerate(self.trans):
-            x_res = self.norms_1[i](x)
+
+            x_res = self.norms_1[i](x) if self.use_norm else x
             x_res, homophily = layer(x_res, graph, labels, graph_analysis)
-            x = x + x_res
+            x = x + x_res if self.use_residual else x_res
+
             if self.ff:
-                x_res = self.norms_2[i](x)
+                x_res = self.norms_2[i](x) if self.use_norm else x
                 x_res = self.ffns[i](x_res)
-                x = x + x_res
+                x = x + x_res if self.use_residual else x_res
             if i == self.n_layers - 1:
                 mid = x
             if graph_analysis:
                 homo_heads.append(homophily)
 
         if self.output_layer:
-            x = self.output_normalization(x)
-            x = self.output_linear(x).squeeze(1)
-        return mid, x, homo_heads
+            if self.use_norm:
+                x = self.output_normalization(x)
+            x = self.output_linear(x)
+        return mid, x.squeeze(1), homo_heads
 
 
 if __name__ == '__main__':

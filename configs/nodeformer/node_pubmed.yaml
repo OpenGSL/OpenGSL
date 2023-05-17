@@ -20,6 +20,7 @@ dataset:
   feat_norm: true
   cora_split: false
   load_graph: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space

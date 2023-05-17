@@ -1,8 +1,8 @@
 model:
-  n_layers: 2 # n_payers = normal_layers + classification_layer
+  n_layers: 2
   n_hidden: 8
-  n_heads: 8 # for normal layers
-  dropout: 0.6
+  n_heads: 8
+  dropout: 0.5
 
 dataset:
   feat_norm: true
@@ -11,7 +11,7 @@ dataset:
   sparse: true
 
 training:
-  lr: 1e-2
+  lr: 5e-3
   weight_decay: 5e-4
   n_epochs: 200
 

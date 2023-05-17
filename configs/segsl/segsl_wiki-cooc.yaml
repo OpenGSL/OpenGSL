@@ -12,15 +12,18 @@ model:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
+gsl:
+  k: 3
+  se: 2
+
+
 dataset:
+  feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
-  feat_norm: true
-  normalize: true
-  add_loop: true
   sparse: true
 
-
 training:
+  n_iters: 10
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-2
   n_epochs: 200
@@ -30,6 +33,5 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
-  load_graph: false
-  load_graph_path: results/graph/stable
+  save_graph: true
+  save_graph_path: results/graph

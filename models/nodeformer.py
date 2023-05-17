@@ -322,4 +322,4 @@ class NodeFormer(nn.Module):
 
         x_out = self.fcs[-1](z).squeeze(0)
 
-        return x_out, link_loss_
+        return x_out.squeeze(1), link_loss_

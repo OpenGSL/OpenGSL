@@ -941,8 +941,10 @@ class GTSolver(Solver):
     def set_method(self):
         self.model = GT(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                    self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm_type'],
-                   self.conf.model['n_heads'], self.conf.model['act'], ff=self.conf.model['ff'],
-                   hidden_dim_multiplier=self.conf.model['hidden_dim_multiplier']).to(self.device)
+                   self.conf.model['n_heads'], self.conf.model['act'], input_layer=self.conf.model['input_layer'],
+                        ff=self.conf.model['ff'], output_layer=self.conf.model['output_layer'],
+                        use_norm=self.conf.model['use_norm'], use_redisual=self.conf.model['use_residual'],
+                        hidden_dim_multiplier=self.conf.model['hidden_dim_multiplier']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                  weight_decay=self.conf.training['weight_decay'])
 

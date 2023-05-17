@@ -243,7 +243,7 @@ class GAT(nn.Module):
         self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads, dropout=dropout))
         for i in range(n_layers-2):
             self.convs.append(GATConv(n_hidden*n_heads, n_hidden, heads=n_heads, dropout=dropout))
-        self.convs.append((GATConv(n_hidden*n_heads, n_class, concat=False, dropout=dropout)))
+        self.convs.append((GATConv(n_hidden*n_heads, n_class, dropout=dropout)))
         self.dropout = dropout
 
     def forward(self, input):
