@@ -22,7 +22,6 @@ dataset:
   feat_norm: true
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
-  sparse: true
 
 training:
   n_iters: 10
@@ -35,7 +34,5 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
-  save_graph_path: results/graph
   save_graph: true
   save_graph_path: results/graph
