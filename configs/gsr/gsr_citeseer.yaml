@@ -12,7 +12,7 @@ refine_graph:
   rm_ratio: 0.0
   add_ratio: 0.5
   cos_batch_size: 10000
-  fsim_weight: 0.25
+  fsim_weight: 0.75
   fsim_norm: True
 
 
@@ -22,8 +22,8 @@ dataset:
   sparse: true
 
 deepwalk:
-  num_walks: 12
-  window_size: 11
+  num_walks: 10
+  window_size: 13
   walk_length: 100
   n_hidden: 64
   num_workers: 32
@@ -35,18 +35,18 @@ training:
 
   n_epochs: 1000
     
-  gsr_lr: 1e-3
+  gsr_lr: 5e-3
   gsr_weight_decay: 5e-4
-  gsr_epochs: 50
+  gsr_epochs: 100
 
-  intra_weight: 0.5
+  intra_weight: 0.75
   momentum_factor: 0.999
 
   gsl_batch_size: 128
-  fan_out: '20_40'
+  fan_out: '1_2'
 
 analysis:
   flag: false
   project: gsl
 
-search_par: true
+search_par: false

@@ -1,18 +1,18 @@
 model:
   n_hidden: 64
   dropout: 0.5
-  activation: 'Elu'
+  activation: 'relu'
   decoder_layer: 2
-  decoder_n_hidden: 48
+  decoder_n_hidden: 64
 
   nce_k: 16382
   nce_t: 0.07
 
 refine_graph:
-  rm_ratio: 0.0
-  add_ratio: 0.5
+  rm_ratio: 0.05
+  add_ratio: 0
   cos_batch_size: 10000
-  fsim_weight: 0.25
+  fsim_weight: 0.1
   fsim_norm: True
 
 
@@ -35,15 +35,15 @@ training:
 
   n_epochs: 1000
     
-  gsr_lr: 1e-3
+  gsr_lr: 1e-2
   gsr_weight_decay: 5e-4
-  gsr_epochs: 50
+  gsr_epochs: 3
 
-  intra_weight: 0.5
+  intra_weight: 0.75
   momentum_factor: 0.999
 
   gsl_batch_size: 128
-  fan_out: '20_40'
+  fan_out: '15_30'
 
 analysis:
   flag: false
