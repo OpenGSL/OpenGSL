@@ -6,23 +6,28 @@ model:
   input_dropout: 0.2
   norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
   n_heads: 8
-  ff: true
+  ff: false
   hidden_dim_multiplier: 1
 
 dataset:
   feat_norm: true
-  cora_split: false # for cora,citeseer and pubmed
+  cora_split: false
   load_graph: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-3
-  n_epochs: 1000
+  n_epochs: 10
   weight_decay: 5e-3
 
 # analysis
 analysis:
   flag: true
+  sweep: true
+  sweep_id: yotsugi/gsl-benchmark/zraif59m
   project: gsl
   save_graph: false
   graph_analysis: false
+  dir: wandb/gt_cora
+  count: 3

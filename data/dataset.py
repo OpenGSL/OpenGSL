@@ -1,19 +1,16 @@
-import torch.nn as nn
 import torch
-import torch.nn.functional as F
 from data.pyg_load import pyg_load_dataset
 from data.hetero_load import hetero_load
-import dgl
 from data.split import get_split
-from dgl.data.utils import generate_mask_tensor
-from utils.utils import sample_mask, set_seed, normalize_feats, accuracy
+from utils.utils import normalize_feats
 import numpy as np
 from data.homophily_control import get_new_adj
+import pickle
 
 
 class Dataset:
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, cora_split=True, homophily_control=None):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, cora_split=False, homophily_control=None):
         '''
         This class loads, preprocessed and splits data. The results are saved as "self.feats, self.adj, self.labels, self.train_masks, self.val_masks, self.test_masks".
         Noth that self.adj is undirected and has no self loops.
@@ -47,10 +44,13 @@ class Dataset:
         -------
 
         '''
-        if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph']:
+        if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
+                       'flickr']:
             self.data_raw = pyg_load_dataset(ds_name)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
+            if ds_name == 'flickr':
+                self.feats = self.feats.to_dense()
             self.n_nodes = self.feats.shape[0]
             self.dim_feats = self.feats.shape[1]
             self.labels = self.g.y
@@ -78,19 +78,6 @@ class Dataset:
             if feat_norm:
                 self.feats = normalize_feats(self.feats)
             self.n_classes = len(self.labels.unique())
-
-        # elif ds_name in ['penn94']:
-        #     from data.ls_hetero import load_fb100_dataset
-        #     self.adj, self.feats, self.labels, self.splits = load_fb100_dataset()
-        #     self.n_nodes = self.feats.shape[0]
-        #     self.dim_feats = self.feats.shape[1]
-        #     self.n_edges = len(self.adj.coalesce().values())
-        #     self.n_classes = 2
-        #     if not ('data_cpu' in self.conf and self.conf['data_cpu']):
-        #         self.feats = self.feats.to(self.device)
-        #         self.labels = self.labels.to(self.device)
-        #         self.adj = self.adj.to(self.device)
-
 
         else:
             print('dataset not implemented')
@@ -122,7 +109,18 @@ class Dataset:
         self.train_masks = []
         self.val_masks = []
         self.test_masks = []
-        if self.name in ['coauthorcs', 'coauthorph', 'amazoncom', 'amazonpho']:
+        if self.name in ['blogcatalog', 'flickr']:
+            def load_obj(file_name):
+                with open(file_name, 'rb') as f:
+                    return pickle.load(f)
+
+            train_indices, val_indices, test_indices = load_obj('data/' + self.name + '_tvt_nids.pkl')
+            for i in range(n_splits):
+                self.train_masks.append(train_indices)
+                self.val_masks.append(val_indices)
+                self.test_masks.append(test_indices)
+
+        elif self.name in ['coauthorcs', 'coauthorph', 'amazoncom', 'amazonpho']:
             for i in range(n_splits):
                 np.random.seed(i)
                 train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_examples_per_class=20, val_examples_per_class=30)  # 默认采取20-30-rest这种划分

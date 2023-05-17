@@ -22,7 +22,7 @@ training:
   mi_lr: 0.01
   mi_weight_decay: 0
 
-  main_epoch: 20
+  main_epoch: 40
   inner_ne_epoch: 5
   inner_cls_epoch: 5
   inner_mi_epoch: 10
@@ -50,8 +50,10 @@ dataset:
   pyg: False
   big: False
   batch: 0
+  sparse: true
 
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph

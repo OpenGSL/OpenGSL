@@ -19,7 +19,7 @@ def add_knn(k, node_embed, edge_index):
         (knn_edge_index[0].reshape(1, -1), knn_edge_index[1].reshape(1, -1)),
         dim=0)
     knn_edge_index = knn_edge_index.t()
-    edge_index_2 = torch.concat((edge_index, knn_edge_index), dim=0)
+    edge_index_2 = torch.cat((edge_index, knn_edge_index), dim=0)
     edge_index_2 = torch.unique(edge_index_2, dim=0)
     return edge_index_2
 
@@ -35,7 +35,7 @@ def calc_e1(adj: torch.Tensor):
 
 def get_adj_matrix(node_num, edge_index, weight) -> torch.Tensor:
     adj_matrix = torch.zeros((node_num, node_num))
-    adj_matrix[edge_index.t()[0], edge_index.t()[1]] = weight
+    adj_matrix[edge_index.t()[0], edge_index.t()[1]] = weight.float()
     adj_matrix = adj_matrix - torch.diag_embed(torch.diag(adj_matrix))  #去除对角线
     return adj_matrix
 
@@ -46,7 +46,8 @@ def get_weight(node_embedding, edge_index):
     weight = []
     for i in range(links.shape[0]):
         # print(links[i])
-        weight.append(torch.corrcoef(links[i])[0, 1])
+        # weight.append(torch.corrcoef(links[i])[0, 1])
+        weight.append(np.corrcoef(links[i].cpu())[0, 1])
     weight = torch.tensor(weight) + 1
     weight[torch.isnan(weight)] = 0
     M = weight.mean() / (2 * node_num)
@@ -816,7 +817,7 @@ def reshape(community: list, code_tree: PartitionTree, isleaf: torch.Tensor,
                 select_leaf(id2, code_tree, isleaf, se_dict)
             ])
     edge_index = torch.tensor(edge_index)
-    edge_index = torch.concat((edge_index, torch.flip(edge_index, dims=[1])),
+    edge_index = torch.cat((edge_index, torch.flip(edge_index, dims=[1])),
                               dim=0)
     edge_index = torch.unique(edge_index, dim=0)
     return edge_index.t()

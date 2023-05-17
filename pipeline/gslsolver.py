@@ -3,9 +3,10 @@ from sklearn.metrics.pairwise import cosine_similarity as cos
 import numpy as np
 from copy import deepcopy
 from models.gcn import GCN
+from models.gnn_modules import APPNP
 from models.grcn import GRCN
 from models.gaug import GAug, eval_edge_pred, MultipleOptimizer
-from models.gen import EstimateAdj, prob_to_adj
+from models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
 from models.idgl import IDGL, sample_anchors, diff, compute_anchor_adj
 from models.prognn import PGD, prox_operators, EstimateAdj, feature_smoothing
 from models.gt import GT
@@ -57,6 +58,15 @@ class GRCNSolver(Solver):
 
         '''
 
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
+
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
             t0 = time.time()
@@ -87,6 +97,12 @@ class GRCNSolver(Solver):
                     self.best_graph = deepcopy(adj.to_dense())
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
 
             if debug:
                 print(
@@ -98,6 +114,10 @@ class GRCNSolver(Solver):
         loss_test, acc_test, _ = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, self.best_graph
 
     def evaluate(self, test_mask):
@@ -185,6 +205,7 @@ class GAUGSolver(Solver):
                 self.result['train'] = acc_train
                 improve = '*'
                 self.weights = deepcopy(self.model.state_dict())
+                self.best_graph = self.adj
 
             # print
             if debug:
@@ -422,11 +443,16 @@ class GENSolver(Solver):
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
-        self.estimator = EstimateAdj(self.num_targets, self.adj, self.train_mask, self.labels, self.homophily)
+        if self.conf.model['type']=='gcn':
+            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        elif self.conf.model['type']=='appnp':
+            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
+        self.estimator = GENEstimateAdj(self.n_classes, self.adj, self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
@@ -621,7 +647,7 @@ class IDGLSolver(Solver):
                 self.result['train'] = acc_train
                 self.result['valid'] = acc_val
                 improve = '*'
-                self.best_graph = adj.clone().detach()
+                self.best_graph = deepcopy(adj.clone().detach())
             else:
                 wait += 1
                 if wait == self.conf.training['patience']:
@@ -801,10 +827,15 @@ class PROGNNSolver(Solver):
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        if self.conf.model['type'] == 'gcn':
+            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
+                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
+                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+        else:
+            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
         self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
@@ -837,14 +868,11 @@ class GTSolver(Solver):
 
     def learn(self, debug=False):
         if 'analysis' in self.conf and self.conf.analysis['flag']:
-            path = os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir'], 'wandb')
-            if not os.path.exists(path):
-                os.makedirs(path)
-            wandb.init(config=self.conf,
-                       project=self.conf.analysis['project'],
-                       dir=os.path.join(dirname(dirname(os.path.abspath(__file__))), self.conf.analysis['dir']))
-            wandb.define_metric("loss_val", summary="min")
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
             wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
             wandb.define_metric("loss_train", summary="min")
             wandb.define_metric("acc_train", summary="max")
 
@@ -893,7 +921,8 @@ class GTSolver(Solver):
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         if 'analysis' in self.conf and self.conf.analysis['flag']:
             wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
-            wandb.finish()
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask, graph_analysis=False):
@@ -1031,6 +1060,14 @@ class NODEFORMERSolver(Solver):
         self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=self.conf.training['weight_decay'], lr=self.conf.training['lr'])
 
     def learn(self, debug=False):
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
 
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
@@ -1060,6 +1097,13 @@ class NODEFORMERSolver(Solver):
                 self.result['train'] = acc_train
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
+
             if debug:
                 print(
                     "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
@@ -1070,6 +1114,10 @@ class NODEFORMERSolver(Solver):
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask):
@@ -1093,7 +1141,7 @@ class SEGSLSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("segsl"))
-        self.normalize = normalize_sp_tensor if self.conf.sparse else normalize
+        self.normalize = normalize_sp_tensor if self.conf.dataset['sparse'] else normalize
 
     def learn(self, debug=False):
 
@@ -1114,9 +1162,7 @@ class SEGSLSolver(Solver):
 
     def train_gcn(self, iter, adj, debug=False):
         self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                         self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                         self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+                         self.conf.model['dropout'], self.conf.model['input_dropout']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
@@ -1184,14 +1230,14 @@ class SEGSLSolver(Solver):
                                  self.conf.gsl['k'])
         new_edge_index_2 = reshape(community, code_tree, isleaf,
                                    self.conf.gsl['k'])
-        new_edge_index = torch.concat(
+        new_edge_index = torch.cat(
             (new_edge_index.t(), new_edge_index_2.t()), dim=0)
         new_edge_index, unique_idx = torch.unique(
             new_edge_index, return_counts=True, dim=0)
         new_edge_index = new_edge_index[unique_idx != 1].t()
         add_num = int(new_edge_index.shape[1])
 
-        new_edge_index = torch.concat(
+        new_edge_index = torch.cat(
             (new_edge_index.t(), edge_index.cpu()), dim=0)
         new_edge_index = torch.unique(new_edge_index, dim=0)
         new_edge_index = new_edge_index.t()
@@ -1317,7 +1363,9 @@ class SUBLIMESolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.weights = deepcopy(model.state_dict())
-                    self.best_graph = deepcopy(adj)
+                    current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
+                    self.best_graph = deepcopy(current_adj)
+                    self.best_graph_test = deepcopy(adj)
 
             if debug:
                 print("Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
@@ -1340,7 +1388,7 @@ class SUBLIMESolver(Solver):
                         n_layers=self.conf.n_layers_cls, dropout=self.conf.dropout_cls,
                         dropout_adj=self.conf.dropedge_cls, sparse=self.conf.sparse).to(self.device)
         model.load_state_dict(self.weights)
-        adj = self.best_graph
+        adj = self.best_graph_test
         return self.evaluate(model, self.test_mask, adj)
 
     def learn(self, debug=False):
@@ -1357,7 +1405,7 @@ class SUBLIMESolver(Solver):
             self.model.train()
             self.graph_learner.train()
 
-            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)
+            loss, Adj = self.loss_gcl(self.model, self.graph_learner, self.feats, anchor_adj)   # Adj是有自环且normalized
 
             self.optimizer_cl.zero_grad()
             self.optimizer_learner.zero_grad()
@@ -1868,7 +1916,6 @@ class CoGSLSolver(Solver):
         self.best_acc_val = 0
         self.best_loss_val = 1e9
         self.best_test = 0
-        self.best_v = None
         self.best_v_cls_weight = None
         torch.autograd.set_detect_anomaly(True)
 
@@ -1915,7 +1962,7 @@ class CoGSLSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.cls.encoder_v.state_dict())
-                self.best_v = views[0]
+                self.best_graph = views[0]
             print("EPOCH ",epoch, "\tCUR_LOSS_VAL ", loss_val, "\tCUR_ACC_Val ", acc_val, "\tBEST_ACC_VAL ", self.best_acc_val)
         self.total_time = time.time() - self.start_time
         print('Optimization Finished!')
@@ -1925,7 +1972,7 @@ class CoGSLSolver(Solver):
         self.result['test'] = acc_test
         #print("Test_Macro: ", test_f1_macro, "\tTest_Micro: ", test_f1_micro, "\tAUC: ", auc)
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, 0
+        return self.result, self.best_graph.to_dense()
 
 
     def evaluate(self, test_mask):
@@ -1971,7 +2018,7 @@ class CoGSLSolver(Solver):
     def test(self):
         self.model.cls.encoder_v.load_state_dict(self.weights)
         self.model.eval()
-        self.view = self.best_v
+        self.view = self.best_graph
 
         return self.evaluate(self.test_mask)
 

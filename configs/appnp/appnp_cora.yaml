@@ -12,12 +12,15 @@ training:
 dataset:
   feat_norm: true
   cora_split: false
-  load_graph: false
-  normalize: true
-  add_loop: true
+  normalize: false
+  add_loop: false
+  sparse: true
+#  homophily_control: 0.8
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
+  load_graph: true
+  load_graph_path: results/graph/sublime

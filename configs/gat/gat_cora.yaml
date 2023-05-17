@@ -1,0 +1,23 @@
+model:
+  n_layers: 2 # n_payers = normal_layers + classification_layer
+  n_hidden: 8
+  n_heads: 8 # for normal layers
+  dropout: 0.6
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  load_graph: false
+  sparse: true
+
+training:
+  lr: 1e-2
+  weight_decay: 5e-4
+  n_epochs: 200
+
+analysis:
+  flag: false
+  project: gsl-benchmark
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/stable

@@ -4,6 +4,7 @@ import time
 from utils.utils import accuracy
 from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
+import wandb
 
 
 class Solver:
@@ -20,7 +21,7 @@ class Solver:
         self.model = None
 
         self.feats = dataset.feats
-        self.adj = dataset.adj
+        self.adj = dataset.adj if self.conf.dataset['sparse'] else dataset.adj.to_dense()
         self.labels = dataset.labels
         self.train_masks = dataset.train_masks
         self.val_masks = dataset.val_masks
@@ -78,6 +79,14 @@ class Solver:
         -------
 
         '''
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
 
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
@@ -106,6 +115,13 @@ class Solver:
                 self.weights = deepcopy(self.model.state_dict())
 
             # print
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
+
             if debug:
                 print(
                     "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
@@ -115,6 +131,10 @@ class Solver:
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, 0
 
     def evaluate(self, test_mask):

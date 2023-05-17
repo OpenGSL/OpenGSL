@@ -4,7 +4,7 @@ model:
   act: relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 64
   dropout: 0.5
-  input_dropout: 0.5
+  input_dropout: 0
   norm:
     flag: false
     norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
@@ -13,12 +13,12 @@ model:
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
-  load_graph:
-    flag: false
-    loc: results/graph/grcn
-  normalize: true
-  add_loop: true
+  cora_split: false # for cora,citeseer and pubmed
+  feat_norm: true
+  normalize: false
+  add_loop: false
+  sparse: true
+
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
@@ -31,3 +31,5 @@ analysis:
   flag: false
   project: gsl
   save_graph: false
+  load_graph: true
+  load_graph_path: results/graph/sublime
