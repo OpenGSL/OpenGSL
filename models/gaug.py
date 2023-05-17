@@ -25,11 +25,11 @@ class VGAE(nn.Module):
         # GCN encoder
         # hidden = self.gcn_base(feats, adj)
         # self.mean = F.relu(self.gcn_mean(hidden, adj))
-        _, self.mean = self.conv_graph((feats, adj, False))
-        self.mean = F.relu(self.mean)
+        _, mean = self.conv_graph((feats, adj, False))
+        mean = F.relu(mean)
         if self.gae:
             # GAE (no sampling at bottleneck)
-            Z = self.mean
+            Z = mean
         else:
             # VGAE
             # self.logstd = F.relu(self.gcn_logstd(hidden, adj))
@@ -39,6 +39,7 @@ class VGAE(nn.Module):
             pass
         # inner product decoder
         adj_logits = Z @ Z.T
+        # print(Z)
         return adj_logits
 
 
@@ -63,6 +64,9 @@ class GAug(nn.Module):
         """ sample an adj from the predicted edge probabilities of ep_net """
         edge_probs = adj_logits / torch.max(adj_logits)
         # sampling
+
+        # print(adj_logits)
+        # print(edge_probs)
         adj_sampled = pyro.distributions.RelaxedBernoulliStraightThrough(temperature=self.temperature, probs=edge_probs).rsample()
         # making adj_sampled symmetric
         adj_sampled = adj_sampled.triu(1)
@@ -80,6 +84,8 @@ class GAug(nn.Module):
         return adj_sampled
 
     def forward(self, feats, adj, adj_orig):
+        # print(feats)
+        # print(adj)
         adj_logits = self.ep_net(feats, adj)
         if self.alpha == 1:
             adj_new = self.sample_adj(adj_logits)
