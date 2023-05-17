@@ -5,6 +5,7 @@ import math
 import dgl
 from .gcn import GCN, GraphConvolution
 from sklearn.neighbors import kneighbors_graph
+from .gnn_modules import APPNP
 import numpy as np
 
 def apply_non_linearity(tensor, non_linearity, i):
@@ -146,20 +147,17 @@ class MLP(torch.nn.Module):
         return similarities
 
 class GCN_DAE(torch.nn.Module):
-    def __init__(self, nlayers, in_dim, hidden_dim, nclasses, dropout, dropout_adj, features, k, knn_metric, i_,
+    def __init__(self, cfg_model, nlayers, in_dim, hidden_dim, nclasses, dropout, dropout_adj, features, k, knn_metric, i_,
                  non_linearity, normalization, mlp_h, mlp_epochs, mlp_act):
         super(GCN_DAE, self).__init__()
 
-        self.layers = torch.nn.ModuleList()
-
-        self.layers.append(GraphConvolution(in_dim, hidden_dim, dropout))
-        if nlayers > 2:
-            self.layers.append(GraphConvolution(hidden_dim, hidden_dim, dropout, n_linear=nlayers - 2))
-        self.layers.append(GraphConvolution(hidden_dim, nclasses, dropout, last_layer=True))
-
+        if cfg_model['type'] == 'gcn':
+            self.layers = GCN(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=1)
+        elif cfg_model['type'] == 'appnp':
+            self.layers = APPNP(in_dim, hidden_dim, nclasses, spmm_type=1,
+                               dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
 
         self.dropout_adj = torch.nn.Dropout(p=dropout_adj)
-        self.dropout_adj_p = dropout_adj
         self.normalization = normalization
 
         self.graph_gen = MLP(2, features.shape[1], math.floor(math.sqrt(features.shape[1] * mlp_h)),
@@ -176,30 +174,26 @@ class GCN_DAE(torch.nn.Module):
         Adj_ = self.get_adj(features)
         Adj = self.dropout_adj(Adj_)
 
-        for i, layer in enumerate(self.layers):
-            x = layer(x, Adj)
+        x = self.layers((x, Adj, True))
 
         return x, Adj_
 
 class GCN_C(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, dropout_adj):
+    def __init__(self, cfg_model, in_channels, hidden_channels, out_channels, num_layers, dropout, dropout_adj):
         super(GCN_C, self).__init__()
 
-        self.layers = torch.nn.ModuleList()
-        self.layers.append(GraphConvolution(in_channels, hidden_channels, dropout))
-        if num_layers > 2:
-            self.layers.append(GraphConvolution(hidden_channels, hidden_channels, dropout, n_linear=num_layers - 2))
-        self.layers.append(GraphConvolution(hidden_channels, out_channels, dropout, last_layer=True))
-
+        if cfg_model['type'] == 'gcn':
+            self.layers = GCN(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=1)
+        elif cfg_model['type'] == 'appnp':
+            self.layers = APPNP(in_channels, hidden_channels, out_channels, spmm_type=1,
+                               dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
 
         self.dropout_adj = torch.nn.Dropout(p=dropout_adj)
-        self.dropout_adj_p = dropout_adj
 
     def forward(self, x, adj_t):
         Adj = self.dropout_adj(adj_t)
 
-        for i, layer in enumerate(self.layers):
-            x = layer(x, Adj)
+        x = self.layers((x, Adj, True))
         return x
 
 
@@ -213,20 +207,20 @@ class SLAPS(torch.nn.Module):
         self.device = device
         self.conf = conf
 
-        self.gcn_dae = GCN_DAE(nlayers=self.conf.model['nlayers_adj'], in_dim=num_features, hidden_dim=self.conf.model['hidden_adj'], nclasses=num_features,
+        self.gcn_dae = GCN_DAE(self.conf.model, nlayers=self.conf.model['nlayers_adj'], in_dim=num_features, hidden_dim=self.conf.model['hidden_adj'], nclasses=num_features,
                              dropout=self.conf.model['dropout1'], dropout_adj=self.conf.model['dropout_adj1'],
                              features=features, k=self.conf.model['k'], knn_metric=self.conf.model['knn_metric'], i_=self.conf.model['i'],
-                             non_linearity=self.conf.model['non_linearity'], normalization=self.conf.model['normalization'], mlp_h=self.conf.model['mlp_h'],
+                             non_linearity=self.conf.model['non_linearity'], normalization=self.conf.model['normalization'], mlp_h=self.num_features,
                              mlp_epochs=self.conf.model['mlp_epochs'], mlp_act=self.conf.model['mlp_act'])
-        self.gcn_c = GCN_C(in_channels=num_features, hidden_channels=self.conf.model['hidden'], out_channels=num_classes,
-                        num_layers=self.conf.model['nlayers'], dropout=self.conf.model['dropout2'], dropout_adj=self.conf.model['dropout_adj2'])
+        self.gcn_c = GCN_C(self.conf.model, in_channels=num_features, hidden_channels=self.conf.model['hidden'], out_channels=num_classes,
+                            num_layers=self.conf.model['nlayers'], dropout=self.conf.model['dropout2'], dropout_adj=self.conf.model['dropout_adj2'])
 
 
     def forward(self, features):
         loss_dae, Adj = self.get_loss_masked_features(features)
-        logits = self.gcn_c(features, Adj)
-
-        return logits, loss_dae
+        logits = self.gcn_c(features, Adj).squeeze(1)
+        
+        return logits, loss_dae, Adj
 
     def get_loss_masked_features(self, features):
         if self.conf.dataset['feat_type'] == 'binary':
