@@ -2,12 +2,11 @@ model:
   type: 'gcn'
   nlayers_adj: 2
   hidden_adj: 512
-  k: 20
+  k: 15
   knn_metric: 'cosine'
   i: 6
   non_linearity: 'relu'
   normalization: 'sym'
-  mlp_h: 1433 #[50, 1433]
   mlp_epochs: 100
   mlp_act: 'relu'
   hidden: 32
@@ -22,19 +21,19 @@ model:
 dataset:
   feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
-  sparse: true
+  sparse: false
   feat_type: 'binary' # 'continuous' for pubmed, amazon-ratings, questions, roman-empire and wiki-cooc, otherwise 'binary'
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-2
   lr_dae: 1e-3
-  n_epochs: 2000
+  n_epochs: 1000
   epoch_d: 5
   weight_decay: 5e-4
   weight_decay_dae: 0
   lamda: 10
-  ratio: 10
+  ratio: 5
   nr: 5
 
 analysis:

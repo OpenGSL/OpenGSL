@@ -18,7 +18,7 @@ model:
 
 dataset:
   feat_norm: false
-  cora_split: true # for cora,citeseer and pubmed
+  cora_split: false # for cora,citeseer and pubmed
   feat_type: 'binary' # 'continuous' for pubmed, amazon-ratings, questions, roman-empire and wiki-cooc, otherwise 'binary'
 
 training:

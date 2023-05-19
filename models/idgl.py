@@ -101,7 +101,7 @@ class AnchorGCN(nn.Module):
         if not first:
             cur_agg_vec = update_adj_ratio * cur_agg_vec + (1-update_adj_ratio) * self.layers[-1](node_vec, first_node_anchor_adj, anchor_mp=True)
         output = (1 - graph_skip_conn) * cur_agg_vec + graph_skip_conn * self.layers[-1](node_vec, init_adj, anchor_mp=False)
-        output = F.log_softmax(output, dim=-1)
+        output = F.log_softmax(output, dim=-1).squeeze(1)
         return first_vec, init_agg_vec, node_vec, output
 
 
@@ -201,7 +201,7 @@ class IDGL(nn.Module):
         raw_adj, adj = self.learn_graph(self.graph_learner, node_features, self.graph_skip_conn, init_adj=init_adj)
         adj = F.dropout(adj, self.feat_adj_dropout, training=self.training)
         node_vec = self.encoder(node_features, adj)
-        output = F.log_softmax(node_vec, dim=-1)
+        output = F.log_softmax(node_vec, dim=-1).squeeze(1)
         return output, adj
 
 
