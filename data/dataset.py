@@ -10,7 +10,7 @@ import pickle
 
 class Dataset:
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, cora_split=False, homophily_control=None):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None):
         '''
         This class loads, preprocessed and splits data. The results are saved as "self.feats, self.adj, self.labels, self.train_masks, self.val_masks, self.test_masks".
         Noth that self.adj is undirected and has no self loops.
@@ -21,12 +21,11 @@ class Dataset:
         feat_norm : whether to normalize the features
         verbose : whether to print statistics
         n_splits : number of data splits
-        cora_split : whether adopt random splits for cora, citeseer, pubmed
         '''
         self.name = data
         self.device = torch.device('cuda')
         self.prepare_data(data, feat_norm, verbose)
-        self.split_data(n_splits, cora_split, verbose)
+        self.split_data(n_splits, verbose)
         if homophily_control:
             self.adj = get_new_adj(self.adj, self.labels.cpu().numpy(), homophily_control)
 
@@ -94,12 +93,11 @@ class Dataset:
         if self.num_targets == 2:
             self.num_targets = 1
 
-    def split_data(self, n_splits, cora_split, verbose=True):
+    def split_data(self, n_splits, verbose=True):
         '''
         Parameters
         ----------
         n_splits : number of data splits
-        cora_split : whether adopt random splits for cora, citeseer, pubmed
         verbose : whether to print statistics
 
         Returns
@@ -129,16 +127,9 @@ class Dataset:
                 self.test_masks.append(test_indices)
         elif self.name in ['cora', 'citeseer', 'pubmed']:
             for i in range(n_splits):
-                if cora_split:
-                    np.random.seed(i)
-                    train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_examples_per_class=20, val_size=500, test_size=1000)
-                    self.train_masks.append(train_indices)
-                    self.val_masks.append(val_indices)
-                    self.test_masks.append(test_indices)
-                else:
-                    self.train_masks.append(torch.nonzero(self.g.train_mask, as_tuple=False).squeeze().numpy())
-                    self.val_masks.append(torch.nonzero(self.g.val_mask, as_tuple=False).squeeze().numpy())
-                    self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
+                self.train_masks.append(torch.nonzero(self.g.train_mask, as_tuple=False).squeeze().numpy())
+                self.val_masks.append(torch.nonzero(self.g.val_mask, as_tuple=False).squeeze().numpy())
+                self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
         elif self.name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
             assert n_splits < 10 , 'n_splits > splits provided'
             self.train_masks = self.splits[0][:n_splits]

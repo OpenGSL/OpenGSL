@@ -2,6 +2,7 @@ import torch
 from copy import deepcopy
 import time
 from utils.utils import accuracy
+from utils.recorder import Recorder
 from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 import wandb
@@ -55,6 +56,7 @@ class Solver:
         self.best_graph = None
         self.result = {'train': 0, 'valid': 0, 'test': 0}
         self.start_time = time.time()
+        self.recoder = Recorder(self.conf.training['patience'], self.conf.training['criterion'])
         self.set_method()
 
     def set_method(self):
@@ -104,15 +106,18 @@ class Solver:
 
             # Evaluate
             loss_val, acc_val = self.evaluate(self.val_mask)
+            flag, flag_earlystop = self.recoder.add(loss_val, acc_val)
 
             # save
-            if acc_val > self.result['valid']:
+            if flag:
                 improve = '*'
                 self.total_time = time.time() - self.start_time
                 self.best_val_loss = loss_val
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
+            elif flag_earlystop:
+                break
 
             # print
             if 'analysis' in self.conf and self.conf.analysis['flag']:
@@ -158,7 +163,6 @@ class Solver:
     def test(self):
         self.model.load_state_dict(self.weights)
         return self.evaluate(self.test_mask)
-
 
 
 
