@@ -2,7 +2,7 @@ model:
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
-  n_hidden: 64
+  n_hidden: 16
   dropout: 0.5
   input_dropout: 0
   norm:
@@ -25,6 +25,8 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
+  patience: ~
+  criterion: metric
 
 # analysis
 analysis:

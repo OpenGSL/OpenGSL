@@ -15,31 +15,14 @@ class EstimateAdj:
         self.count = 0
 
         self.homophily = homophily
-        if self.homophily > 0.5:
-            # If it is greater than 0.5, E is initialized with the original adjacency matrix
-            self.N = 1
-            self.E = adj.cpu().numpy()   # E:(num_node,num_node)
-        else:
-            # otherwise
-            self.N = 0
-            self.E = np.zeros((self.num_node, self.num_node), dtype=np.int64)
 
     def reset_obs(self):
         self.count = 0
-        #''' when you don't want the first graph to be an observation in any case
-        if self.homophily > 0.5:
-            self.N = 1
-            self.E = self.adj.copy()
-        else:
-            self.N = 0
-            self.E = np.zeros((self.num_node, self.num_node), dtype=np.int64)
-        #'''
-        #self.N = 0
-        #self.E = np.zeros((self.num_node, self.num_node), dtype=np.int64)
+        self.N = 0
+        self.E = np.zeros((self.num_node, self.num_node), dtype=np.int64)
 
     def update_obs(self, graph):
-        tmp = graph - np.diag(graph.diagonal())   # remove self loop
-        self.E = self.E + tmp
+        self.E += graph
         self.N += 1
 
     def revise_pred(self):

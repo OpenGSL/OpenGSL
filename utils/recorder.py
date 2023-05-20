@@ -14,6 +14,8 @@ class Recorder:
             flag = loss_val < self.best_loss
         elif self.criterion == 'metric':
             flag = metric_val > self.best_metric
+        elif self.criterion == 'either':
+            flag = loss_val < self.best_loss or metric_val > self.best_metric
         elif self.criterion == 'both':
             flag = loss_val < self.best_loss and metric_val > self.best_metric
         else:

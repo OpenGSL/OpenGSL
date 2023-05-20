@@ -343,8 +343,7 @@ class GENSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("gen"))
-        self.adj = self.adj.to_dense().to(self.device)
-        self.homophily = get_homophily(self.labels.cpu().numpy(), self.adj.cpu().numpy())
+        self.homophily = get_homophily(self.labels.cpu().numpy(), self.adj.to_dense().cpu().numpy())
 
     def knn(self, feature):
         # Generate a knn graph for input feature matrix. Note that the graph contains self loop.
@@ -361,7 +360,7 @@ class GENSolver(Solver):
         improve_1 = ''
         best_loss_val = 10
         best_acc_val = 0
-        normalized_adj = normalize(adj)
+        normalized_adj = normalize_sp_tensor(adj)
         for epoch in range(self.conf.training['n_epochs']):
             improve_2 = ''
             t0 = time.time()
@@ -392,6 +391,7 @@ class GENSolver(Solver):
                     self.best_iter = iter+1
                     self.hidden_output = hidden_output
                     self.output = output if len(output.shape)>1 else output.unsqueeze(1)
+                    self.output = F.log_softmax(self.output, dim=1)
                     self.weights = deepcopy(self.model.state_dict())
                     self.best_graph = deepcopy(adj)
 
@@ -409,7 +409,7 @@ class GENSolver(Solver):
         self.estimator.update_obs(self.knn(self.hidden_output))   # 3
         self.estimator.update_obs(self.knn(self.output))   # 4
         alpha, beta, O, Q, iterations = self.estimator.EM(self.output.max(1)[1].detach().cpu().numpy(), self.conf.gsl['tolerance'])
-        adj = torch.tensor(prob_to_adj(Q, self.conf.gsl['threshold']),dtype=torch.float32,device=self.device)
+        adj = torch.tensor(prob_to_adj(Q, self.conf.gsl['threshold']),dtype=torch.float32, device=self.device).to_sparse()
         print('Iteration {:04d} | Time(s) {:.4f} | EM step {:04d}'.format(iter+1,time.time()-t,self.estimator.count))
         return adj
 
@@ -439,7 +439,7 @@ class GENSolver(Solver):
 
     def test(self):
         self.model.load_state_dict(self.weights)
-        normalized_adj = normalize(self.best_graph)
+        normalized_adj = normalize_sp_tensor(self.best_graph)
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
@@ -447,12 +447,13 @@ class GENSolver(Solver):
             self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                              self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+                             self.conf.model['input_layer'], self.conf.model['output_layer'], weight_initializer='glorot',
+                             bias_initializer='zeros').to(self.device)
         elif self.conf.model['type']=='appnp':
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
-        self.estimator = GENEstimateAdj(self.n_classes, self.adj, self.train_mask, self.labels, self.homophily)
+        self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
