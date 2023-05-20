@@ -22,6 +22,7 @@ import torch.nn.functional as F
 import time
 from pipeline.solver import Solver
 from utils.utils import normalize, get_lr_schedule_by_sigmoid, get_homophily, normalize_sp_tensor, sparse_tensor_to_scipy_sparse, sparse_normalize, sparse_mx_to_torch_sparse_tensor
+from utils.recorder import Recorder
 import dgl
 import copy
 import wandb
@@ -705,9 +706,10 @@ class PROGNNSolver(Solver):
 
         # evaluate
         loss_val, acc_val = self.evaluate(self.val_mask, normalized_adj)
+        flag, flag_earlystop = self.recoder.add(loss_val, acc_val)
 
         # save best model
-        if loss_val < self.best_val_loss:
+        if flag:
             self.total_time = time.time()-self.start_time
             self.improve = True
             self.best_val_loss = loss_val
@@ -770,9 +772,10 @@ class PROGNNSolver(Solver):
         self.model.eval()
         normalized_adj = estimator.normalize()
         loss_val, acc_val = self.evaluate(self.val_mask, normalized_adj)
+        flag, flag_earlystop = self.recoder.add(loss_val, acc_val)
 
         # save the best model
-        if loss_val < self.best_val_loss:
+        if flag:
             self.total_time = time.time()-self.start_time
             self.improve = True
             self.best_val_loss = loss_val
@@ -795,12 +798,14 @@ class PROGNNSolver(Solver):
 
             for i in range(int(self.conf.training['inner_steps'])):
                 self.train_gcn(epoch, debug=debug)
+
+            # we use earlystopping here as prognn is very slow
             if self.improve:
                 self.wait = 0
                 self.improve = False
             else:
                 self.wait += 1
-                if self.wait == self.conf.training['patience']:
+                if self.wait == self.conf.training['patience_iter']:
                     print('Early stop!')
                     break
 
@@ -832,7 +837,8 @@ class PROGNNSolver(Solver):
             self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                              self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                             self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
+                             self.conf.model['input_layer'], self.conf.model['output_layer'],
+                             weight_initializer='uniform').to(self.device)
         else:
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
