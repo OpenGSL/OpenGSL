@@ -18,14 +18,17 @@ gsl:
   normalize: false
 
 dataset:
-  re_split: false # for cora,citeseer and pubmed
+  feat_norm: false
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 5e-2
-  n_epochs: 300
+  n_epochs: 200
   weight_decay: 5e-3
   lr_graph: 1e-3
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false
