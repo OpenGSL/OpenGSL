@@ -1,6 +1,7 @@
 import scipy.sparse as sp
 from sklearn.metrics.pairwise import cosine_similarity as cos
 import numpy as np
+import random
 from copy import deepcopy
 from models.gcn import GCN
 from models.gnn_modules import APPNP
@@ -1837,6 +1838,9 @@ class CoGSLSolver(Solver):
             self.view2_indices = torch.load(self.conf.dataset['view2_indices_path'])
         self.view1 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view1,False) )
         self.view2 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view2,False) )
+        #self.train_mask = np.load('/root/dataset/citeseer/train.npy')
+        #self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
+        #self.test_mask = np.load('/root/dataset/citeseer/test.npy')
         #print(self.view1_indices.shape)
         #print(self.view1.shape)
         #print(self.view2_indices.shape)
@@ -1854,9 +1858,24 @@ class CoGSLSolver(Solver):
 
     def view_diff(self):
         adj = sparse_tensor_to_scipy_sparse(self.adj)
-        at = sparse_normalize(adj)
+        at = sparse_normalize(adj,False)
         result = self.conf.dataset['diff_alpha'] * sp.linalg.inv(sp.eye(adj.shape[0]) - (1 - self.conf.dataset['diff_alpha']) * at)
         return result
+
+    def view_sub(self):
+        adj = (self.adj.to_dense() - torch.eye(self.adj.shape[0]).to(self.device)).to_sparse()
+        index = []
+        for i in range(self.adj.indices().shape[1]):
+            index.append(i)
+        random.shuffle(index)
+        index = index[:self.conf.dataset['sub_k']]
+        ind0 = self.adj.indices()[0,index]
+        ind1 = self.adj.indices()[1,index]
+        adj  = torch.sparse.FloatTensor(torch.stack([ind0,ind1]), torch.ones(self.conf.dataset['sub_k']).to(self.device),
+                                                [self.n_nodes, self.n_nodes])
+        adj = (self.adj.to_dense() - torch.eye(self.adj.shape[0]).to(self.device)).to_sparse()
+        return sparse_tensor_to_scipy_sparse(adj) 
+
 
     def get_khop_indices(self, k, view):
         view = (view.A > 0).astype("int32")
