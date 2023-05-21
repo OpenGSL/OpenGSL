@@ -2,7 +2,7 @@ model:
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
-  n_hidden: 64
+  n_hidden: 16
   dropout: 0.5
   input_dropout: 0
   norm:
@@ -15,8 +15,8 @@ model:
 dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: true
-  normalize: false
-  add_loop: false
+  normalize: true
+  add_loop: true
   sparse: true
 
 
@@ -25,11 +25,13 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
+  patience: ~
+  criterion: metric
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: true
-  load_graph_path: results/graph/sublime
+  load_graph: false
+  load_graph_path: results/graph/stable

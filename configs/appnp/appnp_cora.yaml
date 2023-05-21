@@ -7,13 +7,15 @@ model:
 training:
   lr: 1e-2
   weight_decay: 5e-4
-  n_epochs: 1000
+  n_epochs: 10000
+  patience: 100
+  criterion: either
 
 dataset:
   feat_norm: true
   cora_split: false
-  normalize: false
-  add_loop: false
+  normalize: true
+  add_loop: true
   sparse: true
 #  homophily_control: 0.8
 
@@ -22,5 +24,5 @@ analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: true
-  load_graph_path: results/graph/sublime
+  load_graph: false
+  load_graph_path: results/graph/stable

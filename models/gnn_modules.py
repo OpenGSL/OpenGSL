@@ -148,6 +148,10 @@ class LINKX(nn.Module):
 
 
 class APPNP(nn.Module):
+    '''
+    APPNP Implementation
+    Weight decay on the first layer and dropout on adj are not used.
+    '''
     def __init__(self, in_channels, hidden_channels, out_channels, dropout=.5, K=10, alpha=.1, spmm_type=0):
         super(APPNP, self).__init__()
         self.lin1 = nn.Linear(in_channels, hidden_channels)
@@ -165,7 +169,7 @@ class APPNP(nn.Module):
         # adj is normalized and sparse
         x=input[0]
         adj=input[1]
-        only_z = input[2] if len(input)>2 else True
+        only_z = input[2] if len(input) > 2 else True
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -240,19 +244,21 @@ class GAT(nn.Module):
     def __init__(self, n_feat, n_hidden, n_class, n_layers, n_heads, dropout):
         super(GAT, self).__init__()
         self.convs = nn.ModuleList()
-        self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads, dropout=dropout))
+        self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads[0], dropout=dropout))
         for i in range(n_layers-2):
-            self.convs.append(GATConv(n_hidden*n_heads, n_hidden, heads=n_heads, dropout=dropout))
-        self.convs.append((GATConv(n_hidden*n_heads, n_class, concat=False, dropout=dropout)))
+            self.convs.append(GATConv(n_hidden*n_heads[i], n_hidden, heads=n_heads[i+1], dropout=dropout))
+        self.convs.append((GATConv(n_hidden*n_heads[-2], n_class, heads=n_heads[-1], dropout=dropout, concat=False)))
         self.dropout = dropout
 
     def forward(self, input):
         x = input[0]
         edge_index = input[1]
 
+        x = F.dropout(x, training=self.training, p=self.dropout)
+
         for i in range(len(self.convs)-1):
             x = self.convs[i](x, edge_index)
-            x = F.elu(x)
             x = F.dropout(x, training=self.training, p=self.dropout)
+            x = F.elu(x)
         x = self.convs[-1](x, edge_index)
         return x

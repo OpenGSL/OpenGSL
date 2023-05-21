@@ -16,4 +16,4 @@ dataset:
 analysis:
   flag: false
   load_graph: true
-  load_graph_path: results/graph/prognn
+  load_graph_path: results/graph/stable

@@ -1,18 +1,20 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_geometric.nn.dense.linear import Linear
 
 
 class GraphConvolution(nn.Module):
 
-    def __init__(self, in_features, out_features, dropout=0.5, n_linear=1, bias=True, spmm_type=1, act='relu', last_layer=False):
+    def __init__(self, in_features, out_features, dropout=0.5, n_linear=1, bias=True, spmm_type=1, act='relu',
+                 last_layer=False, weight_initializer=None, bias_initializer=None):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.mlp = nn.ModuleList()
-        self.mlp.append(nn.Linear(in_features, out_features, bias=bias))
+        self.mlp.append(Linear(in_features, out_features, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
         for i in range(n_linear-1):
-            self.mlp.append(nn.Linear(out_features, out_features, bias=bias))
+            self.mlp.append(Linear(out_features, out_features, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
         self.dropout = dropout
         self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
         self.act = eval('F.'+act) if not act == 'identity' else lambda x: x
@@ -42,7 +44,8 @@ class GraphConvolution(nn.Module):
 class GCN(nn.Module):
 
     def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
-                 spmm_type=0, act='relu', input_layer=False, output_layer=False):
+                 spmm_type=0, act='relu', input_layer=False, output_layer=False, weight_initializer=None,
+                 bias_initializer=None):
 
         super(GCN, self).__init__()
 
@@ -79,7 +82,8 @@ class GCN(nn.Module):
             else:
                 out_hidden = nhid
 
-            self.convs.append(GraphConvolution(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act))
+            self.convs.append(GraphConvolution(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act,
+                                               weight_initializer=weight_initializer, bias_initializer=bias_initializer))
             if self.norm_flag:
                 self.norms.append(self.norm_type(in_hidden))
         self.convs[-1].last_layer = True

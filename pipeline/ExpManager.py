@@ -44,7 +44,7 @@ class ExpManager:
         homophily_control = None
         if 'homophily_control' in conf.dataset:
             homophily_control = conf.dataset['homophily_control']
-        dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, cora_split=conf.dataset['cora_split'], homophily_control=homophily_control)
+        dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, homophily_control=homophily_control)
         # self.conf = conf
         self.conf = argparse.Namespace(**vars(conf), **{'data': data, 'method': method})
         if 'sweep' in self.conf.analysis and self.conf.analysis['sweep']:

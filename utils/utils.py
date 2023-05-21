@@ -110,23 +110,19 @@ def get_lr_schedule_by_sigmoid(n_epochs, lr, warmup):
     return lr_schedule
 
 
-def normalize_feat(mx):
+def normalize_feats(mx):
     """Row-normalize sparse matrix.
     """
+    device = mx.device
+    mx = mx.cpu().numpy()
     r_sum = np.array(mx.sum(1))
     r_inv = np.power(r_sum, -1).flatten()
     r_inv[np.isinf(r_inv)] = 0.
     r_mat_inv = sp.diags(r_inv)
     mx = r_mat_inv.dot(mx)
+    mx = torch.tensor(mx).to(device)
     return mx
 
-def normalize_feats(x):
-    rowsum = x.sum(1)
-    r_inv = rowsum.pow(-1).flatten()
-    r_inv[torch.isinf(r_inv)] = 0.
-    r_mat_inv = torch.diag(r_inv)
-    X = r_mat_inv @ x
-    return X
 
 class AverageMeter(object):
     """Computes and stores the average and current value.
