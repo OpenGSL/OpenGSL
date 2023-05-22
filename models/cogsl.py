@@ -5,36 +5,122 @@ import torch.nn.functional as F
 #from module.cls import Classification
 #from module.mi_nce import MI_NCE
 #from module.fusion import Fusion
+from torch_geometric.nn import GCNConv
+from torch_sparse import SparseTensor
 
-from .gcn import GraphConvolution
+#from .gcn import GraphConvolution
 import numpy as np
 
-class two_layer_GCN(nn.Module):
-    def __init__(self, num_feature, cls_hid_1, num_class, dropout = 0.5, act = 'relu'):
-        super(two_layer_GCN, self).__init__()
-        self.layer1 = GraphConvolution(num_feature, cls_hid_1, dropout, act= act)
-        self.layer2 = GraphConvolution(cls_hid_1, num_class, dropout, last_layer=True)
+class GCN_two_pyg(nn.Module):
+    def __init__(self, input_dim, hid_dim1, hid_dim2, dropout=0., activation="relu"):
+        super(GCN_two_pyg, self).__init__()
+        self.conv1 = GCNConv(input_dim, hid_dim1)
+        self.conv2 = GCNConv(hid_dim1, hid_dim2)
+
+        self.dropout = dropout
+        assert activation in ["relu", "leaky_relu", "elu"]
+        self.activation = getattr(F, activation)
 
     def forward(self, feature, adj):
-        x = self.layer1(feature, adj)
-        x = self.layer2(x,adj)
-        return x
+        adj = SparseTensor.from_dense(adj.to_dense())
+        x1 = self.activation(self.conv1(feature, adj))
+        x1 = F.dropout(x1, p=self.dropout, training=self.training)
+        x2 = self.conv2(x1, adj)
+        return x2
+
+class GCN_one_pyg(nn.Module):
+    def __init__(self, in_ft, out_ft, bias=True, activation=None):
+        super(GCN_one_pyg, self).__init__()
+        self.conv1 = GCNConv(in_ft, out_ft)
+        self.activation = activation
+        if bias:
+            self.bias = nn.Parameter(torch.FloatTensor(out_ft))
+            self.bias.data.fill_(0.0)
+        else:
+            self.register_parameter('bias', None)
+
+    def forward(self, feat, adj):
+        adj = SparseTensor.from_dense(adj.to_dense())
+        out = self.conv1(feat, adj)
+        if self.bias is not None:
+            out += self.bias
+        if self.activation is not None:
+            out = self.activation(out)
+        return out
+
+class GCN_two(nn.Module):
+    def __init__(self, input_dim, hid_dim1, hid_dim2, dropout=0., activation="relu"):
+        super(GCN_two, self).__init__()
+        self.conv1 = GCN_one(input_dim, hid_dim1)
+        self.conv2 = GCN_one(hid_dim1, hid_dim2)
+
+        self.dropout = dropout
+        assert activation in ["relu", "leaky_relu", "elu"]
+        self.activation = getattr(F, activation)
+
+    def forward(self, feature, adj):
+        x1 = self.activation(self.conv1(feature, adj))
+        x1 = F.dropout(x1, p=self.dropout, training=self.training)
+        x2 = self.conv2(x1, adj)
+        return x2  # F.log_softmax(x2, dim=1)
+
+
+class GCN_one(nn.Module):
+    def __init__(self, in_ft, out_ft, bias=True, activation=None):
+        super(GCN_one, self).__init__()
+        self.fc = nn.Linear(in_ft, out_ft, bias=False)
+        self.activation = activation
+        if bias:
+            self.bias = nn.Parameter(torch.FloatTensor(out_ft))
+            self.bias.data.fill_(0.0)
+        else:
+            self.register_parameter('bias', None)
+
+        for m in self.modules():
+            self.weights_init(m)
+
+    def weights_init(self, m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight.data)
+            if m.bias is not None:
+                m.bias.data.fill_(0.0)
+
+    def forward(self, feat, adj):
+        adj = adj.to_dense()
+        feat = self.fc(feat)
+        out = torch.spmm(adj, feat)
+        if self.bias is not None:
+            out += self.bias
+        if self.activation is not None:
+            out = self.activation(out)
+        return out
+
+#class two_layer_GCN(nn.Module):
+#    def __init__(self, num_feature, cls_hid_1, num_class, dropout = 0.5, act = 'relu'):
+#        super(two_layer_GCN, self).__init__()
+#        self.layer1 = GraphConvolution(num_feature, cls_hid_1, dropout, act= act)
+#        self.layer2 = GraphConvolution(cls_hid_1, num_class, dropout=0, last_layer=True)
+#
+#    def forward(self, feature, adj):
+#        x = self.layer1(feature, adj)
+#        x = self.layer2(x,adj)
+#        return x
 
 class Classification(nn.Module):
     def __init__(self, num_feature, cls_hid_1, num_class, dropout, pyg):
         super(Classification, self).__init__()
-        #if pyg==False:
-        #    self.encoder_v1 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
-        #    self.encoder_v2 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
-        #    self.encoder_v = GCN_two(num_feature, cls_hid_1, num_class, dropout)
-        #else:
-        #    print("pyg")
-        #    self.encoder_v1 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-        #    self.encoder_v2 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-        #    self.encoder_v = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-        self.encoder_v = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
-        self.encoder_v1 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
-        self.encoder_v2 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
+        if pyg==False:
+            self.encoder_v1 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
+            self.encoder_v2 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
+            self.encoder_v = GCN_two(num_feature, cls_hid_1, num_class, dropout)
+        else:
+            #print("pyg")
+            self.encoder_v1 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
+            self.encoder_v2 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
+            self.encoder_v = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
+        #self.encoder_v = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
+        #self.encoder_v1 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
+        #self.encoder_v2 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
 
     def forward(self, feat, view, flag):
         if flag == "v1":
@@ -87,7 +173,7 @@ class Fusion(nn.Module):
         w_v2 = self.get_weight(prob_v2)
         beta_v1 = w_v1 / (w_v1 + w_v2)
         beta_v2 = w_v2 / (w_v1 + w_v2)
-        if self.name not in ["citeseer", "digits", "polblogs"]:
+        if self.name not in ["citeseer", "digits", "polblogs", "cora"]:
             beta_v1 = beta_v1.diag().to_sparse()
             beta_v2 = beta_v2.diag().to_sparse()
             v = torch.sparse.mm(beta_v1, v1) + torch.sparse.mm(beta_v2, v2)
@@ -101,11 +187,11 @@ class Fusion(nn.Module):
 class GenView(nn.Module):
     def __init__(self, num_feature, hid, com_lambda, dropout, pyg):
         super(GenView, self).__init__()
-        #if pyg == False:
-        #    self.gen_gcn = GCN_one(num_feature, hid, activation=nn.ReLU())
-        #else:
-        #    self.gen_gcn = GCN_one_pyg(num_feature, hid, activation=nn.ReLU())  
-        self.gen_gcn = GraphConvolution(num_feature, hid)
+        if pyg == False:
+            self.gen_gcn = GCN_one(num_feature, hid, activation=nn.ReLU())
+        else:
+            self.gen_gcn = GCN_one_pyg(num_feature, hid, activation=nn.ReLU())  
+        #self.gen_gcn = GraphConvolution(num_feature, hid, dropout=0)
         self.gen_mlp = nn.Linear(2 * hid, 1)
         nn.init.xavier_normal_(self.gen_mlp.weight, gain=1.414)
         self.relu = nn.ReLU()
@@ -132,7 +218,7 @@ class View_Estimator(nn.Module):
         super(View_Estimator, self).__init__()
         self.v1_gen = GenView(num_feature, gen_hid, com_lambda_v1, dropout, pyg)
         self.v2_gen = GenView(num_feature, gen_hid, com_lambda_v2, dropout, pyg)
-        if (big):
+        if big:
             self.normalize = self.normalize1
         else:
             self.normalize = self.normalize2
@@ -159,18 +245,18 @@ class View_Estimator(nn.Module):
 class MI_NCE(nn.Module):
     def __init__(self, num_feature, mi_hid_1, tau, pyg, big, batch):
         super(MI_NCE, self).__init__()
-        #if pyg == False:
-        #    self.gcn = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
-        #    self.gcn1 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
-        #    self.gcn2 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
-        #else:
-        #    print("pyg")
-        #    self.gcn = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-        #    self.gcn1 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-        #    self.gcn2 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-        self.gcn = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
-        self.gcn1 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
-        self.gcn2 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
+        if pyg == False:
+            self.gcn = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn1 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn2 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
+        else:
+            #print("pyg")
+            self.gcn = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn1 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn2 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
+        #self.gcn = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
+        #self.gcn1 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
+        #self.gcn2 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
         self.proj = nn.Sequential(
             nn.Linear(mi_hid_1, mi_hid_1),
             nn.ELU(),
