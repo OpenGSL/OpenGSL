@@ -1,5 +1,5 @@
 model:
-  seed: 3
+  seed: 7
   cls_hid_1: 16
   com_lambda_v1: 0.1
   com_lambda_v2: 0.1
@@ -31,16 +31,16 @@ training:
 
 dataset:
   name: citeseer
-  init: True    # True : generate view, False : read view
+  init: False    # True : generate view, False : read view
   feat_norm: True
   cora_split: false
   name_view1: view_adj
   name_view2: view_diff
-  view1_path: # *.npz
-  view2_path: # *.npz
-  view1_indices_path: #*.pt
-  view2_indices_path: #*.pt
-  diff_alpha: 0.5 # 
+  view1_path: #/data/CiteSeer/CiteSeer/processed/v1_adj.npz # *.npz
+  view2_path: #/data/CiteSeer/CiteSeer/processed/v2_diff.npz # *.npz
+  view1_indices_path: #/data/CiteSeer/CiteSeer/processed/v1_2.pt #*.pt
+  view2_indices_path: #/data/CiteSeer/CiteSeer/processed/v2_40.pt #*.pt
+  diff_alpha: 0.1 # 
   knn_k: 3
   view1_indices: 2
   view2_indices: 1

@@ -43,7 +43,7 @@ class GRCN(torch.nn.Module):
             self.conv_graph = GCNConv_diag(num_features)
             self.conv_graph2 = GCNConv_diag(num_features)
         else:
-            self.conv_graph = GCN(num_features, conf.gsl['n_hidden'], conf.gsl['n_hidden'], conf.gsl['n_layers'],
+            self.conv_graph = GCN(num_features, conf.gsl['n_hidden_1'], conf.gsl['n_hidden_2'], conf.gsl['n_layers'],
                              conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
                              conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
                              conf.gsl['input_layer'], conf.gsl['output_layer'])
@@ -95,7 +95,7 @@ class GRCN(torch.nn.Module):
             node_embeddings = torch.tanh(self.conv_graph(input, norm_Adj))
             node_embeddings = self.conv_graph2(node_embeddings, norm_Adj)
         else:
-            _, node_embeddings = self.conv_graph(input, norm_Adj)
+            node_embeddings = self.conv_graph((input, norm_Adj, True))
         if self._normalize:
             node_embeddings = F.normalize(node_embeddings, dim=1, p=2)
         return node_embeddings
