@@ -148,7 +148,7 @@ class GAUGSolver(Solver):
         '''
         super().__init__(conf, dataset)
         print("Solver Version : [{}]".format("gaug"))
-        self.normalized_adj = normalize(self.adj.to_dense()).to(self.device)
+        self.normalized_adj = normalize_sp_tensor(self.adj).to(self.device)
         self.adj_orig = (self.adj.to_dense() + torch.eye(self.n_nodes).to(self.device))  # adj with self loop
         self.conf = conf
 
@@ -299,8 +299,6 @@ class GAUGSolver(Solver):
         return self.result, self.best_graph
 
     def set_method(self):
-        self.model = GAug(self.dim_feats, self.num_targets, self.conf).to(self.device)
-
         # sample edges
         if self.labels.size(0) > 5000:
             edge_frac = 0.01
@@ -331,6 +329,8 @@ class GAUGSolver(Solver):
         pos_edges = nz_upper[:n_edges_sample]
         self.val_edges = np.concatenate((pos_edges, neg_edges), axis=0)
         self.edge_labels = np.array([1] * n_edges_sample + [0] * n_edges_sample)
+
+        self.model = GAug(self.dim_feats, self.num_targets, self.conf).to(self.device)
 
 
 class GENSolver(Solver):

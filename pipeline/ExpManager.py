@@ -83,7 +83,8 @@ class ExpManager:
         assert total_runs <= len(self.train_seeds)
         logger = Logger(runs=total_runs)
         for i in range(self.n_splits):
-            for j in range(self.n_runs):
+            succeed = 0
+            for j in range(400):
                 idx = i * self.n_runs + j
                 print("Exp {}/{}".format(idx, total_runs))
                 set_seed(self.train_seeds[idx])
@@ -97,8 +98,14 @@ class ExpManager:
                     # exit(0)
 
                 # run an exp
-                result, graph = self.solver.run_exp(split=i, debug=self.debug)
+                try:
+                    result, graph = self.solver.run_exp(split=i, debug=self.debug)
+                except ValueError:
+                    continue
                 logger.add_result(idx, result)
+                succeed += 1
+                if succeed == self.n_runs:
+                    break
 
                 # save graph
                 if self.save_graph_path:

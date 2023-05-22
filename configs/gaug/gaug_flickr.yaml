@@ -31,7 +31,7 @@ gsl:
   temperature: 0.3
 
 dataset:
-  feat_norm: true
+  feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
 
@@ -39,11 +39,12 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
-  warmup: 9
+  warmup: 10
   patience: 100
   pretrain_ep: 5
   pretrain_nc: 300
   beta: 2.5
+  criterion: ~
 
 # analysis
 analysis:

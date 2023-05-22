@@ -44,6 +44,7 @@ training:
   pretrain_ep: 160
   pretrain_nc: 30
   beta: 0.8
+  criterion: ~
 
 # analysis
 analysis:

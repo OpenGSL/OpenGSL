@@ -19,7 +19,8 @@ class VGAE(nn.Module):
         self.conv_graph = GCN(dim_feats, conf.gsl['n_hidden'], conf.gsl['n_embed'], conf.gsl['n_layers'],
                               conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
                               conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
-                              conf.gsl['input_layer'], conf.gsl['output_layer'])
+                              conf.gsl['input_layer'], conf.gsl['output_layer'], bias=False,
+                              weight_initializer='glorot')
 
     def forward(self, feats, adj):
         # GCN encoder
@@ -39,7 +40,6 @@ class VGAE(nn.Module):
             pass
         # inner product decoder
         adj_logits = Z @ Z.T
-        # print(Z)
         return adj_logits
 
 
@@ -55,10 +55,10 @@ class GAug(nn.Module):
         self.ep_net = VGAE(dim_feats, conf)
         # node classification network
         # self.nc_net = GCN(dim_feats, dim_h, n_classes, dropout=dropout)
-        self.nc_net = GCN(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'],
-                             conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
-                             conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
-                             conf.model['input_layer'], conf.model['output_layer'])
+        self.nc_net = GCN(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
+                          conf.model['input_dropout'], conf.model['norm'], conf.model['n_linear'],
+                          conf.model['spmm_type'], conf.model['act'], conf.model['input_layer'],
+                          conf.model['output_layer'], weight_initializer='glorot', bias_initializer='zeros')
 
     def sample_adj(self, adj_logits):
         """ sample an adj from the predicted edge probabilities of ep_net """

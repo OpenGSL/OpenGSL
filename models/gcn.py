@@ -45,7 +45,7 @@ class GCN(nn.Module):
 
     def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None):
+                 bias_initializer=None, bias=True):
 
         super(GCN, self).__init__()
 
@@ -83,7 +83,8 @@ class GCN(nn.Module):
                 out_hidden = nhid
 
             self.convs.append(GraphConvolution(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act,
-                                               weight_initializer=weight_initializer, bias_initializer=bias_initializer))
+                                               weight_initializer=weight_initializer, bias_initializer=bias_initializer,
+                                               bias=bias))
             if self.norm_flag:
                 self.norms.append(self.norm_type(in_hidden))
         self.convs[-1].last_layer = True
