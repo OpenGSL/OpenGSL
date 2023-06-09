@@ -14,7 +14,6 @@ from models.gt import GT
 from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
-from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
 from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 from models.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 from models.cogsl import CoGSL
