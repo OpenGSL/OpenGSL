@@ -27,6 +27,8 @@ training:
   inner_cls_epoch: 5
   inner_mi_epoch: 10
   temp_r: 1e-4
+  patience: ~
+  criterion: ~
 
 
 dataset:

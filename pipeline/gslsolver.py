@@ -970,17 +970,6 @@ class SLAPSSolver(Solver):
         print("Solver Version : [{}]".format("slaps"))
 
     def learn(self, debug=False):
-        '''
-        Learning process of slaps.
-        Parameters
-        ----------
-        debug
-
-        Returns
-        -------
-
-        '''
-
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
             t0 = time.time()
@@ -988,7 +977,7 @@ class SLAPSSolver(Solver):
             self.optim.zero_grad()
             
             # forward and backward
-            output, loss_dae = self.model(self.feats)
+            output, loss_dae, adj = self.model(self.feats)
             if epoch < self.conf.training['n_epochs'] // self.conf.training['epoch_d']:
                 self.model.gcn_c.eval()
                 loss_train = self.conf.training['lamda'] * loss_dae
@@ -1009,6 +998,7 @@ class SLAPSSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
+                self.best_graph = adj.clone()
 
             #print
             if debug:
@@ -1021,12 +1011,12 @@ class SLAPSSolver(Solver):
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, 0
+        return self.result, self.best_graph
     
     def evaluate(self, test_mask):
         self.model.eval()
         with torch.no_grad():
-            output, _ = self.model(self.feats)
+            output, _, _ = self.model(self.feats)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)
@@ -1490,17 +1480,22 @@ class GSRSolver(Solver):
         # prepare dgl graph
         edges = self.adj.coalesce().indices().cpu()
         self.g = dgl.graph((edges[0], edges[1]), num_nodes=self.n_nodes, idtype=torch.int).to(self.device)
-
-        emb_mat = gen_deepwalk_emb(self.adj, number_walks=conf.deepwalk['num_walks'], walk_length=conf.deepwalk['walk_length'],
-                                   window=conf.deepwalk['window_size'], size=conf.deepwalk['n_hidden'], workers=conf.deepwalk['num_workers'])
-        emb_mat = torch.FloatTensor(emb_mat).to(self.device)
-
-        # t = dict()
-        # t[0] = emb_mat
-        # torch.save(t,'emb_mat.t7')
-
-        # t = torch.load('emb_mat.t7')
-        # emb_mat = t[0].cuda()
+        
+        import os
+        filename = str(self.n_nodes) + "_" +  str(self.n_classes) + ".t7"
+        if os.path.exists(filename):
+            t = torch.load(filename)
+            emb_mat = t[0].cuda()
+            print("load ", filename)
+        else:
+            emb_mat = gen_deepwalk_emb(self.adj, number_walks=conf.deepwalk['num_walks'], walk_length=conf.deepwalk['walk_length'],
+                                    window=conf.deepwalk['window_size'], size=conf.deepwalk['n_hidden'], workers=conf.deepwalk['num_workers'])
+            emb_mat = torch.FloatTensor(emb_mat).to(self.device)
+            
+            t = dict()
+            t[0] = emb_mat
+            torch.save(t,filename)
+            print("store ", filename)
 
         self.feat = {'F': self.feats, 'S': emb_mat}
         self.feat_dim = {v: feat.shape[1] for v, feat in self.feat.items()}
@@ -1599,8 +1594,7 @@ class GSRSolver(Solver):
             return dgl.dataloading.DistEdgeDataLoader(
                 g, train_seeds, sampler,
                 batch_size=conf.training['gsl_batch_size'],
-                shuffle=True, drop_last=True,
-                num_workers=conf.training['gsl_num_workers'])
+                shuffle=True, drop_last=True)
 
         views = ['F', 'S']
         optimizer = torch.optim.Adam(self.gsl.parameters(), lr=self.conf.training['gsr_lr'], weight_decay=self.conf.training['gsr_weight_decay'])
@@ -1629,8 +1623,8 @@ class GSRSolver(Solver):
                 std_dict = {v: round(q_emb[v].std(dim=0).mean().item(), 4) for v in ['F', 'S']}
                 # print(f"Std: {std_dict}")
 
-                if std_dict['F'] == 0 or std_dict['S'] == 0:
-                    print(f'\n\n????!!!! Same Embedding Epoch={epoch_id}Step={step}\n\n')
+                # if std_dict['F'] == 0 or std_dict['S'] == 0:
+                #     print(f'\n\n????!!!! Same Embedding Epoch={epoch_id}Step={step}\n\n')
                     # q_emb = p_model(edge_subgraph, blocks, input_feature, mode='q')
 
                 with torch.no_grad():
@@ -1838,6 +1832,7 @@ class CoGSLSolver(Solver):
             self.view2_indices = torch.load(self.conf.dataset['view2_indices_path'])
         self.view1 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view1,False) )
         self.view2 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view2,False) )
+        self.loss_fn = F.binary_cross_entropy if self.num_targets == 1 else F.nll_loss
         #self.train_mask = np.load('/root/dataset/citeseer/train.npy')
         #self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
         #self.test_mask = np.load('/root/dataset/citeseer/test.npy')
@@ -1911,7 +1906,7 @@ class CoGSLSolver(Solver):
         return self.conf.model['mi_coe'] * v1v2 + (vv1 + vv2) * (1 - self.conf.model['mi_coe']) / 2
 
     def loss_acc(self, output, y):
-        loss = F.nll_loss(output, y)
+        loss = self.loss_fn(output, y)
         acc = self.metric(y.cpu().numpy(),output.detach().cpu().numpy())
         return loss, acc
 

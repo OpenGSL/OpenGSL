@@ -93,7 +93,7 @@ class ExpManager:
                 if self.load_graph_path:
                     self.solver.adj = torch.load(os.path.join(self.load_graph_path,'{}_{}_{}.pth'.format(self.data, i, self.train_seeds[idx]))).to(self.device)
                     if self.conf.dataset['sparse']:
-                        self.solver.adj = self.solver.adj.to_sparse()
+                        self.solver.adj = self.solver.adj.to_dense().to_sparse()
                     # print(self.solver.adj)
                     # exit(0)
 

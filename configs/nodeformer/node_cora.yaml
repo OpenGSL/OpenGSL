@@ -24,10 +24,12 @@ dataset:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
-  n_epochs: 300
+  lr: 1e-3
+  n_epochs: 1000
   weight_decay: 5e-4
   lambda: 1.0
+  patience: ~
+  criterion: ~
 
 # analysis
 analysis:

@@ -10,7 +10,7 @@ import pickle
 
 class Dataset:
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/'):
         '''
         This class loads, preprocessed and splits data. The results are saved as "self.feats, self.adj, self.labels, self.train_masks, self.val_masks, self.test_masks".
         Noth that self.adj is undirected and has no self loops.
@@ -23,6 +23,7 @@ class Dataset:
         n_splits : number of data splits
         '''
         self.name = data
+        self.path = path
         self.device = torch.device('cuda')
         self.prepare_data(data, feat_norm, verbose)
         self.split_data(n_splits, verbose)
@@ -45,7 +46,7 @@ class Dataset:
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
                        'flickr']:
-            self.data_raw = pyg_load_dataset(ds_name)
+            self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
             if ds_name == 'flickr':

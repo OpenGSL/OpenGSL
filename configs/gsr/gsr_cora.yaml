@@ -9,10 +9,10 @@ model:
   nce_t: 0.07
 
 refine_graph:
-  rm_ratio: 0.0
-  add_ratio: 0.5
+  rm_ratio: 0.01
+  add_ratio: 0.6
   cos_batch_size: 10000
-  fsim_weight: 0.25
+  fsim_weight: 0.8
   fsim_norm: True
 
 
@@ -30,16 +30,16 @@ deepwalk:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-3
+  lr: 1e-2
   weight_decay: 5e-4
 
   n_epochs: 1000
     
-  gsr_lr: 1e-3
+  gsr_lr: 1e-2
   gsr_weight_decay: 5e-4
   gsr_epochs: 50
 
-  intra_weight: 0.5
+  intra_weight: 0.4
   momentum_factor: 0.999
 
   gsl_batch_size: 128

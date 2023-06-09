@@ -32,11 +32,15 @@ model:
     flag: false
     norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
 
+training:
+  patience: ~
+  criterion: ~
 
 dataset:
   feat_norm: false
   cora_split: false
   load_graph: false
+  sparse: true
 
 # analysis
 analysis:

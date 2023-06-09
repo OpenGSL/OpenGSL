@@ -5,6 +5,8 @@ training:
   n_epochs: 1000
   lr: 1e-2
   weight_decay: 5e-7
+  patience: ~
+  criterion: ~
 
 dataset:
   cora_split: false

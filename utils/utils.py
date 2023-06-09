@@ -184,6 +184,7 @@ def get_edge_homophily(label, adj):
             cnt += adj[i, j]
     return cnt/num_edge
 
-def get_homophily(label, adj, type='node'):
-    # np.fill_diagonal(adj, 0)
+def get_homophily(label, adj, type='node', fill=None):
+    if fill:
+        np.fill_diagonal(adj, fill)
     return eval('get_'+type+'_homophily(label, adj)')
