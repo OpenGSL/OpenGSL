@@ -11,7 +11,7 @@ training:
   weight_decay: 5e-4
   n_epochs: 1000
   patience: ~
-  criterion: ~
+  criterion: metric
 
 dataset:
   feat_norm: true

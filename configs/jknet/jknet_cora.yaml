@@ -26,12 +26,12 @@ training:
   n_epochs: 200
   weight_decay: 5e-4
   patience: ~
-  criterion: ~
+  criterion: metric
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
-  #load_graph: true
-  #load_graph_path: results/graph/stable
+  load_graph: true
+  load_graph_path: results/graph/gaug

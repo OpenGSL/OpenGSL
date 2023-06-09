@@ -44,7 +44,7 @@ class ExpManager:
         homophily_control = None
         if 'homophily_control' in conf.dataset:
             homophily_control = conf.dataset['homophily_control']
-        dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, homophily_control=homophily_control)
+        self.dataset = Dataset(data, feat_norm=conf.dataset['feat_norm'], verbose=verbose, n_splits=n_splits, homophily_control=homophily_control)
         # self.conf = conf
         self.conf = argparse.Namespace(**vars(conf), **{'data': data, 'method': method})
         if 'sweep' in self.conf.analysis and self.conf.analysis['sweep']:
@@ -75,7 +75,7 @@ class ExpManager:
         self.debug = debug
 
         Solver0 = solvers[method]
-        self.solver = Solver0(self.conf, dataset)
+        self.solver = Solver0(self.conf, self.dataset)
 
     def run(self):
         total_runs = self.n_runs * self.n_splits
@@ -102,16 +102,16 @@ class ExpManager:
                     result, graph = self.solver.run_exp(split=i, debug=self.debug)
                 except ValueError:
                     continue
-                logger.add_result(idx, result)
-                succeed += 1
-                if succeed == self.n_runs:
-                    break
+                logger.add_result(succeed, result)
 
                 # save graph
                 if self.save_graph_path:
                     if not os.path.exists(self.save_graph_path):
                         os.makedirs(self.save_graph_path)
-                    torch.save(graph.cpu(), os.path.join(self.save_graph_path, '{}_{}_{}.pth'.format(self.data, i, self.train_seeds[idx])))
+                    torch.save(graph.cpu(), os.path.join(self.save_graph_path, '{}_{}_{}.pth'.format(self.data, i, self.train_seeds[succeed])))
+                succeed += 1
+                if succeed == self.n_runs:
+                    break
         self.acc_save, self.std_save = logger.print_statistics()
         self.save()
 
@@ -123,6 +123,7 @@ class ExpManager:
             self.update_conf(wandb.config)
             # print(self.conf)
             set_seed(42)
+            self.solver = solvers[self.method](self.conf, self.dataset)
             if self.load_graph_path:
                 self.solver.adj = torch.load(os.path.join(self.load_graph_path, '{}_{}_{}.pth'.format(
                     self.data, 0, 0))).to_sparse().to(self.device)

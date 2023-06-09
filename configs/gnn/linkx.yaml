@@ -4,14 +4,14 @@ model:
   n_hidden: 64
 
 training:
-  n_epochs: 100
+  n_epochs: 300
   lr: 1e-2
   weight_decay: 1e-3
 
 dataset:
   feat_norm: true
   cora_split: false
-  normalize: true
+  normalize: false
   add_loop: true
   sparse: true
 
@@ -20,4 +20,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/stable
+  load_graph_path: results/graph/sublime

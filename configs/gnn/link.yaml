@@ -2,14 +2,14 @@ model:
   name: link
 
 training:
-  n_epochs: 300
+  n_epochs: 500
   lr: 0.001
   weight_decay: 0
 
 dataset:
   feat_norm: true
   cora_split: false
-  normalize: true
+  normalize: false
   add_loop: true
   sparse: true
 
@@ -19,4 +19,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/stable
+  load_graph_path: results/graph/sublime

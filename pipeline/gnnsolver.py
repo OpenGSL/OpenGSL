@@ -4,7 +4,6 @@ from models.jknet import JKNet
 from pipeline.solver import Solver
 import torch
 from utils.utils import normalize_sp_tensor, normalize
-from data.homophily_control import get_new_adj
 
 
 class SGCSolver(Solver):

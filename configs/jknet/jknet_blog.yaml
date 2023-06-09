@@ -25,6 +25,8 @@ training:
   lr: 1e-2
   n_epochs: 400
   weight_decay: 5e-7
+  patience: ~
+  criterion: metric
 
 # analysis
 analysis:
@@ -32,4 +34,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/prognn
+  load_graph_path: results/graph/gaug

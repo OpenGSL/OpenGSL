@@ -1,6 +1,5 @@
 '''
 This is the GT model from UniMP [https://arxiv.org/pdf/2009.03509.pdf]
-implemented by [https://arxiv.org/pdf/2302.11640.pdf] via dgl
 '''
 import numpy as np
 import torch
@@ -173,6 +172,143 @@ class GT(nn.Module):
                 x = self.output_normalization(x)
             x = self.output_linear(x)
         return mid, x.squeeze(1), homo_heads
+
+
+class GraphTransformerAttn(nn.Module):
+    def __init__(self, dim, dim_out, num_heads, concat=True):
+        super().__init__()
+
+        self.dim = dim
+        self.dim_out = dim_out
+        self.dim_inner = dim_out * num_heads
+        self.num_heads = num_heads
+        self.concat = concat
+
+        self.attn_query = nn.Linear(in_features=dim, out_features=self.dim_inner)
+        self.attn_key = nn.Linear(in_features=dim, out_features=self.dim_inner)
+        self.attn_value = nn.Linear(in_features=dim, out_features=self.dim_inner)
+
+    def forward(self, x, graph, labels=None, graph_analysis=False):
+        queries = self.attn_query(x)
+        keys = self.attn_key(x)
+        values = self.attn_value(x)
+
+        queries = queries.reshape(-1, self.num_heads, self.dim_out)
+        keys = keys.reshape(-1, self.num_heads, self.dim_out)
+        values = values.reshape(-1, self.num_heads, self.dim_out)
+
+        attn_scores = ops.u_dot_v(graph, queries, keys) / self.dim_out ** 0.5
+        attn_probs = edge_softmax(graph, attn_scores)
+
+        x = ops.u_mul_e_sum(graph, values, attn_probs)
+        if self.concat:
+            x = x.reshape(-1, self.dim_inner)
+        else:
+            x = torch.mean(x, dim=1)
+
+        if graph_analysis:
+            assert labels is not None, 'error'
+            homophily = self.compute_homo(graph, attn_probs, labels)
+            return x, homophily
+        return x
+
+    def compute_homo(self, graph, attn_weights, labels):
+        '''
+        Args:
+            graph: dgl graph
+            attn_weights: [n_edges, n_heads, 1], attention weights learned by a transformer layer
+
+        Returns:
+            homophily: [n_heads] the homophily of attention weights of each head
+
+        '''
+
+        n_heads = self.num_heads
+        n_nodes = graph.num_nodes()
+        homophily = np.zeros(n_heads)
+        edges = graph.edges()
+        row = edges[0].cpu().numpy()
+        col = edges[1].cpu().numpy()
+        # values = adj.coalesce().values().numpy()
+        # return sp.coo_matrix((values, (row, col)), shape=adj.shape)
+        for i in range(n_heads):
+            values = attn_weights.squeeze()[:, i].cpu().detach().numpy()
+            adj = sp.coo_matrix((values, (row, col)), shape=(n_nodes, n_nodes)).todense()
+            homophily[i] = get_homophily(labels, adj)
+        return homophily
+
+
+class GatedResidual(nn.Module):
+    """ This is the implementation of Eq (5), i.e., gated residual connection between block.
+    """
+    def __init__(self, dim_in, dim_out, only_gate=False):
+        super().__init__()
+        self.lin_res = nn.Linear(dim_in, dim_out)
+        self.proj = nn.Sequential(
+            nn.Linear(dim_out * 3, 1, bias = False),
+            nn.Sigmoid()
+        )
+        self.norm = nn.LayerNorm(dim_out)
+        self.non_lin = nn.ReLU()
+        self.only_gate = only_gate
+
+    def forward(self, x, res):
+        res = self.lin_res(res)
+        gate_input = torch.cat((x, res, x - res), dim = -1)
+        gate = self.proj(gate_input) # Eq (5), this is beta in the paper
+        if self.only_gate: # This is for Eq (6), a case when normalizaton and non linearity is not used.
+            return x * gate + res * (1 - gate)
+        return self.non_lin(self.norm(x * gate + res * (1 - gate)))
+
+
+class GraphTransformerModel(nn.Module):
+    """ This is the overall architecture of the model.
+    """
+
+    def __init__(
+            self,
+            n_feats,
+            n_class,
+            n_hidden,
+            n_layers,
+            n_heads=8,
+    ):
+        super().__init__()
+        self.n_feats = n_feats
+        self.n_class = n_class
+        self.n_hidden = n_hidden
+        self.n_layers = n_layers
+        self.n_heads = n_heads
+
+        self.layers = nn.ModuleList()
+
+        self.input_layer = nn.Linear(n_feats, n_hidden)
+
+        assert n_hidden % n_heads == 0
+
+        for i in range(n_layers):
+            if i < n_layers - 1:
+                self.layers.append(nn.ModuleList([
+                    GraphTransformerAttn(n_hidden, dim_out=int(n_hidden / n_heads), num_heads=n_heads),
+                    GatedResidual(n_hidden, n_hidden)
+                ]))
+            else:
+                self.layers.append(nn.ModuleList([
+                    GraphTransformerAttn(n_hidden, dim_out=n_class, num_heads=n_heads, concat=False),
+                    GatedResidual(n_hidden, n_class, only_gate=True)
+                ]))
+
+    def forward(self, input):
+        x=input[0]
+        graph=input[1]
+
+        x = self.input_layer(x)
+
+        for trans_block in self.layers:
+            trans, trans_residual = trans_block
+            x = trans_residual(trans(x, graph), x)
+
+        return x
 
 
 if __name__ == '__main__':
