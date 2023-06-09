@@ -7,6 +7,7 @@ training:
   smoothness_ratio: 0
   degree_ratio: 0.03
   sparsity_ratio: 0
+  criterion: ~
 
 model:
   n_layers: 3
@@ -20,7 +21,7 @@ model:
 gsl:
   graph_skip_conn: 0.7
   update_adj_ratio: 0.3
-  graph_include_self: False
+  graph_include_self: false
 
   graph_learn_epsilon: 0.1
   graph_learn_epsilon2: 0.1
@@ -43,4 +44,5 @@ dataset:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph

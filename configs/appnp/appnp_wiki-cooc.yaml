@@ -8,6 +8,8 @@ training:
   lr: 1e-1
   weight_decay: 5e-5
   n_epochs: 400
+  patience: ~
+  criterion: ~
 
 dataset:
   feat_norm: false
@@ -23,7 +25,7 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: false
-  load_graph_path: results/graph/idgl
+  load_graph_path: results/graph/prognn
   sweep: false
   sweep_id: yotsugi/gsl-benchmark/l0bc02j1
   count: 500

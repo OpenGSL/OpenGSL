@@ -1,4 +1,5 @@
 model:
+  type: 'gcn'
   nlayers_adj: 2
   hidden_adj: 128
   k: 20
@@ -19,6 +20,7 @@ dataset:
   feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   feat_type: 'continuous' # 'continuous' for pubmed, amazon-ratings, questions, roman-empire and wiki-cooc, otherwise 'binary'
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
@@ -31,6 +33,8 @@ training:
   lamda: 1
   ratio: 10
   nr: 1
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false

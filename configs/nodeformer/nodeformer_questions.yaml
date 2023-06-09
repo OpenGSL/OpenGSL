@@ -27,6 +27,8 @@ training:
   n_epochs: 100
   weight_decay: 0
   lambda: 1.0
+  patience: ~
+  criterion: ~
 
 # analysis
 analysis:

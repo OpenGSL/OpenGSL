@@ -27,7 +27,9 @@ maskfeat_rate_anchor: 0.6
 contrast_batch_size: 0
 c: 0
 
-
+training:
+  patience: ~
+  criterion: ~
 
 dataset:
   feat_norm: false   # sublime does not normalize feats

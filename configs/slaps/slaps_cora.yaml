@@ -36,6 +36,8 @@ training:
   lamda: 10
   ratio: 10
   nr: 5
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false
