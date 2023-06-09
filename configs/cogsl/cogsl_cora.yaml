@@ -1,32 +1,35 @@
 model:
   seed: 3
   cls_hid_1: 64
-  com_lambda_v1: 0.1
-  com_lambda_v2: 0.1
+  com_lambda_v1: 1
+  com_lambda_v2: 0.5
   gen_hid: 32
-  lam: 0.5
+  lam: 0.9
   alpha: 0.1
-  mi_hid_1: 128
+  mi_hid_1: 32
   cls_coe: 0.3
   mi_coe: 0.3
-  tau: 0.8
+  tau: 0.5
   cls_dropout: 0.5
-  ve_dropout: 0.2
+  ve_dropout: 0.8
 
 
 training:
   cls_lr: 0.01
   cls_weight_decay: 5e-4
-  ve_lr: 0.001
+  ve_lr: 0.1
   ve_weight_decay: 0
   mi_lr: 0.01
   mi_weight_decay: 0
 
   main_epoch: 100
-  inner_ne_epoch: 1
-  inner_cls_epoch: 5
+  inner_ne_epoch: 5
+  inner_cls_epoch: 1
   inner_mi_epoch: 10
-  temp_r: 1e-4
+  temp_r: 1e-3
+
+  patience: ~
+  criterion: ~
 
 
 dataset:
@@ -40,7 +43,7 @@ dataset:
   #view2_path: # *.npz
   #view1_indices_path:  #*.pt
   #view2_indices_path:  #*.pt
-  diff_alpha: 0.05 # 
+  diff_alpha: 0.15 #
   knn_k: 3
   view1_indices: 2
   view2_indices: 1
@@ -57,3 +60,6 @@ analysis:
   project: gsl
   save_graph: true
   save_graph_path: results/graph
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/4l4zs0jn
+  count: 100

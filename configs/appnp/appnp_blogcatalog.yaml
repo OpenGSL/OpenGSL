@@ -8,6 +8,8 @@ training:
   lr: 1e-2
   weight_decay: 5e-7
   n_epochs: 1000
+  patience: ~
+  criterion: metric
 
 dataset:
   feat_norm: true
@@ -23,4 +25,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/prognn
+  load_graph_path: results/graph/gaug

@@ -244,10 +244,10 @@ class GAT(nn.Module):
     def __init__(self, n_feat, n_hidden, n_class, n_layers, n_heads, dropout):
         super(GAT, self).__init__()
         self.convs = nn.ModuleList()
-        self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads[0], dropout=dropout))
+        self.convs.append(GATConv(n_feat, n_hidden, heads=n_heads, dropout=dropout))
         for i in range(n_layers-2):
-            self.convs.append(GATConv(n_hidden*n_heads[i], n_hidden, heads=n_heads[i+1], dropout=dropout))
-        self.convs.append((GATConv(n_hidden*n_heads[-2], n_class, heads=n_heads[-1], dropout=dropout, concat=False)))
+            self.convs.append(GATConv(n_hidden*n_heads, n_hidden, heads=n_heads, dropout=dropout))
+        self.convs.append((GATConv(n_hidden*n_heads, n_class, heads=n_heads, dropout=dropout, concat=False)))
         self.dropout = dropout
 
     def forward(self, input):
@@ -261,4 +261,4 @@ class GAT(nn.Module):
             x = F.dropout(x, training=self.training, p=self.dropout)
             x = F.elu(x)
         x = self.convs[-1](x, edge_index)
-        return x
+        return x.squeeze(1)

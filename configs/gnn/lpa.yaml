@@ -5,7 +5,7 @@ model:
 dataset:
   cora_split: false
   feat_norm: true
-  normalize: true
+  normalize: false
   add_loop: true
   sparse: true
 
@@ -14,4 +14,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/stable
+  load_graph_path: results/graph/sublime

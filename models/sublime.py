@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import kneighbors_graph
 from models.gcn import GCN
+from models.gnn_modules import APPNP
 import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
@@ -311,7 +312,7 @@ class GNN_learner(nn.Module):
 
 
 class GraphEncoder(nn.Module):
-    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse):
+    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse, conf=None):
 
         super(GraphEncoder, self).__init__()
         self.dropout = dropout
@@ -323,9 +324,13 @@ class GraphEncoder(nn.Module):
                 self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, hidden_dim))
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
-            self.model = GCN(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
-                             input_layer=False, output_layer=False, spmm_type=0)
-
+            if conf.model['type']=='gcn':
+                self.model = GCN(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
+                                 input_layer=False, output_layer=False, spmm_type=0)
+            elif conf.model['type']=='appnp':
+                self.model = APPNP(in_dim, hidden_dim, emb_dim,
+                                    dropout=conf.model['dropout'], K=conf.model['K'],
+                                    alpha=conf.model['alpha'])
         self.proj_head = nn.Sequential(nn.Linear(emb_dim, proj_dim), nn.ReLU(inplace=True),
                                            nn.Linear(proj_dim, proj_dim))
 
@@ -344,10 +349,10 @@ class GraphEncoder(nn.Module):
 
 
 class GCL(nn.Module):
-    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, dropout_adj, sparse):
+    def __init__(self, nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, dropout_adj, sparse, conf=None):
         super(GCL, self).__init__()
 
-        self.encoder = GraphEncoder(nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse)
+        self.encoder = GraphEncoder(nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse, conf)
         self.dropout_adj = dropout_adj
         self.sparse = sparse
 

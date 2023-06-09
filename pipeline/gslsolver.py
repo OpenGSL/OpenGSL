@@ -1227,8 +1227,8 @@ class SEGSLSolver(Solver):
     def structure_learning(self, logits, adj):
         edge_index = adj.coalesce().indices().t()
 
-        k = knn_maxE1(edge_index, logits)  # edge index对称有自环
-        edge_index_2 = add_knn(k, logits, edge_index)
+        k = knn_maxE1(edge_index, logits.unsqueeze(1))  # edge index对称有自环
+        edge_index_2 = add_knn(k, logits.unsqueeze(1), edge_index)
         weight = get_weight(logits, edge_index_2)
         adj_matrix = get_adj_matrix(self.n_nodes, edge_index_2, weight)
 
@@ -1476,7 +1476,8 @@ class SUBLIMESolver(Solver):
         self.graph_learner = self.graph_learner.to(self.device)
         self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
                     emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
-                    dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse).to(self.device)
+                    dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse,
+                         conf=self.conf).to(self.device)
         self.optimizer_cl = torch.optim.Adam(self.model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
         self.optimizer_learner = torch.optim.Adam(self.graph_learner.parameters(), lr=self.conf.lr,
                                              weight_decay=self.conf.wd)
@@ -1940,6 +1941,15 @@ class CoGSLSolver(Solver):
         -------
 
         '''
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.init(config=self.conf,
+                           project=self.conf.analysis['project'])
+            wandb.define_metric("acc_val", summary="max")
+            wandb.define_metric("loss_val", summary="min")
+            wandb.define_metric("loss_train", summary="min")
+            wandb.define_metric("acc_train", summary="max")
+
 
         self.best_acc_val = 0
         self.best_loss_val = 1e9
@@ -1991,6 +2001,12 @@ class CoGSLSolver(Solver):
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.cls.encoder_v.state_dict())
                 self.best_graph = views[0]
+            if 'analysis' in self.conf and self.conf.analysis['flag']:
+                wandb.log({'epoch':epoch+1,
+                           'acc_val':acc_val,
+                           'loss_val':loss_val,
+                           'acc_train': acc_train,
+                           'loss_train': loss_train})
             print("EPOCH ",epoch, "\tCUR_LOSS_VAL ", loss_val, "\tCUR_ACC_Val ", acc_val, "\tBEST_ACC_VAL ", self.best_acc_val)
         self.total_time = time.time() - self.start_time
         print('Optimization Finished!')
@@ -2000,6 +2016,10 @@ class CoGSLSolver(Solver):
         self.result['test'] = acc_test
         #print("Test_Macro: ", test_f1_macro, "\tTest_Micro: ", test_f1_micro, "\tAUC: ", auc)
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
+        if 'analysis' in self.conf and self.conf.analysis['flag']:
+            wandb.log({'loss_test':loss_test, 'acc_test':acc_test})
+            if not ('sweep' in self.conf.analysis and self.conf.analysis['sweep']):
+                wandb.finish()
         return self.result, self.best_graph.to_dense()
 
 

@@ -22,11 +22,14 @@ training:
   mi_lr: 0.01
   mi_weight_decay: 0
 
-  main_epoch: 40
+  main_epoch: 200
   inner_ne_epoch: 5
   inner_cls_epoch: 5
   inner_mi_epoch: 10
   temp_r: 1e-4
+
+  patience: ~
+  criterion: ~
 
 
 dataset:
@@ -36,11 +39,11 @@ dataset:
   cora_split: false
   name_view1: view_adj
   name_view2: view_diff
-  view1_path: #/data/CiteSeer/CiteSeer/processed/v1_adj.npz # *.npz
-  view2_path: #/data/CiteSeer/CiteSeer/processed/v2_diff.npz # *.npz
-  view1_indices_path: #/data/CiteSeer/CiteSeer/processed/v1_2.pt #*.pt
-  view2_indices_path: #/data/CiteSeer/CiteSeer/processed/v2_40.pt #*.pt
-  diff_alpha: 0.1 # 
+  view1_path: data/CiteSeer/CiteSeer/processed/v1_adj.npz
+  view2_path: data/CiteSeer/CiteSeer/processed/v2_diff.npz
+  view1_indices_path: data/CiteSeer/CiteSeer/processed/v1_2.pt
+  view2_indices_path: data/CiteSeer/CiteSeer/processed/v2_40.pt
+  diff_alpha: 0.1 #
   knn_k: 3
   view1_indices: 2
   view2_indices: 1

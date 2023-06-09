@@ -10,6 +10,8 @@ training:
   lr: 2e-3
   weight_decay: 5e-4
   n_epochs: 1000
+  patience: ~
+  criterion: metric
 
 dataset:
   feat_norm: true
@@ -24,4 +26,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/stable
+  load_graph_path: results/graph/grcn

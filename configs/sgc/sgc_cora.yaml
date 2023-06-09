@@ -19,5 +19,5 @@ analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: false
-  load_graph_path: results/graph/stable
+  load_graph: true
+  load_graph_path: results/graph/gaug

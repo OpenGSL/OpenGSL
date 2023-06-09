@@ -1,4 +1,5 @@
 from .gcn import GCN
+from .gnn_modules import APPNP
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -55,11 +56,15 @@ class GAug(nn.Module):
         self.ep_net = VGAE(dim_feats, conf)
         # node classification network
         # self.nc_net = GCN(dim_feats, dim_h, n_classes, dropout=dropout)
-        self.nc_net = GCN(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
-                          conf.model['input_dropout'], conf.model['norm'], conf.model['n_linear'],
-                          conf.model['spmm_type'], conf.model['act'], conf.model['input_layer'],
-                          conf.model['output_layer'], weight_initializer='glorot', bias_initializer='zeros')
-
+        if conf.model['type']=='gcn':
+            self.nc_net = GCN(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
+                              conf.model['input_dropout'], conf.model['norm'], conf.model['n_linear'],
+                              conf.model['spmm_type'], conf.model['act'], conf.model['input_layer'],
+                              conf.model['output_layer'], weight_initializer='glorot', bias_initializer='zeros')
+        elif conf.model['type']=='appnp':
+            self.nc_net = APPNP(dim_feats, conf.model['n_hidden'], n_classes,
+                               dropout=conf.model['dropout'], K=conf.model['K'],
+                               alpha=conf.model['alpha'])
     def sample_adj(self, adj_logits):
         """ sample an adj from the predicted edge probabilities of ep_net """
         edge_probs = adj_logits / torch.max(adj_logits)
