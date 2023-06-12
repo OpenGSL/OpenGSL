@@ -7,7 +7,7 @@ from data.dataset import Dataset
 from pipeline.gnnsolver import GCNSolver, SGCSolver, MLPSolver, LINKXSolver, LINKSolver, APPNPSolver, JKNetSolver, \
     GPRGNNSolver, LPASolver, GATSolver
 from pipeline.gslsolver import GRCNSolver, GAUGSolver, GENSolver, IDGLSolver, PROGNNSolver, GTSolver, SLAPSSolver, \
-    NODEFORMERSolver, SEGSLSolver, GSRSolver, SUBLIMESolver, STABLESolver, CoGSLSolver
+    NODEFORMERSolver, SEGSLSolver, SUBLIMESolver, STABLESolver, CoGSLSolver
 import argparse
 import wandb
 
@@ -32,7 +32,6 @@ solvers = {
     'gprgnn':GPRGNNSolver,
     'nodeformer': NODEFORMERSolver,
     'segsl': SEGSLSolver,
-    'gsr':GSRSolver,
     'sublime': SUBLIMESolver,
     'stable': STABLESolver,
     'cogsl':CoGSLSolver

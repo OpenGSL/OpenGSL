@@ -21,6 +21,7 @@ training:
   lr_adj: 1e-2
   inner_steps: 2
   outer_steps: 1
+  criterion: ~
 
 gsl:
   symmetric: false
@@ -33,10 +34,14 @@ dataset:
   feat_norm: false
   cora_split: false
   sparse: true
+  normalize: true
+  add_loop: true
 
 # analysis
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false
   save_graph_path: results/graph
+  load_graph: false
+  load_graph_path: results/graph/prognn

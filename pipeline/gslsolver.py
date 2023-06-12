@@ -14,7 +14,6 @@ from models.gt import GT
 from models.slaps import SLAPS
 from models.nodeformer import NodeFormer, adj_mul
 from models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
-from models.gsr import GSR, gen_deepwalk_emb, MemoryMoCo, TwoLayerGCN
 from models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 from models.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 from models.cogsl import CoGSL
@@ -970,17 +969,6 @@ class SLAPSSolver(Solver):
         print("Solver Version : [{}]".format("slaps"))
 
     def learn(self, debug=False):
-        '''
-        Learning process of slaps.
-        Parameters
-        ----------
-        debug
-
-        Returns
-        -------
-
-        '''
-
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
             t0 = time.time()
@@ -988,7 +976,7 @@ class SLAPSSolver(Solver):
             self.optim.zero_grad()
             
             # forward and backward
-            output, loss_dae = self.model(self.feats)
+            output, loss_dae, adj = self.model(self.feats)
             if epoch < self.conf.training['n_epochs'] // self.conf.training['epoch_d']:
                 self.model.gcn_c.eval()
                 loss_train = self.conf.training['lamda'] * loss_dae
@@ -1009,6 +997,7 @@ class SLAPSSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
+                self.best_graph = adj.clone()
 
             #print
             if debug:
@@ -1021,12 +1010,12 @@ class SLAPSSolver(Solver):
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, 0
+        return self.result, self.best_graph
     
     def evaluate(self, test_mask):
         self.model.eval()
         with torch.no_grad():
-            output, _ = self.model(self.feats)
+            output, _, _ = self.model(self.feats)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)
@@ -1483,192 +1472,6 @@ class SUBLIMESolver(Solver):
                                              weight_decay=self.conf.wd)
 
 
-class GSRSolver(Solver):
-    def __init__(self, conf, dataset):
-        super().__init__(conf, dataset)
-        print("Solver Version : [{}]".format("gsr"))
-
-        # prepare dgl graph
-        edges = self.adj.coalesce().indices().cpu()
-        self.g = dgl.graph((edges[0], edges[1]), num_nodes=self.n_nodes, idtype=torch.int).to(self.device)
-
-        emb_mat = gen_deepwalk_emb(self.adj, number_walks=conf.deepwalk['num_walks'], walk_length=conf.deepwalk['walk_length'],
-                                   window=conf.deepwalk['window_size'], size=conf.deepwalk['n_hidden'], workers=conf.deepwalk['num_workers'])
-        emb_mat = torch.FloatTensor(emb_mat).to(self.device)
-
-        # t = dict()
-        # t[0] = emb_mat
-        # torch.save(t,'emb_mat.t7')
-
-        # t = torch.load('emb_mat.t7')
-        # emb_mat = t[0].cuda()
-
-        self.feat = {'F': self.feats, 'S': emb_mat}
-        self.feat_dim = {v: feat.shape[1] for v, feat in self.feat.items()}
-
-    def learn(self, debug=False):
-        def para_copy(model_to_init, pretrained_model, paras_to_copy):
-            # Pass parameters (if exists) of old model to new model
-            para_dict_to_update = model_to_init.state_dict()
-            pretrained_dict = {k: v for k, v in pretrained_model.state_dict().items() if k in paras_to_copy}
-            para_dict_to_update.update(pretrained_dict)
-            model_to_init.load_state_dict(para_dict_to_update)
-
-        self.pretrain(debug)
-        self.g = self.gsl.refine_graph(self.g, self.feat)
-        para_copy(self.model, self.gsl.encoder.F, paras_to_copy=['conv1.weight', 'conv1.bias'])
-
-        for epoch in range(self.conf.training['n_epochs']):
-            improve = ''
-            t0 = time.time()
-            self.model.train()
-            self.optim.zero_grad()
-
-            # forward and backward
-            output = self.model(self.g, self.feats)
-            loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
-            acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
-            loss_train.backward()
-            self.optim.step()
-
-            # Evaluate
-            loss_val, acc_val = self.evaluate(self.val_mask)
-
-            # save
-            if acc_val > self.result['valid']:
-                self.total_time = time.time() - self.start_time
-                improve = '*'
-                self.best_val_loss = loss_val
-                self.result['valid'] = acc_val
-                self.result['train'] = acc_train
-                self.weights = deepcopy(self.model.state_dict())
-
-            #print
-            if debug:
-                print(
-                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
-                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
-
-        print('Optimization Finished!')
-        print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test = self.test()
-        self.result['test'] = acc_test
-        print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, 0
-
-    def evaluate(self, test_mask):
-        self.model.eval()
-        with torch.no_grad():
-            output = self.model(self.g, self.feats)
-        logits = output[test_mask]
-        labels = self.labels[test_mask]
-        loss = self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy())
-
-    def set_method(self):
-        self.gsl = GSR(self.g, self.feat_dim, self.device, self.conf).to(self.device)
-
-        self.model = TwoLayerGCN(self.dim_feats, self.conf.model['n_hidden'], self.n_classes,
-                                    self.conf.model['activation'], self.conf.model['dropout'], is_out_layer=True).to(self.device)
-        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
-
-    def pretrain(self, debug):
-        def moment_update(model, model_ema, m):
-            """ model_ema = m * model_ema + (1 - m) model """
-            for p1, p2 in zip(model.parameters(), model_ema.parameters()):
-                p2.data.mul_(m).add_(p1.detach().data, alpha= 1 - m)
-
-        def NCESoftmaxLoss(x):
-            bsz = x.shape[0]
-            x = x.squeeze()
-            label = torch.zeros([bsz], device=self.device).long()
-            loss = torch.nn.CrossEntropyLoss()(x, label)
-            return loss
-
-        def get_pretrain_loader(g, conf):
-            g = g.remove_self_loop()  # Self loops shan't be sampled
-            # src, dst = g.edges()
-            n_edges = g.num_edges()
-
-            train_seeds = np.arange(n_edges)
-            # g = dgl.graph((torch.cat([src, dst]), torch.cat([dst, src])))
-            # reverse_eids = torch.cat([torch.arange(n_edges, 2 * n_edges), torch.arange(0, n_edges)])
-
-            # Create sampler
-            sampler = dgl.dataloading.MultiLayerNeighborSampler(
-                [int(fanout) for fanout in conf.training['fan_out'].split('_')])
-            return dgl.dataloading.DistEdgeDataLoader(
-                g, train_seeds, sampler,
-                batch_size=conf.training['gsl_batch_size'],
-                shuffle=True, drop_last=True,
-                num_workers=conf.training['gsl_num_workers'])
-
-        views = ['F', 'S']
-        optimizer = torch.optim.Adam(self.gsl.parameters(), lr=self.conf.training['gsr_lr'], weight_decay=self.conf.training['gsr_weight_decay'])
-
-        # Construct virtual relation triples
-        gsl_ema = GSR(self.g, self.feat_dim, self.device, self.conf).to(self.device)
-        moment_update(self.gsl, gsl_ema, 0)  # Copy
-        moco_memories = {v: MemoryMoCo(self.conf.model['n_hidden'], self.conf.model['nce_k'],  # Single-view contrast
-                                        self.conf.model['nce_t'], device=self.device).to(self.device)
-                            for v in views}
-        criterion = NCESoftmaxLoss
-        pretrain_loader = get_pretrain_loader(self.g, self.conf)
-
-        for epoch_id in range(self.conf.training['gsr_epochs']):
-            t0 = time.time()
-            for step, (input_nodes, edge_subgraph, blocks) in enumerate(pretrain_loader):
-                input_nodes = input_nodes.long()
-                # edge_subgraph = edge_subgraph.to(self.device)
-                # blocks = [b.to(self.device) for b in blocks]
-                input_feature = {v: self.feat[v][input_nodes].to(self.device) for v in views}
-
-                # ===================Moco forward=====================
-                self.gsl.train()
-
-                q_emb = self.gsl(edge_subgraph, blocks, input_feature, mode='q')
-                std_dict = {v: round(q_emb[v].std(dim=0).mean().item(), 4) for v in ['F', 'S']}
-                # print(f"Std: {std_dict}")
-
-                if std_dict['F'] == 0 or std_dict['S'] == 0:
-                    print(f'\n\n????!!!! Same Embedding Epoch={epoch_id}Step={step}\n\n')
-                    # q_emb = p_model(edge_subgraph, blocks, input_feature, mode='q')
-
-                with torch.no_grad():
-                    k_emb = gsl_ema(edge_subgraph, blocks, input_feature, mode='k')
-                intra_out, inter_out = [], []
-
-                for tgt_view, memory in moco_memories.items():
-                    for src_view in views:
-                        if src_view == tgt_view:
-                            intra_out.append(memory(
-                                q_emb[f'{tgt_view}'], k_emb[f'{tgt_view}']))
-                        else:
-                            inter_out.append(memory(
-                                q_emb[f'{src_view}->{tgt_view}'], k_emb[f'{tgt_view}']))
-
-                # ===================backward=====================
-                # ! Self-Supervised Learning
-                intra_loss = torch.stack([criterion(out_) for out_ in intra_out]).mean()
-                inter_loss = torch.stack([criterion(out_) for out_ in inter_out]).mean()
-                # ! Loss Fusion
-                loss_tensor = torch.stack([intra_loss, inter_loss])
-                intra_w = float(self.conf.training['intra_weight'])
-                loss_weights = torch.tensor([intra_w, 1 - intra_w], device=self.device)
-                loss = torch.dot(loss_weights, loss_tensor)
-                # ! Semi-Supervised Learning
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                moment_update(self.gsl, gsl_ema, self.conf.training['momentum_factor'])
-
-            #print
-            if debug:
-                print("Epoch {:05d} | Batch {:05d} | Time {:.4f} | intra_loss {:.4f} | inter_loss {:.4f} | overall_loss {:.4f}".format(
-                    epoch_id, step, time.time() - t0, intra_loss.item(), inter_loss.item(), loss.item()))
-
-
 class STABLESolver(Solver):
     def __init__(self, conf, dataset):
         '''
@@ -1839,6 +1642,7 @@ class CoGSLSolver(Solver):
             self.view2_indices = torch.load(self.conf.dataset['view2_indices_path'])
         self.view1 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view1,False) )
         self.view2 = sparse_mx_to_torch_sparse_tensor( sparse_normalize(_view2,False) )
+        self.loss_fn = F.binary_cross_entropy if self.num_targets == 1 else F.nll_loss
         #self.train_mask = np.load('/root/dataset/citeseer/train.npy')
         #self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
         #self.test_mask = np.load('/root/dataset/citeseer/test.npy')
@@ -1912,7 +1716,7 @@ class CoGSLSolver(Solver):
         return self.conf.model['mi_coe'] * v1v2 + (vv1 + vv2) * (1 - self.conf.model['mi_coe']) / 2
 
     def loss_acc(self, output, y):
-        loss = F.nll_loss(output, y)
+        loss = self.loss_fn(output, y)
         acc = self.metric(y.cpu().numpy(),output.detach().cpu().numpy())
         return loss, acc
 

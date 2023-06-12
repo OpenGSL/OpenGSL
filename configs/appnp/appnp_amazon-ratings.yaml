@@ -8,6 +8,8 @@ training:
   lr: 1e-2
   weight_decay: 5e-6
   n_epochs: 1000
+  patience: 100
+  criterion: either
 
 dataset:
   feat_norm: false

@@ -7,6 +7,7 @@ training:
   smoothness_ratio: 0
   degree_ratio: 0.03
   sparsity_ratio: 0
+  criterion: ~
 
 model:
   n_layers: 2
@@ -43,4 +44,5 @@ dataset:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
+  save_graph_path: results/graph

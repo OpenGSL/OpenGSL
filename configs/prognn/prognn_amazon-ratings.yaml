@@ -18,9 +18,11 @@ training:
   n_epochs: 500
   weight_decay: 5e-7
   patience: 100
+  patience_iter: 10000
   lr_adj: 1e-2
   inner_steps: 2
   outer_steps: 1
+  criterion: either
 
 gsl:
   symmetric: false
