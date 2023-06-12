@@ -188,3 +188,49 @@ def get_homophily(label, adj, type='node', fill=None):
     if fill:
         np.fill_diagonal(adj, fill)
     return eval('get_'+type+'_homophily(label, adj)')
+
+
+def get_adjusted_homophily(_label, adj):
+    label = _label.long()
+    labels = label.max() + 1
+    d = adj.sum(1)
+    E = d.sum()
+    D = torch.zeros(labels)
+    for i in range(adj.shape[0]):
+        D[label[i]] += d[i]
+
+    h_edge = get_edge_homophily(label, adj)
+    sum_pk = ((D / E) ** 2).sum()
+
+    return (h_edge - sum_pk) / (1 - sum_pk)
+
+
+def get_label_informativeness(_label, adj):
+    label = _label.long()
+    labels = label.max() + 1
+    LI_1 = 0
+    LI_2 = 0
+
+    p = torch.zeros((labels, labels))
+    for i, j in adj.nonzero():
+        p[label[i]][label[j]] = p[label[i]][label[j]] + adj[i][j]
+
+    d = adj.sum(1)
+    E = d.sum()
+    D = torch.zeros(labels)
+
+    for i in range(adj.shape[0]):
+        D[label[i]] = D[label[i]] + d[i]
+
+    for i in range(labels):
+        for j in range(labels):
+            p[i][j] = p[i][j] / E
+
+    p_ = D / E
+    LI_2 = (p_ * torch.log(p_)).sum()
+    for i in range(labels):
+        for j in range(labels):
+            if (p[i][j] != 0):
+                LI_1 += p[i][j] * torch.log(p[i][j] / (p_[i] * p_[j]))
+
+    return -LI_1 / LI_2
