@@ -1,23 +1,24 @@
 model:
   n_hidden: 64
   dropout: 0.5
+  dprate: 0.5
   K: 10
   alpha: 0.1
+  init: 'PPR'
 
 training:
   lr: 1e-2
-  weight_decay: 5e-4
-  n_epochs: 10000
-  patience: 100
-  criterion: either
+  weight_decay: 5e-7
+  n_epochs: 1000
+  patience: ~
+  criterion: metric
 
 dataset:
   feat_norm: true
   cora_split: false
   normalize: false
   add_loop: false
-  sparse: true
-#  homophily_control: 0.8
+  sparse: false
 
 # analysis
 analysis:

@@ -207,7 +207,7 @@ class GAUGSolver(Solver):
                 self.result['train'] = acc_train
                 improve = '*'
                 self.weights = deepcopy(self.model.state_dict())
-                self.best_graph = self.adj
+                self.best_graph = self.adj.to_dense()
 
             # print
             if debug:

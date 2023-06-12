@@ -17,7 +17,7 @@ dataset:
   cora_split: false
   feat_norm: false
   add_loop: false
-  normalize: true
+  normalize: false
   sparse: true
 
 training:
@@ -25,6 +25,8 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
+  patience: ~
+  criterion: metric
 
 # analysis
 analysis:
@@ -32,4 +34,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/grcn
+  load_graph_path: results/graph/sublime

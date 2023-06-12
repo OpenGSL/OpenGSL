@@ -15,7 +15,7 @@ model:
 dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: true
-  normalize: true
+  normalize: false
   add_loop: false
   sparse: true
 
@@ -34,4 +34,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/grcn
+  load_graph_path: results/graph/sublime

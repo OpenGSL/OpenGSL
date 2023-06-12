@@ -25,4 +25,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: true
-  load_graph_path: results/graph/gaug
+  load_graph_path: results/graph/gen
