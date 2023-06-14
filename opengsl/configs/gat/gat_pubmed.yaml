@@ -1,0 +1,25 @@
+model:
+  n_layers: 2
+  n_hidden: 8
+  n_heads: [8, 8]
+  dropout: 0.6
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  load_graph: false
+  sparse: true
+
+training:
+  lr: 1e-2
+  weight_decay: 1e-3
+  n_epochs: 10000
+  patience: 100
+  criterion: metric
+
+analysis:
+  flag: false
+  project: gsl-benchmark
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/stable

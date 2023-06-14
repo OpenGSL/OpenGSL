@@ -1,0 +1,28 @@
+model:
+  n_hidden: 64
+  dropout: 0.5
+  K: 10
+  alpha: 0.1
+
+training:
+  lr: 1e-2
+  weight_decay: 5e-4
+  n_epochs: 10000
+  patience: 100
+  criterion: either
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  normalize: true
+  add_loop: true
+  sparse: true
+#  homophily_control: 0.8
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/stable

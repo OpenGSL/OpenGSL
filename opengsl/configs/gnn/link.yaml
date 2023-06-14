@@ -1,0 +1,24 @@
+model:
+  name: link
+
+training:
+  n_epochs: 500
+  lr: 0.001
+  weight_decay: 0
+  criterion: metric
+  patience: ~
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  normalize: false
+  add_loop: false
+  sparse: true
+
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/idgl

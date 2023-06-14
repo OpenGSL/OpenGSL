@@ -1,0 +1,31 @@
+model:
+  n_hidden: 128
+  dropout: 0.2
+  K: 8
+  alpha: 0.9
+
+training:
+  lr: 1e-1
+  weight_decay: 5e-5
+  n_epochs: 400
+  patience: ~
+  criterion: ~
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  normalize: true
+  add_loop: true
+  sparse: true
+#  homophily_control: 0.8
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/prognn
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/l0bc02j1
+  count: 500

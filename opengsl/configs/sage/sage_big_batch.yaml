@@ -1,0 +1,41 @@
+lr: 1e-2
+weight_decay: 5e-4
+dropout: 0.5
+n_epochs: 200
+batch_size: 1024
+use_bn: true
+
+# fanouts here corresponds to the order in MultiLayerNeighborSampler
+# len(fanouts) == n_layers, use -1 if you want to sample all neighbors in that layer
+# Generally, infer_fanouts should be all -1, or equal to fanouts
+fanouts: [-1, -1, -1]
+infer_fanouts: [-1, -1, -1]
+
+n_hidden: 256
+n_layers: 3
+
+self_loop: True
+
+log_every: 20
+eval_every: 5
+num_workers: 4
+
+# for small benchmarks, all node features and labels will be put in GPU for acceleration
+# if the GPU memory cannot hold it, specify it to True, e.g. when training ogb
+data_cpu: false
+
+# below are for loading new graph structure of benchmark
+# reload_gs: false
+# graph_fn: data/g_struct/example/cora_raw.pth
+
+# below is for random feature input testing
+# random_feature: true
+
+# for learning rate scheduler
+# if you do not need a scheduler, comment all lines below
+scheduler: MultiStep
+milestones: [20, 100]
+gamma: 0.1
+
+# whether to transform the graph structure to symmetric
+to_symmetric: true

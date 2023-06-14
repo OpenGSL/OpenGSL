@@ -1,0 +1,23 @@
+model:
+  n_layers: 2
+
+training:
+  n_epochs: 1000
+  lr: 1e-1
+  weight_decay: 5e-6
+  patience: ~
+  criterion: metric
+
+dataset:
+  cora_split: false
+  feat_norm: false
+  normalize: true
+  add_loop: true
+  sparse: true
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/gaug

@@ -18,6 +18,7 @@ dataset:
   normalize: true
   add_loop: true
   sparse: true
+  homophily_control: 0.8
 
 
 training:
