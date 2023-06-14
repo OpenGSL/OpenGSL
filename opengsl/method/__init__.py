@@ -8,6 +8,8 @@ from .gnnsolver import GATSolver as gat
 from .gnnsolver import JKNetSolver as jknet
 from .gnnsolver import APPNPSolver as appnp
 from .gnnsolver import GPRGNNSolver as gprgnn
+from .gnnsolver import LINKSolver as link
+from .gnnsolver import LPASolver as lpa
 from .gslsolver import PROGNNSolver as prognn
 from .gslsolver import IDGLSolver as idgl
 from .gslsolver import GRCNSolver as grcn
