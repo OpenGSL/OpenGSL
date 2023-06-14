@@ -17,7 +17,7 @@ class GSL_Model(torch.nn.Module):
     def forward(self, input, adj):
         """ Graph Convolutional Layer forward function
         """
-        x = self.layer(x)
+        x = self.layer(input)
         return x
 
 
@@ -50,7 +50,7 @@ class GSL(opengsl.Solver):
             self.optim.step()
 
             # Evaluate
-            loss_val, acc_val, _ = self.evaluate(self.val_mask)
+            loss_val, acc_val = self.evaluate(self.val_mask)
 
             # save
             if acc_val > self.result['valid']:
@@ -76,7 +76,7 @@ class GSL(opengsl.Solver):
     def evaluate(self, test_mask):
         self.model.eval()
         with torch.no_grad():
-            output = self.model(self.feats, self.adj, self.labels.cpu().numpy())
+            output = self.model(self.feats, self.adj)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)
@@ -95,7 +95,7 @@ class GSL(opengsl.Solver):
 
 conf = opengsl.load_conf(path="gsl_cora.yaml")
 dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_norm'])
-solver = opengsl.method.gcn(conf,dataset)
+solver = GSL(conf,dataset)
 
 
 exp = opengsl.ExpManager(solver, n_runs = 10)
