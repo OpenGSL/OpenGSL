@@ -3,6 +3,7 @@ load data via pyg
 '''
 
 from torch_geometric.datasets import Planetoid, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor, AttributedGraphDataset
+import os
 
 
 def pyg_load_dataset(name, path='./data/'):
@@ -25,21 +26,21 @@ def pyg_load_dataset(name, path='./data/'):
     name = dic[name]
 
     if name in ["Cora", "CiteSeer", "PubMed"]:
-        dataset = Planetoid(root=path+name, name=name)
+        dataset = Planetoid(root=os.path.join(path, name), name=name)
     elif name in ["Computers", "Photo"]:
-        dataset = Amazon(root=path+name, name=name)
+        dataset = Amazon(root=os.path.join(path, name), name=name)
     elif name in ["CS", "Physics"]:
-        dataset = Coauthor(root=path+name, name=name)
+        dataset = Coauthor(root=os.path.join(path, name), name=name)
     elif name in ['WikiCS']:
-        dataset = WikiCS(root=path+name)
+        dataset = WikiCS(root=os.path.join(path, name))
     elif name in ['Chameleon', 'Squirrel', 'Crocodile']:
-        dataset = WikipediaNetwork(root=path+name, name=name)
+        dataset = WikipediaNetwork(root=os.path.join(path, name), name=name)
     elif name in ['Cornell', 'Texas', 'Wisconsin']:
-        dataset = WebKB(root=path+name, name=name)
+        dataset = WebKB(root=os.path.join(path, name), name=name)
     elif name == 'Actor':
-        dataset = Actor(root=path+name)
+        dataset = Actor(root=os.path.join(path, name))
     elif name in ['blogcatalog', 'flickr']:
-        dataset = AttributedGraphDataset(root=path+name, name=name)
+        dataset = AttributedGraphDataset(root=os.path.join(path, name), name=name)
     else:
         exit("wrong dataset")
     return dataset

@@ -1,11 +1,5 @@
 import argparse
 import os
-import sys
-
-# expected to remove#
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE_DIR)
-#---#
 
 
 parser = argparse.ArgumentParser()
@@ -24,12 +18,14 @@ args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-
 import opengsl as opengsl
 
 conf = opengsl.load_conf(method=args.method, dataset=args.data)
+conf.analysis['save_graph'] = True
+conf.analysis['save_graph_path'] = 'results/graph'
 print(conf)
-dataset = opengsl.data.Dataset(args.data, feat_norm=conf.dataset['feat_norm'])
+dataset = opengsl.data.Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
+
 
 method = eval('opengsl.method.{}(conf, dataset)'.format(args.method))
 exp = opengsl.ExpManager(method, n_runs=10, debug=args.debug)

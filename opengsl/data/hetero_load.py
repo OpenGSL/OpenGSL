@@ -2,8 +2,12 @@ import numpy as np
 import os
 import torch
 import dgl
+import urllib.request
 
 def hetero_load(name, path='./data/hetero_data'):
+    file_name = f'{name.replace("-", "_")}.npz'
+    if not os.path.exists(os.path.join(path, file_name)):
+        download(file_name, path)
     data = np.load(os.path.join(path, f'{name.replace("-", "_")}.npz'))
     node_features = torch.tensor(data['node_features'])
     labels = torch.tensor(data['node_labels'])
@@ -29,3 +33,15 @@ def hetero_load(name, path='./data/hetero_data'):
 
 
     return node_features, adj, labels, (train_indices, val_indices, test_indices)
+
+def download(name, path):
+    url = 'https://github.com/yandex-research/heterophilous-graphs/raw/main/data/'
+    try:
+        print('Downloading', url+name)
+        urllib.request.urlretrieve(url + name, os.path.join(path, name))
+        print('Done!')
+    except:
+        raise Exception('''Download failed! Make sure you have stable Internet connection and enter the right name''')
+
+if __name__ == '__main__':
+    print(hetero_load('minesweeper', 'tmp'))

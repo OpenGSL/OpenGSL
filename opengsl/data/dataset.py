@@ -6,6 +6,8 @@ from ..utils.utils import normalize_feats
 import numpy as np
 from .homophily_control import get_new_adj
 import pickle
+import os
+import urllib.request
 
 
 class Dataset:
@@ -67,7 +69,7 @@ class Dataset:
                 self.feats = normalize_feats(self.feats)
 
         elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
-            self.feats, self.adj, self.labels, self.splits = hetero_load(ds_name)
+            self.feats, self.adj, self.labels, self.splits = hetero_load(ds_name, path=self.path)
 
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device)
@@ -112,8 +114,20 @@ class Dataset:
             def load_obj(file_name):
                 with open(file_name, 'rb') as f:
                     return pickle.load(f)
+            def download(name):
+                url = 'https://github.com/zhao-tong/GAug/raw/master/data/graphs/'
+                try:
+                    print('Downloading', url + name)
+                    urllib.request.urlretrieve(url + name, os.path.join(self.path, name))
+                    print('Done!')
+                except:
+                    raise Exception(
+                        '''Download failed! Make sure you have stable Internet connection and enter the right name''')
 
-            train_indices, val_indices, test_indices = load_obj('data/' + self.name + '_tvt_nids.pkl')
+            split_file = self.name + '_tvt_nids.pkl'
+            if not os.path.exists(os.path.join(self.path, split_file)):
+                download(split_file)
+            train_indices, val_indices, test_indices = load_obj(os.path.join(self.path, split_file))
             for i in range(n_splits):
                 self.train_masks.append(train_indices)
                 self.val_masks.append(val_indices)
