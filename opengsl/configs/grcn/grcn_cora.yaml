@@ -21,8 +21,6 @@ gsl:
 dataset:
   feat_norm: false
   sparse: true
-  normalize: true
-  add_loop: false
 #  homophily_control: 0.4
 
 training:
@@ -37,7 +35,7 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: false
+  save_graph: true
   save_graph_path: results/graph
 
 # use wandb to tune hyperparams
