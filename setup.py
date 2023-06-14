@@ -36,9 +36,8 @@ def do_setup():
         long_description_content_type="text/markdown",
         install_requires=get_install_requires(),
         python_requires=">=3.7.0",
-        packages=find_packages(
-            include=["*"],
-        ),
+        packages=find_packages(),
+        include_package_data=True,
         keywords=["AI", "GNN", "graph structure learning"],
         classifiers=[
             "Programming Language :: Python :: 3.8",

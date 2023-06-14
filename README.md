@@ -8,12 +8,12 @@ Only the GPU version is currently available.
 
 
 ## Installation
-Note: OpenGSL requires Python 3.10+
+Note: OpenGSL requires Python 3.7+
 
-<!-- **Using Pip**
+**Using Pip**
 ``` bash
 pip install opengsl
-``` -->
+```
 
 **Installation for local development:**
 ``` bash
@@ -109,16 +109,16 @@ If you use our benchmark in your works, we would appreciate citations to the pap
 
 | **Paper** | **Method** | **Conference** |
 |---------|:----------:|:--------------:|
-| ****      | GCN        |                |
-| **null**  | ProGNN     |                |
-| **null**  | IDGL       |                |
-| **null**  | GRCN       |                |
-| **null**  | GAug(O)    |                |
-| **null**  | SLAPS      |                |
-| **null**  | GT         |                |
-| **null**  | Nodeformer |                |
-| **null**  | GEN        |                |
-| **null**  | CoGSL      |                |
-| **null**  | SEGSL      |                |
-| **null**  | SUBLIME    |                |
-| **null**  | STABLE     |                |
+| Semi-supervised classification with graph convolutional networks      | GCN        | ICLR 2017 |
+| Graph Structure Learning for Robust Graph Neural Networks  | ProGNN     | KDD 2020 |
+| Iterative Deep Graph Learning for Graph Neural Networks: Better and Robust Node Embeddings  | IDGL       | NeurIPS 2020 |
+| Graph-Revised Convolutional Network  | GRCN       | ECML-PKDD 2020 |
+| Data Augmentation for Graph Neural Networks  | GAug(O)    | AAAI 2021 |
+| SLAPS: Self-Supervision Improves Structure Learning for Graph Neural Networks  | SLAPS      | ICML 2021 |
+| Masked label prediction: Unified message passing model for semi-supervised classification  | GT         | IJCAI 2021 |
+| Nodeformer: A scalable graph structure learning transformer for node classification  | Nodeformer | NeurIPS 2022 |
+| Graph Structure Estimation Neural Networks  | GEN        | WWW 2021 |
+| Compact Graph Structure Learning via Mutual Information Compression  | CoGSL      | WWW 2022 |
+| SE-GSL: A General and Effective Graph Structure Learning Framework through Structural Entropy Optimization  | SEGSL      | WWW 2023 |
+| Towards Unsupervised Deep Graph Structure Learning  | SUBLIME    | WWW 2022 |
+| Reliable Representations Make A Stronger Defender: Unsupervised Structure Refinement for Robust GNN  | STABLE     | KDD 2022 |
