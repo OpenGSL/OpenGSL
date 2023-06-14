@@ -1,0 +1,30 @@
+model:
+  n_layers: 5
+  act: gelu # [relu, elu, gelu, leakyrelu]
+  n_hidden: 512
+  dropout: 0.2
+  input_dropout: 0.2
+  norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  n_heads: 8
+  ff: true
+  hidden_dim_multiplier: 1
+
+dataset:
+  cora_split: true # for cora,citeseer and pubmed
+  feat_norm: false
+  load_graph: false
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 3e-5
+  n_epochs: 1000
+  weight_decay: 0
+
+# analysis
+analysis:
+  flag: true
+  project: gsl-benchmark
+  save_graph: false
+  dir: wandb/gt_hetero
+  graph_analysis: false
+  group: gt
