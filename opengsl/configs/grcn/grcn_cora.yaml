@@ -35,7 +35,7 @@ training:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false
   save_graph_path: results/graph
 
 # use wandb to tune hyperparams

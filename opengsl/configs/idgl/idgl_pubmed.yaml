@@ -41,4 +41,4 @@ dataset:
 analysis:
   flag: false
   project: gsl
-  save_graph: true
+  save_graph: false

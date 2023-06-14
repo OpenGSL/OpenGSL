@@ -33,13 +33,11 @@ conf = opengsl.load_conf(method="gcn", dataset="cora")
 
 #### Step 2: Load data
 ``` python
-import opengsl.data
 dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_norm'])
 ```
 
 #### Step 3: Build Model
 ``` python
-import opengsl.method
 solver = opengsl.method.gcn(conf,dataset)
 ```
 
@@ -49,9 +47,13 @@ exp = opengsl.ExpManager(solver, n_runs = 10)
 exp.run()
 ```
 
+## Add method
+if you want to use your own method, see `example.py` for detail.
+
+
 ## Node Classification Results
 | **Model**      | **Cora**     | **Citeseer** | **Pubmed**   | **Questions** | **Minesweeper** |
-|--------------|:------------:|:------------:|:------------:|:-------------:|:---------------:|
+|----------------|:------------:|:------------:|:------------:|:-------------:|:---------------:|
 | **GCN**        | 81.95 ± 0.62 | 71.34 ± 0.48 | 78.98 ± 0.35 | 75.80 ± 0.51  | 78.28 ± 0.44    |
 | **ProGNN**     | 80.27 ± 0.48 | 71.35 ± 0.42 | 79.39 ± 0.29 | --            | 51.43 ± 2.22    |
 | **IDGL**       | 84.19 ± 0.61 | 73.26 ± 0.53 | 82.78 ± 0.44 | 50.00 ± 0.00  | 50.00 ± 0.00    |
@@ -68,7 +70,7 @@ exp.run()
 
 
 | **Model**      | **BlogCatalog** | **Flickr**   | **Amazon-ratings** | **Roman-empire** | **Wiki-cooc**  |
-|--------------|:---------------:|:------------:|:------------------:|:----------------:|:--------------:|
+|----------------|:---------------:|:------------:|:------------------:|:----------------:|:--------------:|
 | **GCN**        | 76.12 ± 0.42    | 61.60 ± 0.49 | 45.24 ± 0.29       | 70.41 ± 0.47     | 92.03 ± 0.19   |
 | **ProGNN**     | 73.38 ± 0.30    | 52.88 ± 0.76 | --                 | 56.21 ± 0.58     | 89.07 ± 5.59   |
 | **IDGL**       | 89.68 ± 0.24    | 86.03 ± 0.25 |  45.87 ± 0.58      | 47.10 ± 0.65     |  90.18 ± 0.27  |
@@ -82,14 +84,6 @@ exp.run()
 | **SEGSL**      | 75.03 ± 0.28    | 60.59 ± 0.54 | --                 | --               | --             |
 | **SUBLIME**    | 95.29 ± 0.26    | 88.74 ± 0.29 | 44.49 ± 0.30       | 63.93 ± 0.27     | 76.10 ± 1.12   |
 | **STABLE**     | 71.84 ± 0.56    | 51.36 ± 1.24 | 48.36 ± 0.21       | 41.00 ± 1.18     | 80.46 ± 2.44   |
-
-## Add method
-
-There is an example of use your own GSL method.
-
-```python
-
-```
 
 ## How to Contribute
 As an active research topic, we are witenessing the rapid development of GSL methods.

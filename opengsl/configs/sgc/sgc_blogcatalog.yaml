@@ -17,5 +17,5 @@ dataset:
 
 analysis:
   flag: false
-  load_graph: true
+  load_graph: false
   load_graph_path: results/graph/gaug
