@@ -15,8 +15,6 @@ class GSL_Model(torch.nn.Module):
         """
 
     def forward(self, input, adj):
-        """ Graph Convolutional Layer forward function
-        """
         x = self.layer(input)
         return x
 
@@ -92,11 +90,12 @@ class GSL(opengsl.Solver):
                                  weight_decay=self.conf.training['weight_decay'])
 
 
+if __name__ == "__main__":
+    
+    conf = opengsl.load_conf(path="gsl_cora.yaml")
+    dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_norm'])
+    solver = GSL(conf,dataset)
 
-conf = opengsl.load_conf(path="gsl_cora.yaml")
-dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_norm'])
-solver = GSL(conf,dataset)
 
-
-exp = opengsl.ExpManager(solver, n_runs = 10)
-exp.run()
+    exp = opengsl.ExpManager(solver, n_runs = 10)
+    exp.run()

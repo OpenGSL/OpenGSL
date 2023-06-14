@@ -9,13 +9,20 @@ wandb
 pyro-api
 pyro-ppl
 numpy
+numba
+torch
+torch_geometric
+torch_sparse
+dgl
+"""
+
+"""
 numba >= 0.57.0
 torch >= 1.12.1
 torch_geometric >= 2.3.0
 torch_sparse >= 0.6.17
 dgl >= 1.0.2
 """
-
 
 def get_install_requires():
     reqs = [req for req in REQUIRES.split("\n") if len(req) > 0]

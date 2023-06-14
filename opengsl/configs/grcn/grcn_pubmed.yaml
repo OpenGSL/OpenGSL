@@ -50,6 +50,6 @@ analysis:
   sweep: false
   sweep_id: yotsugi/gsl-benchmark/iky8ecp8
   project: gsl-benchmark
-  save_graph: true
+  save_graph: false
   save_graph_path: results/graph
   count: 300
