@@ -10,10 +10,10 @@ Only the GPU version is currently available.
 ## Installation
 Note: OpenGSL requires Python 3.10+
 
-<!-- **Using Pip**
+**Using Pip**
 ``` bash
 pip install opengsl
-``` -->
+```
 
 **Installation for local development:**
 ``` bash
