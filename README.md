@@ -1,8 +1,9 @@
 # OpenGSL
-OpenGSL is a comprehensive benchmark for Graph Structure Learning
+OpenGSL is a comprehensive benchmark for Graph Structure Learning.
 
 ## Overview of the benchmark
 OpenGSL is a easy interface for Graph Structure Learning.
+
 Only the GPU version is currently available.
 
 
@@ -32,17 +33,19 @@ conf = opengsl.load_conf(method="gcn", dataset="cora")
 
 #### Step 2: Load data
 ``` python
+import opengsl.data
 dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_norm'])
 ```
 
 #### Step 3: Build Model
 ``` python
-method = opengsl.method.gcn(conf,dataset)
+import opengsl.method
+solver = opengsl.method.gcn(conf,dataset)
 ```
 
 #### Step 4: Training and Evaluation
 ``` python
-exp = opengsl.ExpManager(method, n_runs = 10)
+exp = opengsl.ExpManager(solver, n_runs = 10)
 exp.run()
 ```
 
@@ -80,6 +83,13 @@ exp.run()
 | **SUBLIME**    | 95.29 ± 0.26    | 88.74 ± 0.29 | 44.49 ± 0.30       | 63.93 ± 0.27     | 76.10 ± 1.12   |
 | **STABLE**     | 71.84 ± 0.56    | 51.36 ± 1.24 | 48.36 ± 0.21       | 41.00 ± 1.18     | 80.46 ± 2.44   |
 
+## Add method
+
+There is an example of use your own GSL method.
+
+```python
+
+```
 
 ## How to Contribute
 As an active research topic, we are witenessing the rapid development of GSL methods.
