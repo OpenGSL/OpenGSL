@@ -1,3 +1,5 @@
+model:
+  type: gcn
 sparse: true
 epochs_cls: 200
 lr_cls: 0.01
@@ -27,7 +29,9 @@ maskfeat_rate_anchor: 0.4
 contrast_batch_size: 2000
 c: 50
 
-
+training:
+  patience: ~
+  criterion: ~
 
 dataset:
   feat_norm: false   # sublime does not normalize feats
@@ -38,6 +42,5 @@ dataset:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

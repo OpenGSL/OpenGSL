@@ -33,5 +33,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
+  save_graph_path: results/graph

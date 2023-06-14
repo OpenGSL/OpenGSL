@@ -1,4 +1,5 @@
 model:
+  type: 'gcn'
   nlayers_adj: 2
   hidden_adj: 1024
   k: 30
@@ -32,7 +33,10 @@ training:
   lamda: 10
   ratio: 10
   nr: 5
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false
-  project: gsl
+  save_graph: false
+  save_graph_path: results/graph

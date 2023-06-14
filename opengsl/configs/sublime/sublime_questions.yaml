@@ -1,3 +1,5 @@
+model:
+  type: gcn
 sparse: true
 epochs_cls: 400
 lr_cls: 1e-1
@@ -28,8 +30,6 @@ maskfeat_rate_anchor: 0.4
 contrast_batch_size: 2000
 c: 50
 
-
-
 dataset:
   feat_norm: false   # sublime does not normalize feats
   cora_split: false
@@ -43,6 +43,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

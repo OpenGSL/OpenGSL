@@ -1,4 +1,5 @@
 model:
+  type: gcn
   n_hidden: 128
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
@@ -44,6 +45,7 @@ training:
   pretrain_ep: 0
   pretrain_nc: 400
   beta: 0
+  criterion: ~
 
 # analysis
 analysis:

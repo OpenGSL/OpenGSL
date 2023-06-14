@@ -18,7 +18,7 @@ training:
   n_epochs: 250
   weight_decay: 5e-5
   patience: 100
-  lr_adj: 1e-2
+  lr_adj: 1e-3
   inner_steps: 2
   outer_steps: 1
 

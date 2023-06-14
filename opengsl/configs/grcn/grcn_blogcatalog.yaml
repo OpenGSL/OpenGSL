@@ -1,5 +1,5 @@
 model:
-  type: appnp
+  type: gcn
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
@@ -31,14 +31,10 @@ training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-2
   n_epochs: 500
-  weight_decay: 5e-4
-  lr_graph: 1e-2
+  weight_decay: 5e-5
+  lr_graph: 1e-4
 
 analysis:
   flag: false
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/mosxhgjw
-  project: gsl-benchmark
   save_graph: false
   save_graph_path: results/graph
-  count: 100

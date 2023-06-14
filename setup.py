@@ -13,7 +13,7 @@ numba
 torch
 torch_geometric
 torch_sparse
-dgl
+dgl-cu115
 """
 
 def get_install_requires():
@@ -28,7 +28,7 @@ with open("README.md") as f:
 def do_setup():
     setup(
         name="opengsl",
-        version="0.0.1",
+        version="0.0.2",
         description="A comprehensive benchmark for Graph Structure Learning.",
         url="https://github.com/OpenGSL/OpenGSL",
         author='Zhiyao Zhou, Sheng Zhou, Bochao Mao, Xuanyi Zhou',

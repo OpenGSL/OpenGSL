@@ -15,19 +15,19 @@ model:
   dropout: 0.5
   norm: false
   scalable_run: true
-  num_anchors: 700
+  num_anchors: 300
 
 
 gsl:
   graph_skip_conn: 0.7
-  update_adj_ratio: 0.3
+  update_adj_ratio: 0.1
   graph_include_self: False
 
   graph_learn_epsilon: 0.1
   graph_learn_epsilon2: 0.1
   graph_learn_topk: null
   graph_learn_topk2: null
-  graph_learn_num_pers: 6
+  graph_learn_num_pers: 4
 
   feat_adj_dropout: 0
   gl_dropout: 0

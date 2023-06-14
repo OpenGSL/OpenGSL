@@ -26,7 +26,7 @@ training:
   n_epochs: 400
   weight_decay: 5e-7
   patience: ~
-  criterion: ~
+  criterion: metric
 
 # analysis
 analysis:

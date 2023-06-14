@@ -7,6 +7,7 @@ training:
   smoothness_ratio: 0.4
   degree_ratio: 0
   sparsity_ratio: 0.2
+  criterion: ~
 
 model:
   n_layers: 2
@@ -35,7 +36,8 @@ gsl:
   test_eps_adj: 1e-3
 
 dataset:
-  re_split: true # for cora,citeseer and pubmed
+  feat_norm: true
+  sparse: true
 
 # analysis
 analysis:

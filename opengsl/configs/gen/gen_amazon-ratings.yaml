@@ -16,9 +16,9 @@ model:
   alpha: 0.1
 
 gsl:
-  k: 9
+  k: 8
   tolerance: 0.01
-  threshold: 0.5
+  threshold: 0.6
 
 dataset:
   feat_norm: false
@@ -37,6 +37,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

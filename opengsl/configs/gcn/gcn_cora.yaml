@@ -18,8 +18,7 @@ dataset:
   normalize: true
   add_loop: true
   sparse: true
-  homophily_control: 0.8
-
+#  homophily_control: 0.8
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space

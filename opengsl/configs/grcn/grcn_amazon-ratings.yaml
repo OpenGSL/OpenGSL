@@ -35,9 +35,5 @@ training:
 
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/zea47r53
-  count: 100

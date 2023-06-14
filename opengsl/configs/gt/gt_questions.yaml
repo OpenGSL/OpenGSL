@@ -24,14 +24,11 @@ training:
   lr: 1e-3
   n_epochs: 1000
   weight_decay: 5e-7
+  patience: ~
+  criterion: ~
 
 # analysis
 analysis:
   flag: false
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/ee5b64f0
-  project: gsl
   save_graph: false
-  graph_analysis: false
-  dir: wandb/gt_cora
-  count: 500
+  save_graph_path: results/graph

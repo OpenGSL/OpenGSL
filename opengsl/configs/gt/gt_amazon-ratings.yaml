@@ -30,10 +30,5 @@ training:
 # analysis
 analysis:
   flag: false
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/mkt40963
-  project: gsl
   save_graph: false
-  graph_analysis: false
-  dir: wandb/gt_cora
-  count: 500
+  save_graph_path: results/graph

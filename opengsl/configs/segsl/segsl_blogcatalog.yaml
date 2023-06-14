@@ -1,5 +1,4 @@
 model:
-  type: appnp
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
@@ -12,35 +11,28 @@ model:
   input_layer: false
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
-  K: 10
-  alpha: 0.1
-
-training:
-  lr: 1e-2
-  n_epochs: 300
-  weight_decay: 5e-7
-  patience_iter: 100
-  lr_adj: 1e-2
-  inner_steps: 2
-  outer_steps: 1
-  patience: ~
-  criterion: either
 
 gsl:
-  symmetric: false
-  lambda_: 0.001
-  alpha: 5e-4
-  beta: 1.5
-  gamma: 1
+  k: 2
+  se: 3
+
 
 dataset:
   feat_norm: true
-  cora_split: false
+  cora_split: false # for cora,citeseer and pubmed
   sparse: true
+
+training:
+  n_iters: 10
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-2
+  n_epochs: 200
+  weight_decay: 5e-7
+  patience: ~
+  criterion: ~
 
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

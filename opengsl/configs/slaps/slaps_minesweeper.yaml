@@ -1,4 +1,5 @@
 model:
+  type: 'gcn'
   nlayers_adj: 2
   hidden_adj: 128
   k: 20
@@ -6,7 +7,6 @@ model:
   i: 6
   non_linearity: 'relu'
   normalization: 'sym'
-  mlp_h: 6805
   mlp_epochs: 500
   mlp_act: 'relu'
   hidden: 32
@@ -20,6 +20,7 @@ dataset:
   feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   feat_type: 'continuous' # 'continuous' for pubmed, amazon-ratings, questions, roman-empire and wiki-cooc, otherwise 'binary'
+  sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
@@ -32,7 +33,10 @@ training:
   lamda: 1
   ratio: 10
   nr: 1
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false
-  project: gsl
+  save_graph: false
+  save_graph_path: results/graph

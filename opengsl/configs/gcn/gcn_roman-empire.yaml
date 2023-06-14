@@ -6,10 +6,10 @@ model:
   dropout: 0.5
   input_dropout: 0
   norm:
-    flag: false
-    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
-  input_layer: false
-  output_layer: false
+    flag: true
+    norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  input_layer: true
+  output_layer: true
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
 dataset:
@@ -22,9 +22,12 @@ dataset:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-1
-  n_epochs: 400
+  lr: 1e-3
+  n_epochs: 500
   weight_decay: 5e-5
+  patience: ~
+  criterion: metric
+
 
 # analysis
 analysis:

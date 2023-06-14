@@ -35,8 +35,7 @@ gsl:
   test_eps_adj: 8e-5
 
 dataset:
-  cora_split: false
-  feat_norm: false
+  feat_norm: true
   sparse: true
 
 # analysis

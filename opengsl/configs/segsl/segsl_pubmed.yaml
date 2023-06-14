@@ -29,10 +29,11 @@ training:
   lr: 1e-2
   n_epochs: 200
   weight_decay: 5e-4
+  patience: ~
+  criterion: ~
 
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

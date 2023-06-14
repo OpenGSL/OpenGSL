@@ -1,8 +1,8 @@
 model:
   n_layers: 2
   act: relu
-  n_hidden: 64
-  n_heads: 4
+  n_hidden: 128
+  n_heads: 8
   dropout: 0.5
   use_bn: true
   M: 30
@@ -34,8 +34,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
-  save_graph: false
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/wdiwc99e
-  count: 1
+  patience: ~
+  criterion: ~

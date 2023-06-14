@@ -21,8 +21,9 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 import opengsl as opengsl
 
 conf = opengsl.load_conf(method=args.method, dataset=args.data)
-conf.analysis['save_graph'] = True
-conf.analysis['save_graph_path'] = 'results/graph'
+if not args.method == 'gcn':
+    conf.analysis['save_graph'] = True
+    conf.analysis['save_graph_path'] = 'results/graph'
 print(conf)
 dataset = opengsl.data.Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
 

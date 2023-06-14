@@ -1,3 +1,7 @@
+model:
+  type: gcn
+model:
+  type: gcn
 sparse: false
 epochs_cls: 400
 lr_cls: 1e-2
@@ -7,7 +11,6 @@ dropout_cls: 0.5
 dropedge_cls: 0.75
 n_layers_cls: 2
 patience_cls: 100
-
 epochs: 2000
 lr: 0.001
 wd: 0.0
@@ -29,7 +32,9 @@ contrast_batch_size: 0
 c: 0
 
 
-
+training:
+  patience: ~
+  criterion: ~
 
 dataset:
   feat_norm: false   # sublime does not normalize feats
@@ -40,6 +45,5 @@ dataset:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

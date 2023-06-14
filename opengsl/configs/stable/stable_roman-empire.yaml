@@ -12,9 +12,9 @@ lr: 1e-1
 weight_decay: 5e-5
 n_embed: 512
 jt: 0.0
-cos: 0.1
+cos: 0.3
 threshold: 1
-k: 1
+k: 5
 alpha: -0.5
 beta: 2
 recover_percent: 0.2
@@ -34,6 +34,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

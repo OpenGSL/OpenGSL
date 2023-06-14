@@ -57,9 +57,5 @@ dataset:
 
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/4l4zs0jn
-  count: 100

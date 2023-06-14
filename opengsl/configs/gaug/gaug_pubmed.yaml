@@ -1,4 +1,5 @@
 model:
+  type: gcn
   n_hidden: 128
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer

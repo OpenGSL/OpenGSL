@@ -33,8 +33,5 @@ training:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
-  sweep: false
-  sweep_id: yotsugi/gsl-benchmark/r8n3fluk
-  count: 100
+  save_graph_path: results/graph

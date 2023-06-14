@@ -1,4 +1,5 @@
 model:
+  type: gcn
   n_hidden: 128
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
@@ -27,7 +28,7 @@ gsl:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
   gae: true
-  alpha: 0.05
+  alpha: 0.1
   temperature: 0.3
 
 dataset:
@@ -39,7 +40,7 @@ training:
   lr: 1e-2
   n_epochs: 500
   weight_decay: 5e-7
-  warmup: 10
+  warmup: 20
   patience: 100
   pretrain_ep: 5
   pretrain_nc: 500

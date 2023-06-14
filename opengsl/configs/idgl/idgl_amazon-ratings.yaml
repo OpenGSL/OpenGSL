@@ -15,7 +15,7 @@ model:
   dropout: 0.2
   norm: false
   scalable_run: true
-  num_anchors: 700
+  num_anchors: 500
 
 
 gsl:
@@ -36,8 +36,7 @@ gsl:
   test_eps_adj: 8e-5
 
 dataset:
-  cora_split: false
-  feat_norm: false
+  feat_norm: true
   sparse: true
 
 # analysis

@@ -1,3 +1,5 @@
+model:
+  type: gcn
 sparse: false
 epochs_cls: 200
 lr_cls: 0.001
@@ -40,6 +42,5 @@ dataset:
 # analysis
 analysis:
   flag: false
-  project: gsl
   save_graph: false
   save_graph_path: results/graph

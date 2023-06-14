@@ -19,15 +19,15 @@ model:
 
 
 gsl:
-  graph_skip_conn: 0.7
-  update_adj_ratio: 0.3
+  graph_skip_conn: 0.9
+  update_adj_ratio: 0.2
   graph_include_self: false
 
   graph_learn_epsilon: 0.1
   graph_learn_epsilon2: 0.1
   graph_learn_topk: null
   graph_learn_topk2: null
-  graph_learn_num_pers: 6
+  graph_learn_num_pers: 8
 
   feat_adj_dropout: 0
   gl_dropout: 0

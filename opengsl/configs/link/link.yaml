@@ -6,7 +6,7 @@ training:
   lr: 0.001
   weight_decay: 0
   patience: ~
-  criterion: ~
+  criterion: metric
 
 dataset:
   feat_norm: true
