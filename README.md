@@ -8,7 +8,7 @@ Only the GPU version is currently available.
 
 
 ## Installation
-Note: OpenGSL requires Python 3.10+
+Note: OpenGSL requires Python 3.7+
 
 **Using Pip**
 ``` bash
@@ -109,16 +109,16 @@ If you use our benchmark in your works, we would appreciate citations to the pap
 
 | **Paper** | **Method** | **Conference** |
 |---------|:----------:|:--------------:|
-| ****      | GCN        |                |
-| **null**  | ProGNN     |                |
-| **null**  | IDGL       |                |
-| **null**  | GRCN       |                |
-| **null**  | GAug(O)    |                |
-| **null**  | SLAPS      |                |
-| **null**  | GT         |                |
-| **null**  | Nodeformer |                |
-| **null**  | GEN        |                |
-| **null**  | CoGSL      |                |
-| **null**  | SEGSL      |                |
-| **null**  | SUBLIME    |                |
-| **null**  | STABLE     |                |
+| Semi-supervised classification with graph convolutional networks      | GCN        | ICLR |
+| Graph Structure Learning for Robust Graph Neural Networks  | ProGNN     | KDD |
+| Iterative Deep Graph Learning for Graph Neural Networks: Better and Robust Node Embeddings  | IDGL       | NeurIPS |
+| Graph-Revised Convolutional Network  | GRCN       | ECML-PKDD |
+| Data Augmentation for Graph Neural Networks  | GAug(O)    | AAAI |
+| SLAPS: Self-Supervision Improves Structure Learning for Graph Neural Networks  | SLAPS      | ICML |
+| Masked label prediction: Unified message passing model for semi-supervised classification  | GT         | IJCAI |
+| Nodeformer: A scalable graph structure learning transformer for node classification  | Nodeformer | NeurIPS |
+| Graph Structure Estimation Neural Networks  | GEN        | WWW |
+| Compact Graph Structure Learning via Mutual Information Compression  | CoGSL      | WWW |
+| SE-GSL: A General and Effective Graph Structure Learning Framework through Structural Entropy Optimization  | SEGSL      | WWW |
+| Towards Unsupervised Deep Graph Structure Learning  | SUBLIME    | WWW |
+| Reliable Representations Make A Stronger Defender: Unsupervised Structure Refinement for Robust GNN  | STABLE     | KDD |
