@@ -1,5 +1,8 @@
 # Compiled python modules.
 *.pyc
 
+# Test file
+/data
+
 # Packages
 /opengsl.egg-info
