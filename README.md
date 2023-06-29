@@ -96,8 +96,8 @@ solver = opengsl.method.GCNSolver(conf,dataset)
 
 #### Step 4: Training and Evaluation
 ``` python
-exp = opengsl.ExpManager(solver, n_runs = 10)
-exp.run()
+exp = opengsl.ExpManager(solver)
+exp.run(n_runs = 10)
 ```
 
 ## Adding New GSL Method

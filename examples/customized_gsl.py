@@ -95,5 +95,5 @@ if __name__ == "__main__":
     solver = GSL(conf,dataset)
 
 
-    exp = opengsl.ExpManager(solver, n_runs = 10)
-    exp.run()
+    exp = opengsl.ExpManager(solver)
+    exp.run(n_runs = 10)

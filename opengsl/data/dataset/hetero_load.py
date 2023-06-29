@@ -35,7 +35,7 @@ def hetero_load(name, path='./data/hetero_data'):
     return node_features, adj, labels, (train_indices, val_indices, test_indices)
 
 def download(name, path):
-    url = 'https://github.com/yandex-research/heterophilous-graphs/raw/main/data/'
+    url = 'https://github.com/OpenGSL/HeterophilousDatasets/tree/main/data/'
     try:
         print('Downloading', url+name)
         urllib.request.urlretrieve(url + name, os.path.join(path, name))

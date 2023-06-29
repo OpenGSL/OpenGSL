@@ -37,11 +37,11 @@ class ExpManager:
     >>> solver = SGCSolver(conf, dataset)
     >>>
     >>> import opengsl.ExpManager
-    >>> exp = ExpManager(solver, n_runs=10, debug=True)
-    >>> exp.run()
+    >>> exp = ExpManager(solver)
+    >>> exp.run(n_runs=10, debug=True)
 
     '''
-    def __init__(self, solver=None, n_splits=1, n_runs=1, save_path=None, debug=False):
+    def __init__(self, solver=None, save_path=None):
         self.solver = solver
         self.conf = solver.conf
         self.method = solver.method_name
@@ -51,8 +51,6 @@ class ExpManager:
         # you can change random seed here
         self.train_seeds = [i for i in range(400)]
         self.split_seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        self.n_splits = n_splits
-        self.n_runs = n_runs
         self.save_path = None
         self.save_graph_path = None
         self.load_graph_path = None
@@ -68,17 +66,16 @@ class ExpManager:
                 'load_graph_path'] is not None, 'Specify the path to load graph'
             self.load_graph_path = self.conf.analysis['load_graph_path']
         assert self.save_graph_path is None or self.load_graph_path is None, 'GNN does not save graph, GSL does not load graph'
-        self.debug = debug
 
-    def run(self):
-        total_runs = self.n_runs * self.n_splits
-        assert self.n_splits <= len(self.split_seeds)
+    def run(self, n_splits=1, n_runs=1, debug=False):
+        total_runs = n_runs * n_splits
+        assert n_splits <= len(self.split_seeds)
         assert total_runs <= len(self.train_seeds)
         logger = Logger(runs=total_runs)
-        for i in range(self.n_splits):
+        for i in range(n_splits):
             succeed = 0
             for j in range(400):
-                idx = i * self.n_runs + j
+                idx = i * n_runs + j
                 print("Exp {}/{}".format(idx, total_runs))
                 set_seed(self.train_seeds[idx])
 
@@ -89,7 +86,7 @@ class ExpManager:
                         self.solver.adj = self.solver.adj.to_sparse()
                 # run an exp
                 try:
-                    result, graph = self.solver.run_exp(split=i, debug=self.debug)
+                    result, graph = self.solver.run_exp(split=i, debug=debug)
                 except ValueError:
                     continue
                 logger.add_result(succeed, result)
@@ -106,3 +103,5 @@ class ExpManager:
         if self.save_path:
             save_conf(os.path.join(self.save_path, '{}-{}-'.format(self.method, self.data) +
                                    time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime()) + '.yaml'), self.conf)
+            
+        return float(self.acc_save), float(self.std_save)
