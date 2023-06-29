@@ -1,0 +1,1 @@
+from opengsl.config.util import load_conf, save_conf

@@ -1,0 +1,12 @@
+# Compiled python modules.
+*.pyc
+
+# Test file
+/data
+
+# Output files
+/results
+
+# Packages
+/opengsl.egg-info
+docs/build/

@@ -1,0 +1,37 @@
+model:
+  n_layers: 2
+  act: relu
+  n_hidden: 32
+  n_heads: 1
+  dropout: 0.8
+  use_bn: false
+  M: 30
+  use_gumbel: true
+  use_residual: false
+  use_act: true
+  use_jk: false
+  K: 20
+  rb_order: 1
+  rb_trans: sigmoid
+  tau: 0.25
+
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  sparse: true
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-2
+  n_epochs: 1000
+  weight_decay: 5e-4
+  lambda: 0.01
+  patience: ~
+  criterion: ~
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

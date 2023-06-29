@@ -1,0 +1,29 @@
+model:
+  n_hidden: 64
+  dropout: 0
+  K: 6
+  alpha: 0.9
+
+training:
+  lr: 1e-1
+  weight_decay: 5e-5
+  n_epochs: 400
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  normalize: true
+  add_loop: true
+  sparse: true
+#  homophily_control: 0.8
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/idgl
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/kvb0ezmm
+  count: 500

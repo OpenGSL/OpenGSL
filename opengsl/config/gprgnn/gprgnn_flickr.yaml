@@ -1,0 +1,29 @@
+model:
+  n_hidden: 64
+  dropout: 0.5
+  dprate: 0.5
+  K: 10
+  alpha: 0.1
+  init: 'PPR'
+
+training:
+  lr: 1e-2
+  weight_decay: 5e-7
+  n_epochs: 1000
+  patience: ~
+  criterion: metric
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  normalize: false
+  add_loop: false
+  sparse: false
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/sublime

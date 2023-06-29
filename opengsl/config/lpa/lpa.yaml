@@ -1,0 +1,23 @@
+model:
+  n_layers: 2
+  alpha: 0.9
+
+dataset:
+  cora_split: false
+  feat_norm: true
+  normalize: true
+  add_loop: true
+  sparse: true
+
+training:
+  patience: ~
+  criterion: ~
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/gen
+
+# /root/anaconda3/envs/GSL/bin/python /mbc/GSL/GSL-Benchmark/main.py --data wiki-cooc --method lpa --config config/lpa/lpa.yaml --n_runs 9 --gpu 6

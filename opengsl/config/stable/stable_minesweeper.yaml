@@ -1,0 +1,38 @@
+pretrain:
+  n_epochs: 10000
+  lr: 0.001
+  weight_decay: 0.0
+  patience: 100
+
+n_epochs: 1000
+n_hidden: 128
+n_layers: 3
+dropout: 0.2
+lr: 1e-1
+weight_decay: 5e-6
+n_embed: 512
+jt: 0.0
+cos: 0.1
+threshold: 1
+k: 3
+alpha: -0.5
+beta: 2
+recover_percent: 0.2
+
+dataset:
+  cora_split: false # for cora,citeseer and pubmed
+  feat_norm: false
+  load_graph: false
+  sparse: true
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-2
+  n_epochs: 200
+  weight_decay: 5e-4
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

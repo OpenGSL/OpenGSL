@@ -1,0 +1,28 @@
+model:
+  n_layers: 2
+  n_hidden: 8
+  n_heads: [8, 1]
+  dropout: 0.5
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  load_graph: false
+  sparse: true
+
+training:
+  lr: 1e-1
+  weight_decay: 0
+  n_epochs: 10000
+  patience: 1000
+  criterion: metric
+
+analysis:
+  flag: false
+  project: gsl-benchmark
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/stable
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/2w7crseh
+  count: ~

@@ -1,0 +1,28 @@
+model:
+  n_layers: 2 # n_payers = normal_layers + classification_layer
+  n_hidden: 32
+  n_heads: 8 # for normal layers
+  dropout: 0.2
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  load_graph: false
+  sparse: true
+
+training:
+  lr: 1e-2
+  weight_decay: 0
+  n_epochs: 10000
+  patience: 1000
+  criterion: metric
+
+analysis:
+  flag: false
+  project: gsl-benchmark
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/stable
+  sweep: false
+  sweep_id: yotsugi/gsl-benchmark/4cy7fox3
+  count: 500

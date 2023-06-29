@@ -1,0 +1,26 @@
+model:
+  name: link
+
+training:
+  n_epochs: 500
+  lr: 0.001
+  weight_decay: 0
+  patience: ~
+  criterion: metric
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  normalize: true
+  add_loop: true
+  sparse: true
+
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/prognn
+
+# /root/anaconda3/envs/GSL/bin/python /mbc/GSL/GSL-Benchmark/main.py --data wiki-cooc --method link --config config/link/link.yaml --n_runs 9 --gpu 7

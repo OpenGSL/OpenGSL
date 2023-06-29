@@ -1,0 +1,7 @@
+ruamel.yaml
+pandas
+scipy
+scikit-learn
+pyro-api
+pyro-ppl
+numba

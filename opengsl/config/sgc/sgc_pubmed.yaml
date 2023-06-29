@@ -1,0 +1,21 @@
+model:
+  n_layers: 2
+
+training:
+  n_epochs: 100
+  patience: ~
+  criterion: ~
+  lr: 0.2
+  weight_decay: 7.403929623323868e-05   # 1.3026973714043257e-05, 2.3545587233182368e-05, 7.403929623323868e-05 for cora, citeseer, pubmed
+
+dataset:
+  cora_split: false
+  feat_norm: true
+  normalize: false
+  add_loop: false
+  sparse: true
+
+analysis:
+  flag: false
+  load_graph: false
+  load_graph_path: results/graph/sublime
