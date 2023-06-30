@@ -32,6 +32,6 @@ Step 4: Training and Evaluation
 
 .. code-block:: python
 
-    exp = opengsl.ExpManager(solver, n_runs = 10)
-    exp.run()
+    exp = opengsl.ExpManager(solver)
+    exp.run(n_runs = 10)
 
