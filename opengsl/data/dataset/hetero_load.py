@@ -6,6 +6,8 @@ import urllib.request
 
 def hetero_load(name, path='./data/hetero_data'):
     file_name = f'{name.replace("-", "_")}.npz'
+    if not os.path.exists(path):
+        os.makedirs(path)
     if not os.path.exists(os.path.join(path, file_name)):
         download(file_name, path)
     data = np.load(os.path.join(path, f'{name.replace("-", "_")}.npz'))
@@ -35,7 +37,7 @@ def hetero_load(name, path='./data/hetero_data'):
     return node_features, adj, labels, (train_indices, val_indices, test_indices)
 
 def download(name, path):
-    url = 'https://github.com/OpenGSL/HeterophilousDatasets/tree/main/data/'
+    url = 'https://github.com/OpenGSL/HeterophilousDatasets/raw/main/data/'
     try:
         print('Downloading', url+name)
         urllib.request.urlretrieve(url + name, os.path.join(path, name))

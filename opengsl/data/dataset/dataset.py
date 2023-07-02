@@ -69,7 +69,7 @@ class Dataset:
             self.labels = self.g.y
             self.adj = torch.sparse.FloatTensor(self.g.edge_index, torch.ones(self.g.edge_index.shape[1]),
                                                 [self.n_nodes, self.n_nodes])
-            self.n_edges = self.g.num_edges
+            self.n_edges = self.g.num_edges/2
             self.n_classes = self.data_raw.num_classes
 
             self.feats = self.feats.to(self.device)
