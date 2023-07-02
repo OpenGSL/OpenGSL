@@ -36,5 +36,5 @@ dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
 
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
-exp = ExpManager(method, n_runs=1, debug=args.debug, save_path='records')
-exp.run()
+exp = ExpManager(method,  save_path='records')
+exp.run(n_runs=1, debug=args.debug)

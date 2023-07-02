@@ -32,5 +32,5 @@ else:
 print(conf)
 dataset = opengsl.data.Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
 method = eval('opengsl.method.{}(conf, dataset)'.format(args.gnn))
-exp = opengsl.ExpManager(method, n_runs=10, debug=args.debug)
-exp.run()
+exp = opengsl.ExpManager(method,  save_path='records')
+exp.run(n_runs=1, debug=args.debug)
