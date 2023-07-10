@@ -24,7 +24,7 @@ def hetero_load(name, path='./data/hetero_data'):
 
 
     n_nodes = node_features.shape[0]
-    graph = dgl.graph((edges[:, 0], edges[:, 1]), num_nodes=len(node_features), idtype=torch.int)
+    graph = dgl.graph((edges[:, 0], edges[:, 1]), num_nodes=len(node_features), idtype=torch.long)
     graph = dgl.to_bidirected(graph)
     adj = graph.adj()
 
