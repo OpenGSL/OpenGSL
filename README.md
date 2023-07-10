@@ -39,7 +39,7 @@ OpenGSL provides a fair and comprehensive platform to evaluate existing GSL work
 - torch_sparse>=0.6.12
 - dgl>=0.9.0
 
-**Using Pip**
+**Installing with Pip**
 ``` bash
 pip install opengsl
 ```
