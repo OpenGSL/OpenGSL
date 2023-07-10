@@ -90,7 +90,7 @@ class Dataset:
             self.n_edges = len(self.adj.coalesce().values())/2
             if feat_norm:
                 self.feats = normalize(self.feats, style='row')
-                exit(0)
+                # exit(0)
             self.n_classes = len(self.labels.unique())
 
         else:
