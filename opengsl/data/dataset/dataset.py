@@ -79,7 +79,7 @@ class Dataset:
             if feat_norm:
                 self.feats = normalize(self.feats, style='row')
 
-        elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
+        elif ds_name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'tolokers']:
             self.feats, self.adj, self.labels, self.splits = hetero_load(ds_name, path=self.path)
 
             self.feats = self.feats.to(self.device)
@@ -158,7 +158,7 @@ class Dataset:
                 self.train_masks.append(torch.nonzero(self.g.train_mask, as_tuple=False).squeeze().numpy())
                 self.val_masks.append(torch.nonzero(self.g.val_mask, as_tuple=False).squeeze().numpy())
                 self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
-        elif self.name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc']:
+        elif self.name in ['amazon-ratings', 'questions', 'chameleon-filtered', 'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'tolokers']:
             assert n_splits < 10 , 'n_splits > splits provided'
             self.train_masks = self.splits[0][:n_splits]
             self.val_masks = self.splits[1][:n_splits]

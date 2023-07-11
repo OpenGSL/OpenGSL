@@ -22,7 +22,7 @@ with open("README.md", encoding="utf-8") as f:
 def do_setup():
     setup(
         name="opengsl",
-        version="0.0.4",
+        version="0.0.5",
         description="A comprehensive benchmark for Graph Structure Learning.",
         url="https://github.com/OpenGSL/OpenGSL",
         author='Zhiyao Zhou, Sheng Zhou, Bochao Mao, Xuanyi Zhou',
