@@ -13,6 +13,7 @@ parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp'
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
                                                                   'stable', 'cogsl', 'lpa', 'link', 'linkx'], help="Select methods")
+parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
 args = parser.parse_args()
@@ -24,7 +25,10 @@ from opengsl.data import Dataset
 from opengsl import ExpManager
 from opengsl.method import *
 
-conf = load_conf(method=args.method, dataset=args.data)
+if args.config is None:
+    conf = load_conf(method=args.method, dataset=args.data)
+else:
+    conf = load_conf(args.config)
 if not args.method in ['gcn', 'sgc', 'jknet', 'appnp', 'gprgnn', 'gat', 'link', 'lpa', 'linkx']:
     conf.analysis['save_graph'] = True
     conf.analysis['save_graph_path'] = 'results/graph'
@@ -37,4 +41,4 @@ dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
 exp = ExpManager(method,  save_path='records')
-exp.run(n_runs=1, debug=args.debug)
+exp.run(n_runs=10, debug=args.debug)

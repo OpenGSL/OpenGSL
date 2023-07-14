@@ -19,7 +19,7 @@ from opengsl.method.gslsolver import SLAPSSolver
 from opengsl.method.gslsolver import GENSolver
 from opengsl.method.gslsolver import GTSolver
 from opengsl.method.gslsolver import NODEFORMERSolver
-from opengsl.method.gslsolver import CoGSLSolver
+from opengsl.method.gslsolver import COGSLSolver
 from opengsl.method.gslsolver import SUBLIMESolver
 from opengsl.method.gslsolver import STABLESolver
 from opengsl.method.gslsolver import SEGSLSolver

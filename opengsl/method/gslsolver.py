@@ -2193,7 +2193,7 @@ class STABLESolver(Solver):
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.pretrain['lr'], weight_decay=self.conf.pretrain['weight_decay'])
         
         
-class CoGSLSolver(Solver):
+class COGSLSolver(Solver):
     '''
     A solver to train, evaluate, test CoGSL in a run.
 
@@ -2218,7 +2218,7 @@ class CoGSLSolver(Solver):
     >>> import opengsl.config.load_conf
     >>> conf = opengsl.config.load_conf('cogsl', 'cora')
     >>>
-    >>> solver = CoGSLSolver(conf, dataset)
+    >>> solver = COGSLSolver(conf, dataset)
     >>> # Conduct a experiment run.
     >>> acc, new_structure = solver.run_exp(split=0, debug=True)
     '''
@@ -2226,7 +2226,11 @@ class CoGSLSolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = "cogsl"
         print("Solver Version : [{}]".format("CoGSL"))
-        self.adj = (torch.eye(self.adj.shape[0]).to(self.device) + self.adj.to_dense()).to_sparse()
+        edge_index = self.adj.coalesce().indices().cpu()
+        loop_edge_index = torch.stack([torch.arange(self.n_nodes), torch.arange(self.n_nodes)])
+        edges = torch.cat([edge_index, loop_edge_index], dim=1)
+        self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(
+            self.device).coalesce()
         if self.conf.dataset['init'] :
             _view1 = eval("self."+self.conf.dataset["name_view1"]+"()")
             self.view1_indices = self.get_indices(self.conf.dataset["view1_indices"], _view1, self.conf.dataset["view1_k"])
@@ -2265,18 +2269,16 @@ class CoGSLSolver(Solver):
         return result
 
     def view_sub(self):
-        adj = (self.adj.to_dense() - torch.eye(self.adj.shape[0]).to(self.device)).to_sparse()
-        index = []
-        for i in range(self.adj.indices().shape[1]):
-            index.append(i)
-        random.shuffle(index)
-        index = index[:self.conf.dataset['sub_k']]
-        ind0 = self.adj.indices()[0,index]
-        ind1 = self.adj.indices()[1,index]
-        adj  = torch.sparse.FloatTensor(torch.stack([ind0,ind1]), torch.ones(self.conf.dataset['sub_k']).to(self.device),
-                                                [self.n_nodes, self.n_nodes])
-        adj = (self.adj.to_dense() - torch.eye(self.adj.shape[0]).to(self.device)).to_sparse()
-        return sparse_tensor_to_scipy_sparse(adj) 
+        adj = sparse_tensor_to_scipy_sparse(self.adj)
+        adj_ = sp.triu(sp.coo_matrix(adj), 1)
+        adj_cand = np.array(adj_.nonzero())
+        dele_num = int(self.conf.dataset['sub_rate'] * adj_cand.shape[1])
+        adj_sele = np.random.choice(np.arange(adj_cand.shape[1]), dele_num, replace=False)
+        adj_sele = adj_cand[:, adj_sele]
+        adj_new = sp.coo_matrix((np.ones(adj_sele.shape[1]), (adj_sele[0, :], adj_sele[1, :])), shape=adj_.shape)
+        adj_new = adj_new + adj_new.T + sp.eye(adj_new.shape[0])
+        return adj_new
+
 
 
     def get_khop_indices(self, k, view):
@@ -2428,7 +2430,7 @@ class CoGSLSolver(Solver):
         return self.loss_acc(logits[test_mask], self.labels[test_mask])
 
     def set_method(self):
-        self.model = CoGSL(self.dim_feats, self.conf.model['cls_hid_1'], self.n_classes, self.conf.model['gen_hid'],
+        self.model = CoGSL(self.dim_feats, self.conf.model['cls_hid_1'], self.num_targets, self.conf.model['gen_hid'],
                            self.conf.model['mi_hid_1'], self.conf.model['com_lambda_v1'], self.conf.model['com_lambda_v2'],
                            self.conf.model['lam'], self.conf.model['alpha'], self.conf.model['cls_dropout'],
                            self.conf.model['ve_dropout'], self.conf.model['tau'], self.conf.dataset['pyg'],

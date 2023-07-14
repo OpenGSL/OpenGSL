@@ -22,7 +22,7 @@ class GCN_two_pyg(nn.Module):
         self.activation = getattr(F, activation)
 
     def forward(self, feature, adj):
-        adj = SparseTensor.from_dense(adj.to_dense())
+        adj = SparseTensor.from_torch_sparse_coo_tensor(adj)
         x1 = self.activation(self.conv1(feature, adj))
         x1 = F.dropout(x1, p=self.dropout, training=self.training)
         x2 = self.conv2(x1, adj)
@@ -40,7 +40,9 @@ class GCN_one_pyg(nn.Module):
             self.register_parameter('bias', None)
 
     def forward(self, feat, adj):
-        adj = SparseTensor.from_dense(adj.to_dense())
+        # print(adj)
+        # exit(0)
+        adj = SparseTensor.from_torch_sparse_coo_tensor(adj)
         out = self.conv1(feat, adj)
         if self.bias is not None:
             out += self.bias
@@ -162,6 +164,8 @@ class Fusion(nn.Module):
         self.name = name
 
     def get_weight(self, prob):
+        if len(prob.shape)==1:
+            prob = torch.stack([prob, 1 - prob],dim=1)
         out, _ = prob.topk(2, dim=1, largest=True, sorted=True)
         fir = out[:, 0]
         sec = out[:, 1]
