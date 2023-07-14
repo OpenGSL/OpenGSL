@@ -15,7 +15,7 @@
 
 [![Documentation Status](https://readthedocs.org/projects/opengsl/badge/?version=latest)](https://opengsl.readthedocs.io/en/latest/?badge=latest)
 [![license](https://badgen.net/github/license/opengsl/opengsl?color=green)](https://github.com/opengsl/opengsl/blob/main/LICENSE)
-![version](https://img.shields.io/badge/version-0.0.4-blue)
+![version](https://img.shields.io/badge/version-0.0.5-blue)
 
 
 # OpenGSL
@@ -39,7 +39,7 @@ OpenGSL provides a fair and comprehensive platform to evaluate existing GSL work
 - torch_sparse>=0.6.12
 - dgl>=0.9.0
 
-**Using Pip**
+**Installing with Pip**
 ``` bash
 pip install opengsl
 ```
