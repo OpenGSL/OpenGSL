@@ -170,7 +170,7 @@ class GCN_DAE(torch.nn.Module):
         Adj_ = normalize(Adj_, self.normalization)
         return Adj_
 
-    def forward(self, features, x):  # x corresponds to masked_fearures
+    def forward(self, features, x):  # x corresponds to masked_features
         Adj_ = self.get_adj(features)
         Adj = self.dropout_adj(Adj_)
 
