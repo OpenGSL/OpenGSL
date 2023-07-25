@@ -12,7 +12,7 @@ parser.add_argument('--data', type=str, default='cora',
 parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
-                                                                  'stable', 'cogsl', 'lpa', 'link', 'linkx'], help="Select methods")
+                                                                  'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn'], help="Select methods")
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
@@ -29,7 +29,7 @@ if args.config is None:
     conf = load_conf(method=args.method, dataset=args.data)
 else:
     conf = load_conf(args.config)
-if not args.method in ['gcn', 'sgc', 'jknet', 'appnp', 'gprgnn', 'gat', 'link', 'lpa', 'linkx']:
+if not args.method in ['gcn', 'sgc', 'jknet', 'appnp', 'gprgnn', 'gat', 'link', 'lpa', 'linkx', 'wsgnn']:
     conf.analysis['save_graph'] = True
     conf.analysis['save_graph_path'] = 'results/graph'
 else:

@@ -12,3 +12,4 @@ opengsl.method.gnnsolver
    gnnsolver/LINKSolver
    gnnsolver/LPASolver
    gnnsolver/SGCSolver
+   gnnsolver/WSGNNSolver

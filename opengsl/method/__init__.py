@@ -11,6 +11,7 @@ from opengsl.method.gnnsolver import APPNPSolver
 from opengsl.method.gnnsolver import GPRGNNSolver
 from opengsl.method.gnnsolver import LINKSolver
 from opengsl.method.gnnsolver import LPASolver
+from opengsl.method.gnnsolver import WSGNNSolver
 from opengsl.method.gslsolver import PROGNNSolver
 from opengsl.method.gslsolver import IDGLSolver
 from opengsl.method.gslsolver import GRCNSolver
