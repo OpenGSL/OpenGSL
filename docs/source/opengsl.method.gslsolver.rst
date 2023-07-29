@@ -16,3 +16,4 @@ opengsl.method.gslsolver
    gslsolver/SLAPSSolver
    gslsolver/STABLESolver
    gslsolver/SUBLIMESolver
+   gnnsolver/WSGNNSolver
