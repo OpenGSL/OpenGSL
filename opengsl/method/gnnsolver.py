@@ -1,8 +1,10 @@
 from .models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT
+import time
 from .models.gcn import GCN
 from .models.jknet import JKNet
 from .solver import Solver
 import torch
+from copy import deepcopy
 from opengsl.data.preprocess.normalize import normalize
 
 
@@ -563,3 +565,4 @@ class GATSolver(Solver):
                                            weight_decay=self.conf.training['weight_decay'])
         # prepare edge index
         self.edge_index = self.adj.coalesce().indices()
+
