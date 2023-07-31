@@ -8,7 +8,8 @@ model:
   graph_learn_num_pers: 8
   no_bn: false
   hops: 6
-
+  alpha: 0.1
+  mlp_layers: 2
   input_dropout: 0
   norm:
     flag: false
