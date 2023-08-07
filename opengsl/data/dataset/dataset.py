@@ -2,6 +2,7 @@ import torch
 from .pyg_load import pyg_load_dataset
 from .hetero_load import hetero_load
 from .split import get_split
+from opengsl.data.preprocess.knn import knn
 from opengsl.data.preprocess.normalize import normalize
 import numpy as np
 from opengsl.data.preprocess.control_homophily import control_homophily
@@ -31,7 +32,7 @@ class Dataset:
         Path to save dataset files.
     '''
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/'):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/', without_structure=None):
         self.name = data
         self.path = path
         self.device = torch.device('cuda')
@@ -39,6 +40,12 @@ class Dataset:
         self.split_data(n_splits, verbose)
         if homophily_control:
             self.adj = control_homophily(self.adj, self.labels.cpu().numpy(), homophily_control)
+        # zero knowledge on structure
+        if without_structure:
+            if without_structure == 'i':
+                self.adj = torch.eye(self.n_nodes).to(self.device).to_sparse()
+            elif without_structure == 'knn':
+                self.adj = knn(self.feats, int(self.n_edges//self.n_nodes)).to_sparse()
 
     def prepare_data(self, ds_name, feat_norm=False, verbose=True):
         '''
