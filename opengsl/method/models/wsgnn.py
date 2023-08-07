@@ -6,7 +6,8 @@ import torch
 # from torch_geometric.nn import GCNConv, GATConv, APPNP
 from torch_geometric.nn import GCNConv, GATConv
 import torch_sparse
-from .gnn_modules import APPNP
+# from .gnn_modules import APPNP
+from .gcn import GCN
 
 class GraphLearner(nn.Module):
     def __init__(self, input_size, num_pers=16):
@@ -107,10 +108,11 @@ INF = 1e20
 VERY_SMALL_NUMBER = 1e-12
 
 class QModel(nn.Module):
-    def __init__(self, graph_skip_conn, nhid, dropout, hops, alpha, graph_learn_num_pers, d, n, c):
+    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
-        self.encoder = APPNP(d,nhid,c,dropout,hops,alpha)
+        # self.encoder = APPNP(d,nhid,c,dropout,hops,alpha)
+        self.encoder = GCN(d, nhid, c, n_layers, dropout)
         # self.encoder = Dense_APPNP_Net(in_channels=d,
         #                                hidden_channels=nhid,
         #                                out_channels=c,
@@ -146,9 +148,9 @@ class QModel(nn.Module):
         init_adj = init_adj_sparse.to_dense()
 
         raw_adj_1, adj_1 = self.learn_graph(self.graph_learner1, node_features, self.graph_skip_conn, init_adj)
-        node_vec_1 = self.encoder([node_features, adj_1])
+        node_vec_1 = self.encoder([node_features, adj_1, True])
 
-        node_vec_2 = self.encoder([node_features, init_adj])
+        node_vec_2 = self.encoder([node_features, init_adj, True])
         raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1),
                                             self.graph_skip_conn, init_adj)
 
@@ -159,9 +161,10 @@ class QModel(nn.Module):
 
 
 class PModel(nn.Module):
-    def __init__(self, nhid, dropout, hops, alpha, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
+    def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
         super(PModel, self).__init__()
-        self.encoder1 = APPNP(d,nhid,c,dropout,hops,alpha)
+        # self.encoder1 = APPNP(d,nhid,c,dropout,hops,alpha)
+        self.encoder1 = GCN(d, nhid, c, n_layers, dropout)
         # self.encoder1 = Dense_APPNP_Net(in_channels=d,
         #                                 hidden_channels=nhid,
         #                                 out_channels=c,
@@ -195,7 +198,7 @@ class PModel(nn.Module):
         node_features = feats
 
         raw_adj_1, adj_1 = self.learn_graph(self.graph_learner1, node_features)
-        node_vec_1 = self.encoder1([node_features, adj_1])
+        node_vec_1 = self.encoder1([node_features, adj_1, True])
 
         node_vec_2 = self.encoder2(node_features)
         raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1))
@@ -207,10 +210,10 @@ class PModel(nn.Module):
 
 
 class WSGNN(nn.Module):
-    def __init__(self, graph_skip_conn, nhid, dropout, hops, alpha, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
+    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
         super(WSGNN, self).__init__()
-        self.P_Model = PModel(nhid, dropout, hops, alpha, graph_learn_num_pers, mlp_layers, no_bn, d, n, c)
-        self.Q_Model = QModel(graph_skip_conn, nhid, dropout, hops, alpha, graph_learn_num_pers, d, n, c)
+        self.P_Model = PModel(nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c)
+        self.Q_Model = QModel(graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c)
 
     def reset_parameters(self):
         self.P_Model.reset_parameters()
