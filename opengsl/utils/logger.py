@@ -63,4 +63,9 @@ class Logger(object):
             print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}')
             r = best_result[:, 2]
             print(f'   Final Test: {r.mean():.2f} ± {r.std():.2f}')
+            
+            import nni
+            if nni.get_trial_id()!="STANDALONE":
+                nni.report_final_result(float(r.mean()))
+            
             return r.mean(), r.std()
