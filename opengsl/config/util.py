@@ -29,7 +29,7 @@ def load_conf(path:str = None, method:str = None, dataset:str = None):
     if path == None:
         method_name = ['gcn', 'sgc', 'gat', 'jknet', 'appnp', 'gprgnn', 'prognn', 'idgl', 'grcn', 'gaug', 'slaps',
                        'gen', 'gt', 'nodeformer', 'cogsl', 'sublime', 'stable', 'segsl', 'lpa', 'link', 'wsgnn']
-        data_name = ['cora', 'pubmed', 'citeseer','blogcatalog', 'flickr', 'amazon-ratings', 'questions', 'minesweeper', 'roman-empire', 'wiki-cooc']
+        data_name = ['cora', 'pubmed', 'citeseer','blogcatalog', 'flickr', 'amazon-ratings', 'questions', 'minesweeper', 'roman-empire', 'wiki-cooc', 'wikics', 'ogbn-arxiv']
 
         assert method in method_name
         assert dataset in data_name

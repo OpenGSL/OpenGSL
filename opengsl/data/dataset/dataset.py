@@ -9,6 +9,7 @@ from opengsl.data.preprocess.control_homophily import control_homophily
 import pickle
 import os
 import urllib.request
+from ogb.nodeproppred import PygNodePropPredDataset
 
 
 class Dataset:
@@ -65,7 +66,7 @@ class Dataset:
 
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
-                       'flickr']:
+                       'flickr', 'wikics']:
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
@@ -99,6 +100,24 @@ class Dataset:
                 self.feats = normalize(self.feats, style='row')
                 # exit(0)
             self.n_classes = len(self.labels.unique())
+
+        elif ds_name in ['ogbn-arxiv']:
+            self.data_raw = PygNodePropPredDataset(name='ogbn-arxiv', root='./data')
+            self.g = self.data_raw[0]
+            self.feats = self.g.x  # unnormalized
+            self.n_nodes = self.feats.shape[0]
+            self.dim_feats = self.feats.shape[1]
+            self.labels = self.g.y
+            reverse_edge_index = torch.stack([self.g.edge_index[1], self.g.edge_index[0]])
+
+            self.adj = torch.sparse.FloatTensor(torch.cat([reverse_edge_index, self.g.edge_index], dim=1), torch.ones(self.g.edge_index.shape[1]*2),
+                                                [self.n_nodes, self.n_nodes])
+            self.n_edges = self.g.num_edges
+            self.n_classes = self.data_raw.num_classes
+
+            self.feats = self.feats.to(self.device)
+            self.labels = self.labels.to(self.device).view(-1)
+            self.adj = self.adj.to(self.device)
 
         else:
             print('dataset not implemented')
@@ -177,6 +196,20 @@ class Dataset:
         #     self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
         #     self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
         #     self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
+        elif self.name in ['ogbn-arxiv']:
+            split_idx = self.data_raw.get_idx_split()
+            train_idx = split_idx['train']
+            val_idx = split_idx['valid']
+            test_idx = split_idx['test']
+            for i in range(n_splits):
+                self.train_masks.append(train_idx.numpy())
+                self.val_masks.append(val_idx.numpy())
+                self.test_masks.append(test_idx.numpy())
+        elif self.name in ['wikics']:
+            for i in range(n_splits):
+                self.train_masks.append(torch.nonzero(self.g.train_mask[:,i], as_tuple=False).squeeze().numpy())
+                self.val_masks.append(torch.nonzero(self.g.val_mask[:,i], as_tuple=False).squeeze().numpy())
+                self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
         else:
             print('dataset not implemented')
             exit(0)

@@ -9,7 +9,7 @@ parser.add_argument('--data', type=str, default='cora',
                     choices=['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho',
                              'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                              'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
-                             'blogcatalog', 'flickr'], help='dataset')
+                             'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv'], help='dataset')
 parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
