@@ -108,10 +108,11 @@ INF = 1e20
 VERY_SMALL_NUMBER = 1e-12
 
 class QModel(nn.Module):
-    def __init__(self, graph_skip_conn, nhid, dropout, hops, alpha, graph_learn_num_pers, d, n, c):
+    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
-        self.encoder = APPNP(d,nhid,c,dropout,hops,alpha)
+        # self.encoder = APPNP(d,nhid,c,dropout,hops,alpha)
+        self.encoder = GCN(d, nhid, c, n_layers, dropout)
         # self.encoder = Dense_APPNP_Net(in_channels=d,
         #                                hidden_channels=nhid,
         #                                out_channels=c,
