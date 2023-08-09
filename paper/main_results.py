@@ -33,7 +33,11 @@ else:
 conf.analysis['save_graph'] = False
 print(conf)
 
-dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data')
+if 'without_structure' in conf.dataset and conf.dataset['without_structure']:
+    without_structure = conf.dataset['without_structure']
+else:
+    without_structure = None
+dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', without_structure=without_structure)
 
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
