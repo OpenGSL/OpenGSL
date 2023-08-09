@@ -30,6 +30,8 @@ training:
   n_epochs: 500
   weight_decay: 5e-5
   lr_graph: 1e-1
+  patience: ~
+  criterion: ~
 
 analysis:
   flag: false

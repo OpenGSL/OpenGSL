@@ -1,9 +1,10 @@
 model:
+  type: gcn
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 64
-  dropout: 0.5
+  dropout: 0.25
   input_dropout: 0
   norm:
     flag: false
@@ -12,26 +13,32 @@ model:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
-dataset:
-  cora_split: false # for cora,citeseer and pubmed
-  feat_norm: true
-  normalize: true
-  add_loop: true
-  sparse: true
-
-
 training:
-  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
-  n_epochs: 200
+  lr: 2e-2
+  n_epochs: 250
   weight_decay: 5e-4
+  patience_iter: 10000
+  lr_adj: 1e-3
+  inner_steps: 2
+  outer_steps: 1
+  criterion: either
   patience: ~
-  criterion: metric
+
+gsl:
+  symmetric: false
+  lambda_: 0.001
+  alpha: 5e-4
+  beta: 1.5
+  gamma: 1
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  sparse: true
 
 # analysis
 analysis:
   flag: false
   project: gsl
   save_graph: false
-  load_graph: false
-  load_graph_path: results/graph/sublime
+  save_graph_path: results/graph

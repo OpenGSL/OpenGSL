@@ -9,7 +9,7 @@ parser.add_argument('--data', type=str, default='cora',
                     choices=['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho',
                              'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                              'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
-                             'blogcatalog', 'flickr'], help='dataset')
+                             'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv'], help='dataset')
 parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
@@ -17,6 +17,8 @@ parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp'
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
+parser.add_argument('--n_splits', type=int, default=1)
+parser.add_argument('--n_runs', type=int, default=10)
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -37,12 +39,12 @@ if 'without_structure' in conf.dataset and conf.dataset['without_structure']:
     without_structure = conf.dataset['without_structure']
 else:
     without_structure = None
-dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', without_structure=without_structure)
+dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', without_structure=without_structure, n_splits=args.n_splits)
 
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
 exp = ExpManager(method,  save_path='records')
-acc_save, std_save = exp.run(n_runs=10, debug=args.debug)
+acc_save, std_save = exp.run(n_runs=args.n_runs, n_splits=args.n_splits, debug=args.debug)
 
 if not os.path.exists('results'):
     os.makedirs('results')

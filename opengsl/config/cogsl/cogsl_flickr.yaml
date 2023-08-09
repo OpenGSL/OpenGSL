@@ -1,0 +1,63 @@
+model:
+  seed: 3
+  cls_hid_1: 64
+  com_lambda_v1: 0.5
+  com_lambda_v2: 0.5
+  gen_hid: 32
+  lam: 0.1
+  alpha: 0.1
+  mi_hid_1: 128
+  cls_coe: 0.3
+  mi_coe: 0.3
+  tau: 0.8
+  cls_dropout: 0.5
+  ve_dropout: 0.2
+
+training:
+  cls_lr: 0.01
+  cls_weight_decay: 5e-4
+  ve_lr: 0.001
+  ve_weight_decay: 0
+  mi_lr: 0.01
+  mi_weight_decay: 0
+
+  main_epoch: 40
+  inner_ne_epoch: 1
+  inner_cls_epoch: 30
+  inner_mi_epoch: 10
+  temp_r: 1e-4
+  patience: ~
+  criterion: metric
+
+
+dataset:
+  taset:
+  name: pubmed
+  init: True    # True : generate view, False : read view
+  feat_norm: True
+  cora_split: false
+  name_view1: view_adj
+  name_view2: view_sub
+  view1_path: # *.npz
+  view2_path: # *.npz
+  view1_indices_path: #*.pt
+  view2_indices_path: #*.pt
+  diff_alpha: 0.8 #
+  sub_rate: 0.8
+  knn_k: 3
+  view1_indices: 1
+  view2_indices: 1
+  view1_k: 0    # choose the biggest k values for view1_indices
+  view2_k: 0    # if k is 0, all of values will be chosen
+  to_sparse: true
+  pyg: true
+  big: false
+  batch: 5000
+  sparse: true
+  without_structure: i
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  save_graph_path: results/graph

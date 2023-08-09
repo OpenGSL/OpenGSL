@@ -72,8 +72,8 @@ class ExpManager:
         assert n_splits <= len(self.split_seeds)
         assert total_runs <= len(self.train_seeds)
         logger = Logger(runs=total_runs)
+        succeed = 0
         for i in range(n_splits):
-            succeed = 0
             for j in range(400):
                 idx = i * n_runs + j
                 print("Exp {}/{}".format(idx, total_runs))
@@ -97,7 +97,7 @@ class ExpManager:
                         os.makedirs(self.save_graph_path)
                     torch.save(graph.cpu(), os.path.join(self.save_graph_path, '{}_{}_{}.pth'.format(self.data, i, self.train_seeds[succeed])))
                 succeed += 1
-                if succeed == total_runs:
+                if succeed % n_runs == 0:
                     break
         self.acc_save, self.std_save = logger.print_statistics()
         if self.save_path:

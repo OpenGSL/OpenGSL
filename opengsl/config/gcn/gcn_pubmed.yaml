@@ -15,8 +15,8 @@ model:
 dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: true
-  normalize: false
-  add_loop: false
+  normalize: true
+  add_loop: true
   sparse: true
 
 

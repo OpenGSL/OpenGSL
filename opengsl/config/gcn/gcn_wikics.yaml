@@ -3,7 +3,7 @@ model:
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 64
-  dropout: 0.5
+  dropout: 0.25
   input_dropout: 0
   norm:
     flag: false
@@ -14,18 +14,18 @@ model:
 
 dataset:
   cora_split: false # for cora,citeseer and pubmed
-  feat_norm: true
+  feat_norm: false
   normalize: true
   add_loop: true
   sparse: true
-
+#  homophily_control: 0.8
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
-  n_epochs: 200
+  lr: 2e-2
+  n_epochs: 10000
   weight_decay: 5e-4
-  patience: ~
+  patience: 100
   criterion: metric
 
 # analysis
@@ -34,4 +34,4 @@ analysis:
   project: gsl
   save_graph: false
   load_graph: false
-  load_graph_path: results/graph/sublime
+  load_graph_path: results/graph/gen
