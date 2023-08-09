@@ -149,9 +149,12 @@ class QModel(nn.Module):
         node_vec_1 = self.encoder([node_features, adj_1])
 
         node_vec_2 = self.encoder([node_features, init_adj])
-        raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1),
-                                            self.graph_skip_conn, init_adj)
-
+        if len(node_vec_2.shape)==2:
+            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1),
+                                                self.graph_skip_conn, init_adj)
+        else:
+            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.stack([node_vec_1, node_vec_2]).transpose(0,1),
+                                                self.graph_skip_conn, init_adj)
         output = 0.5 * node_vec_1 + 0.5 * node_vec_2
         adj = 0.5 * adj_1 + 0.5 * adj_2
 
@@ -197,8 +200,11 @@ class PModel(nn.Module):
         raw_adj_1, adj_1 = self.learn_graph(self.graph_learner1, node_features)
         node_vec_1 = self.encoder1([node_features, adj_1])
 
-        node_vec_2 = self.encoder2(node_features)
-        raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1))
+        node_vec_2 = self.encoder2(node_features).squeeze(1)
+        if len(node_vec_2.shape) == 2:
+            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1))
+        else:
+            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.stack([node_vec_1, node_vec_2]).transpose(0,1))
 
         output = 0.5 * node_vec_1 + 0.5 * node_vec_2
         adj = 0.5 * adj_1 + 0.5 * adj_2
@@ -222,8 +228,9 @@ class WSGNN(nn.Module):
         return p_y, p_a, q_y, q_a
 
 class ELBONCLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, binary=False):
         super(ELBONCLoss, self).__init__()
+        self.binary = binary
 
     def forward(self, labels, train_mask, log_p_y, log_q_y):
         y_obs = labels[train_mask]
@@ -235,10 +242,14 @@ class ELBONCLoss(nn.Module):
         q_y_obs = torch.exp(log_q_y_obs)
         log_q_y_miss = log_q_y[train_mask == 0]
         q_y_miss = torch.exp(log_q_y_miss)
-        loss_p_y = F.nll_loss(log_p_y_obs, y_obs) - torch.mean(q_y_miss * log_p_y_miss)
-        loss_q_y = torch.mean(q_y_miss * log_q_y_miss)
-
-        loss_y_obs = 10 * F.nll_loss(log_q_y_obs, y_obs)
+        if self.binary:
+            loss_p_y = F.binary_cross_entropy_with_logits(log_p_y_obs, y_obs) - torch.mean(torch.sigmoid(log_q_y_miss) * F.logsigmoid(log_p_y_miss))
+            loss_q_y = torch.mean(torch.sigmoid(log_q_y_miss) * F.logsigmoid(log_q_y_miss))
+            loss_y_obs = 10 * F.binary_cross_entropy_with_logits(log_q_y_obs, y_obs)
+        else:
+            loss_p_y = F.nll_loss(log_p_y_obs, y_obs) - torch.mean(q_y_miss * log_p_y_miss)
+            loss_q_y = torch.mean(q_y_miss * log_q_y_miss)
+            loss_y_obs = 10 * F.nll_loss(log_q_y_obs, y_obs)
 
         loss = loss_p_y + loss_q_y + loss_y_obs
 

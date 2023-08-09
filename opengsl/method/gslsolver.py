@@ -2514,6 +2514,7 @@ class WSGNNSolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = 'wsgnn'
         self.edge_index = self.adj.coalesce().indices()
+        self.f = F.log_softmax if self.num_targets > 1 else F.sigmoid
 
 
     def learn(self, debug=False):
@@ -2538,8 +2539,9 @@ class WSGNNSolver(Solver):
             self.optimizer.zero_grad()
 
             p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
-            p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-            q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+            if self.num_targets > 1:
+                p_y = torch.nn.functional.log_softmax(p_y, dim=1)
+                q_y = torch.nn.functional.log_softmax(q_y, dim=1)
             mask = torch.zeros(self.n_nodes, dtype=bool)
             mask[self.train_mask] = 1
             loss = self.criterion(self.labels, mask, p_y, q_y, )
@@ -2586,8 +2588,9 @@ class WSGNNSolver(Solver):
         self.model.eval()
         with torch.no_grad():
             p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
-        p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-        q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+        if self.num_targets > 1:
+            p_y = torch.nn.functional.log_softmax(p_y, dim=1)
+            q_y = torch.nn.functional.log_softmax(q_y, dim=1)
         mask = torch.zeros(self.n_nodes, dtype=bool)
         mask[val_mask] = 1
         loss = self.criterion(self.labels, mask, p_y, q_y)
@@ -2595,7 +2598,7 @@ class WSGNNSolver(Solver):
         return loss, acc
 
     def set_method(self):
-        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'],self.conf.model['hops'],
+        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'], int(self.conf.model['hops']),
                            self.conf.model['alpha'], self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
-        self.criterion = ELBONCLoss()
+        self.criterion = ELBONCLoss(binary=(self.num_targets==1))
