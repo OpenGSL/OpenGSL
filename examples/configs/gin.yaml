@@ -1,0 +1,19 @@
+model:
+  n_hidden: 64
+  n_layers: 3
+
+training:
+  lr: 1e-2
+  weight_decay: 5e-4
+  n_epochs: 100
+  patience: ~
+  criterion: ~
+
+dataset:
+  feat_norm: true
+  sparse: true
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false

@@ -1,4 +1,4 @@
-from .models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT
+from .models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
 import time
 from .models.gcn import GCN
 from .models.jknet import JKNet
@@ -566,3 +566,45 @@ class GATSolver(Solver):
         # prepare edge index
         self.edge_index = self.adj.coalesce().indices()
 
+
+class GINSolver(Solver):
+    '''
+    A solver to train, evaluate, test Graph isomorphism networks(GIN) in a run.
+
+    Parameters
+    ----------
+    conf : argparse.Namespace
+        Config file.
+    dataset : opengsl.data.Dataset
+        The dataset.
+
+    Attributes
+    ----------
+    method_name : str
+        The name of the method.
+    '''
+    def __init__(self, conf, dataset):
+        super().__init__(conf, dataset)
+        self.method_name = "gin"
+
+    def input_distributer(self):
+        '''
+        Function to ditribute input to GNNs, automatically called in function `learn`.
+
+        Returns
+        -------
+        self.feats : torch.tensor
+            Node features.
+        self.normalized_adj : torch.tensor
+            Adjacency matrix.
+        '''
+        return self.feats, self.adj
+
+    def set_method(self):
+        '''
+        Function to set the model and necessary variables for each run, automatically called in function `set`.
+
+        '''
+        self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers']).to(self.device)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                 weight_decay=self.conf.training['weight_decay'])

@@ -1,0 +1,28 @@
+authorName: opengsl
+experimentName: gin
+trialConcurrency: 1
+maxExecDuration: 1h
+maxTrialNum: 200
+#choice: local, remote, pai
+trainingServicePlatform: local
+searchSpacePath: search_space.json
+#choice: true, false
+useAnnotation: false
+tuner:
+  #choice: TPE, Random, Anneal, Evolution, BatchTuner, MetisTuner, GPTuner
+  #SMAC (SMAC should be installed through nnictl)
+  builtinTunerName: TPE
+  classArgs:
+    #choice: maximize, minimize
+    optimize_mode: maximize
+trial:
+  command: C:\Users\maobochao\anaconda3\envs\GSL\python.exe -u "c:\Users\maobochao\Desktop\OpenGSL\examples\test.py"
+  codeDir: .
+  gpuNum: 1
+localConfig:
+  gpuIndices: "0" # 默认值none。设置后，只有指定的 GPU 会被用来运行 Trial 任务。
+  # ! 和CUDA_VISIBLE_DEVICE=0,3 的效果相同，在程序内部的gpu编号依旧是从0开始的
+  maxTrialNumPerGpu: 4 #  默认值1。指定1个GPU上最大并发trail的数量
+  useActiveGpu: true #  默认值false。是否使用已经被其他进程使用的gpu。
+
+# nnictl create --config nni.yaml
