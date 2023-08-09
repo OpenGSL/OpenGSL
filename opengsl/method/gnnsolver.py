@@ -605,6 +605,6 @@ class GINSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers']).to(self.device)
+        self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                  weight_decay=self.conf.training['weight_decay'])

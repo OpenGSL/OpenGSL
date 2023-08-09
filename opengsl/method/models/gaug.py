@@ -1,5 +1,5 @@
 from .gcn import GCN
-from .gnn_modules import APPNP
+from .gnn_modules import APPNP, GIN
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -65,6 +65,10 @@ class GAug(nn.Module):
             self.nc_net = APPNP(dim_feats, conf.model['n_hidden'], n_classes,
                                dropout=conf.model['dropout'], K=conf.model['K'],
                                alpha=conf.model['alpha'])
+        elif conf.model['type']=='gin':            
+            self.nc_net = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, 
+                              self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
+            
     def sample_adj(self, adj_logits):
         """ sample an adj from the predicted edge probabilities of ep_net """
         edge_probs = adj_logits / torch.max(adj_logits)

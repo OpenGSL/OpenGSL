@@ -4,7 +4,7 @@ import numpy as np
 import random
 from copy import deepcopy
 from .models.gcn import GCN
-from .models.gnn_modules import APPNP
+from .models.gnn_modules import APPNP, GIN
 from .models.grcn import GRCN
 from .models.gaug import GAug, eval_edge_pred, MultipleOptimizer, get_lr_schedule_by_sigmoid
 from .models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
@@ -1090,10 +1090,13 @@ class PROGNNSolver(Solver):
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
                              self.conf.model['input_layer'], self.conf.model['output_layer'],
                              weight_initializer='uniform').to(self.device)
-        else:
+        elif self.conf.model['type'] == 'appnp':
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
         self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
