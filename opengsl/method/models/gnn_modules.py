@@ -284,6 +284,7 @@ class GIN(nn.Module):
     def forward(self, input):
         x = input[0]
         adj = input[1]
+        only_z = input[2] if len(input) > 2 else True
 
         if self.learn_eps:
             for i in range(self.n_layers-1):
@@ -296,4 +297,7 @@ class GIN(nn.Module):
                 x = F.relu(x)
             x = self.mlps[-1](x + self.spmm(adj,x))
         
-        return x.squeeze(1)
+        if only_z:
+            return x.squeeze(1)
+        else:
+            return x, x.squeeze(1)

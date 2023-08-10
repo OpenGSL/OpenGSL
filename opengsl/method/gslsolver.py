@@ -599,6 +599,10 @@ class GENSolver(Solver):
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)        
+        
         self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],

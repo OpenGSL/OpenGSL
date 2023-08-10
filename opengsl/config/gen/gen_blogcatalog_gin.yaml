@@ -1,0 +1,30 @@
+model:
+  type: gin
+  n_hidden: 64
+  n_layers: 2
+  mlp_layers: 1
+
+gsl:
+  k: 8
+  tolerance: 0.0001
+  threshold: 0.8
+
+dataset:
+  feat_norm: true
+  cora_split: false
+  sparse: true
+
+training:
+  n_iters: 20
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-3
+  n_epochs: 400
+  weight_decay: 0
+  patience: ~
+  criterion: ~
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

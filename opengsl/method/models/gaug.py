@@ -66,8 +66,8 @@ class GAug(nn.Module):
                                dropout=conf.model['dropout'], K=conf.model['K'],
                                alpha=conf.model['alpha'])
         elif conf.model['type']=='gin':            
-            self.nc_net = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, 
-                              self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
+            self.nc_net = GIN(dim_feats, conf.model['n_hidden'], n_classes, 
+                              conf.model['n_layers'], conf.model['mlp_layers'])
             
     def sample_adj(self, adj_logits):
         """ sample an adj from the predicted edge probabilities of ep_net """

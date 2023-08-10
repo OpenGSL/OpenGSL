@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
-from .gnn_modules import APPNP
+from .gnn_modules import APPNP, GIN
 
 
 class GCNConv_diag(torch.nn.Module):
@@ -34,10 +34,13 @@ class GRCN(torch.nn.Module):
                                  conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
                                  conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
                                  conf.model['input_layer'], conf.model['output_layer'])
-        else:
+        elif conf.model['type']=='appnp':
             self.conv_task = APPNP(num_features, conf.model['n_hidden'], num_classes,
                                dropout=conf.model['dropout'], K=conf.model['K_APPNP'],
                                alpha=conf.model['alpha'], spmm_type=1)
+        elif conf.model['type'] == 'gin':
+            self.conv_task = GIN(num_features, conf.model['n_hidden'], num_classes,
+                               conf.model['n_layers'], conf.model['mlp_layers'], spmm_type=1)
         self.model_type = conf.gsl['model_type']
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNConv_diag(num_features)

@@ -1,5 +1,6 @@
 model:
-  type: gcn
+  type: gin
+  mlp_layers: 1
 sparse: false
 epochs_cls: 400
 lr_cls: 1e-2
@@ -10,20 +11,20 @@ dropedge_cls: 0.75
 n_layers_cls: 2
 patience_cls: 100
 epochs: 2000
-lr: 0.001
+lr: 0.01
 wd: 0.0
-n_hidden: 512
+n_hidden: 256
 n_embed: 256
 n_proj: 256
 dropout: 0.5
 dropedge_rate: 0.25
-n_layers: 2
+n_layers: 4
 type_learner: att
 k: 20
 sim_function: cosine
 activation_learner: tanh
 eval_freq: 200
-tau: 0.9999
+tau: 0.999
 maskfeat_rate_learner: 0.6
 maskfeat_rate_anchor: 0.8
 contrast_batch_size: 0

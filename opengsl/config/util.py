@@ -54,6 +54,9 @@ def load_conf(path:str = None, method:str = None, dataset:str = None):
                     for x,y in par.items():
                         if x == a:
                             conf[i][a] = y
+            for x,y in par.items():
+                if x == i:
+                    conf[i] = y
 
     conf = argparse.Namespace(**conf)
 
