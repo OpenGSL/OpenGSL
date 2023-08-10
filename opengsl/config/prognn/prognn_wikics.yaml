@@ -15,7 +15,7 @@ model:
 
 training:
   lr: 2e-2
-  n_epochs: 250
+  n_epochs: 100
   weight_decay: 5e-4
   patience_iter: 10000
   lr_adj: 1e-3

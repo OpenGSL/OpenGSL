@@ -152,7 +152,7 @@ class GCN_DAE(torch.nn.Module):
         super(GCN_DAE, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCN(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=1)
+            self.layers = GCN(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=0)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNP(in_dim, hidden_dim, nclasses, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
@@ -183,7 +183,7 @@ class GCN_C(torch.nn.Module):
         super(GCN_C, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCN(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=1)
+            self.layers = GCN(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=0)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNP(in_channels, hidden_channels, out_channels, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])

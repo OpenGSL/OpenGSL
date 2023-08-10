@@ -13,7 +13,7 @@ parser.add_argument('--data', type=str, default='cora',
 parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
-                                                                  'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn'], help="Select methods")
+                                                                  'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn', 'gin'], help="Select methods")
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
@@ -45,13 +45,14 @@ dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', w
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
 exp = ExpManager(method,  save_path='records')
 acc_save, std_save = exp.run(n_runs=args.n_runs, n_splits=args.n_splits, debug=args.debug)
+text = '{:.2f} ± {:.2f}'.format(acc_save, std_save)
 
 if not os.path.exists('results'):
     os.makedirs('results')
 if os.path.exists('results/performance.csv'):
     records = pd.read_csv('results/performance.csv')
-    records.loc[len(records)] = {'method':args.method, 'data':args.data, 'acc':acc_save, 'std':std_save}
+    records.loc[len(records)] = {'method':args.method, 'data':args.data, 'acc':text}
     records.to_csv('results/performance.csv', index=False)
 else:
-    records = pd.DataFrame([[args.method, args.data, acc_save, std_save]], columns=['method', 'data', 'acc', 'std'])
+    records = pd.DataFrame([[args.method, args.data, text]], columns=['method', 'data', 'acc'])
     records.to_csv('results/performance.csv', index=False)

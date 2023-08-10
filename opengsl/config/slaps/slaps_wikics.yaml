@@ -1,0 +1,44 @@
+model:
+  type: 'gcn'
+  nlayers_adj: 2
+  hidden_adj: 128
+  k: 15
+  knn_metric: 'cosine'
+  i: 6
+  non_linearity: 'relu'
+  normalization: 'sym'
+  mlp_h: 50
+  mlp_epochs: 500
+  mlp_act: 'relu'
+  hidden: 64
+  nlayers: 2
+  dropout1: 0.5
+  dropout2: 0.5
+  dropout_adj1: 0.25
+  dropout_adj2: 0.5
+
+dataset:
+  sparse: true
+  feat_norm: false
+  cora_split: false # for cora,citeseer and pubmed
+  feat_type: 'continuous' # 'continuous' for pubmed, amazon-ratings, questions, roman-empire and wiki-cooc, otherwise 'binary'
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-1
+  lr_dae: 1e-3
+  n_epochs: 500
+  epoch_d: 5
+  weight_decay: 5e-5
+  weight_decay_dae: 0
+  lamda: 10
+  ratio: 1
+  nr: 1
+  patience: ~
+  criterion: ~
+
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph
+
