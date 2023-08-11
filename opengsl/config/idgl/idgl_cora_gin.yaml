@@ -10,7 +10,8 @@ training:
   criterion: ~
 
 model:
-  type: gcn
+  type: gin
+  mlp_layers: 1
   n_layers: 2
   n_hidden: 16
   dropout: 0.5

@@ -290,14 +290,14 @@ class GIN(nn.Module):
             for i in range(self.n_layers-1):
                 x = self.mlps[i]((1+self.eps[i])*x + self.spmm(adj,x))
                 x = F.relu(x)
-            x = self.mlps[-1]((1+self.eps[-1])*x + self.spmm(adj,x))
+            z = self.mlps[-1]((1+self.eps[-1])*x + self.spmm(adj,x))
         else:
             for i in range(self.n_layers-1):
                 x = self.mlps[i](x + self.spmm(adj,x))
                 x = F.relu(x)
-            x = self.mlps[-1](x + self.spmm(adj,x))
+            z = self.mlps[-1](x + self.spmm(adj,x))
         
         if only_z:
-            return x.squeeze(1)
+            return z.squeeze(1)
         else:
-            return x, x.squeeze(1)
+            return x, z.squeeze(1)

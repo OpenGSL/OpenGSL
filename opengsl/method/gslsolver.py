@@ -674,7 +674,10 @@ class IDGLSolver(Solver):
         # cur_raw_adj是根据输入Z直接产生的adj, cur_adj是前者归一化并和原始adj加权求和的结果
         cur_raw_adj = F.dropout(cur_raw_adj, self.conf.gsl['feat_adj_dropout'], training=training)
         cur_adj = F.dropout(cur_adj, self.conf.gsl['feat_adj_dropout'], training=training)
-        node_vec, output = network.encoder(init_node_vec, cur_adj)
+        if self.conf.model['type'] == 'gcn':
+            node_vec, output = network.encoder(init_node_vec, cur_adj)
+        else:
+            node_vec, output = network.encoder([init_node_vec, cur_adj, False])
         score = self.metric(self.labels[idx].cpu().numpy(), output[idx].detach().cpu().numpy())
         loss1 = self.loss_fn(output[idx], self.labels[idx])
         loss1 += self.get_graph_loss(cur_raw_adj, init_node_vec)
@@ -696,7 +699,10 @@ class IDGLSolver(Solver):
             cur_raw_adj, cur_adj = network.learn_graph(network.graph_learner2, node_vec, self.conf.gsl['graph_skip_conn'], graph_include_self=self.conf.gsl['graph_include_self'], init_adj=init_adj)
             update_adj_ratio = self.conf.gsl['update_adj_ratio']
             cur_adj = update_adj_ratio * cur_adj + (1 - update_adj_ratio) * first_adj   # 这里似乎和论文中有些出入？？
-            node_vec, output = network.encoder(init_node_vec, cur_adj, self.conf.gsl['gl_dropout'])
+            if self.conf.model['type'] == 'gcn':
+                node_vec, output = network.encoder(init_node_vec, cur_adj, self.conf.gsl['gl_dropout'])
+            else:
+                node_vec, output = network.encoder([init_node_vec, cur_adj, False])
             score = self.metric(self.labels[idx].cpu().numpy(), output[idx].detach().cpu().numpy())
             loss += self.loss_fn(output[idx], self.labels[idx])
             loss += self.get_graph_loss(cur_raw_adj, init_node_vec)

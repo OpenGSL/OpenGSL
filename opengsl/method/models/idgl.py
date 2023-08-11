@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .gcn_idgl import GCN
+from .gnn_modules import APPNP, GIN
 
 
 class AnchorGCNLayer(nn.Module):
@@ -163,14 +164,22 @@ class IDGL(nn.Module):
         self.scalable_run = conf.model['scalable_run'] if 'scalable_run' in conf.model else False
         self.feat_adj_dropout = conf.gsl['feat_adj_dropout']
 
-        gcn_module = AnchorGCN if self.scalable_run else GCN
-        self.encoder = gcn_module(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass, n_layers=conf.model['n_layers'], dropout=conf.model['dropout'], batch_norm=conf.model['norm'])
+        if self.scalable_run:
+            self.encoder = AnchorGCN(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass, n_layers=conf.model['n_layers'], dropout=conf.model['dropout'], batch_norm=conf.model['norm'])
+        elif conf.model['type'] == 'gcn':
+            self.encoder = GCN(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass,
+                                     n_layers=conf.model['n_layers'], dropout=conf.model['dropout'],
+                                     batch_norm=conf.model['norm'])
+        elif conf.model['type'] == 'appnp':
+            self.encoder = APPNP(in_channels=nfeat, hidden_channels=conf.model['n_hidden'], out_channels=nclass, dropout=conf.model['dropout'], K=conf.model['K'], alpha=conf.model['alpha'])
+        elif conf.model['type'] == 'gin':
+            self.encoder = GIN(n_feat=nfeat, n_hidden=conf.model['n_hidden'], n_class=nclass, n_layers=conf.model['n_layers'], mlp_layers=conf.model['mlp_layers'])
         self.graph_learner = GraphLearner(nfeat,
                                         topk=conf.gsl['graph_learn_topk'],
                                         epsilon=conf.gsl['graph_learn_epsilon'],
                                         num_pers=conf.gsl['graph_learn_num_pers'])
 
-        self.graph_learner2 = GraphLearner(self.hidden_size,
+        self.graph_learner2 = GraphLearner(self.nclass if conf.model['type'] == 'appnp' else self.hidden_size,
                                         topk=conf.gsl['graph_learn_topk2'],
                                         epsilon=conf.gsl['graph_learn_epsilon2'],
                                         num_pers=conf.gsl['graph_learn_num_pers'])

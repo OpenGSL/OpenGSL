@@ -10,7 +10,9 @@ training:
   criterion: ~
 
 model:
-  type: gcn
+  type: appnp
+  K: 9
+  alpha: 0.1
   n_layers: 2
   n_hidden: 16
   dropout: 0.5
