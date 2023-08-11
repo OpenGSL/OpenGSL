@@ -23,6 +23,8 @@ training:
   lr_adj: 1e-2
   inner_steps: 2
   outer_steps: 1
+  criterion: either
+  patience_iter: 10000
 
 gsl:
   symmetric: false

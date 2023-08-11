@@ -1864,8 +1864,8 @@ class SUBLIMESolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.weights = deepcopy(model.state_dict())
-                    current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
-                    self.best_graph = deepcopy(current_adj)
+                    # current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
+                    # self.best_graph = deepcopy(current_adj)
                     self.best_graph_test = deepcopy(adj)
 
             if debug:
@@ -2611,6 +2611,6 @@ class WSGNNSolver(Solver):
 
     def set_method(self):
         self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'], self.conf.model['n_layers'],
-                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets).to(self.device)
+                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets, self.conf).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
         self.criterion = ELBONCLoss(binary=(self.num_targets==1))

@@ -1,42 +1,43 @@
 model:
-  type: gcn
+  type: gin
+  mlp_gin: 1
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
-  n_hidden: 64
-  dropout: 0.5
+  n_hidden: 128
+  dropout: 0.8
+  graph_skip_conn: 0.9
+  graph_learn_num_pers: 1
+  no_bn: false
+  mlp_layers: 2
   input_dropout: 0
   norm:
     flag: false
     norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
   input_layer: false
   output_layer: false
-  spmm_type: 1 # specilized for sparse mltiply [0,1], expected to remove in future versions
-  K_APPNP: 10
-  alpha: 0.1
-
-
-gsl:
-  model_type: diag
-  K: 5
-  normalize: true
+  spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
 dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: false
+  normalize: true
+  add_loop: true
   sparse: true
-#  homophily_control: 0.4
+#  homophily_control: 0.8
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-2
-  n_epochs: 500
-  weight_decay: 5e-5
-  lr_graph: 1e-4
+  lr: 1e-1
+  n_epochs: 300
+  weight_decay: 0
   patience: ~
-  criterion: ~
+  criterion: metric
 
+# analysis
 analysis:
   flag: false
+  project: gsl
   save_graph: false
-  save_graph_path: results/graph
+  load_graph: false
+  load_graph_path: results/graph/gen

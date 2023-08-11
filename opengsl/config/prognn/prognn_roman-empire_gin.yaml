@@ -1,9 +1,10 @@
 model:
-  type: gcn
+  type: gin
+  mlp_layers: 1
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
-  n_hidden: 128
+  n_hidden: 32
   dropout: 0.5
   input_dropout: 0
   norm:
@@ -15,7 +16,7 @@ model:
 
 training:
   lr: 1e-1
-  n_epochs: 250
+  n_epochs: 100
   weight_decay: 5e-5
   patience: 100
   lr_adj: 1e-3
@@ -34,6 +35,7 @@ dataset:
   feat_norm: false
   cora_split: false
   sparse: true
+#  without_structure: i
 
 # analysis
 analysis:
