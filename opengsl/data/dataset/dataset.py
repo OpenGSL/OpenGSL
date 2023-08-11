@@ -66,7 +66,7 @@ class Dataset:
 
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
-                       'flickr', 'wikics']:
+                       'flickr', 'wikics', 'csbm20', 'csbm40', 'csbm60', 'csbm80']:
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
@@ -82,6 +82,10 @@ class Dataset:
 
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device)
+            
+            if ds_name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+                self.labels = self.labels.float()
+            
             self.adj = self.adj.to(self.device)
             # normalize features
             if feat_norm:
@@ -210,6 +214,13 @@ class Dataset:
                 self.train_masks.append(torch.nonzero(self.g.train_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.val_masks.append(torch.nonzero(self.g.val_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
+        elif self.name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+            for i in range(n_splits):
+                np.random.seed(i)
+                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_size=int(self.n_nodes*0.025), val_size=int(self.n_nodes*0.025))  # 默认采取20-30-rest这种划分
+                self.train_masks.append(train_indices)
+                self.val_masks.append(val_indices)
+                self.test_masks.append(test_indices)
         else:
             print('dataset not implemented')
             exit(0)
