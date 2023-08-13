@@ -30,7 +30,7 @@ dataset:
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-1
+  lr: 1e-2
   n_epochs: 500
   weight_decay: 0
   patience: ~
