@@ -1,15 +1,20 @@
 model:
-  type: appnp
-  n_hidden: 16
-  K: 10
-  alpha1: 0.3
-  n_layers: 3
-  mlp_layers: 1 
-  dropout: 0
+  type: gcn
+  n_hidden: 128
+  n_layers: 2
+  n_linear: 1 # layers of linear per gcn layer
+  act: relu # [relu, elu, gelu, leakyrelu, identity]
+  dropout: 0.5
+  input_dropout: 0
+  norm:
+    flag: false
+    norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  input_layer: false
+  output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
 
 gsl:
-  n_hidden: 16
+  n_hidden: 128
   n_embed: 32
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
@@ -23,18 +28,18 @@ gsl:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
   gae: true
-  alpha: 0.1
-  temperature: 0.9
+  alpha: 1
+  temperature: 0.3
 
 dataset:
-  feat_norm: true
+  feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
 
 training:
-  lr: 1e-1
+  lr: 1e-2
   n_epochs: 200
-  weight_decay: 5e-5
+  weight_decay: 5e-7
   warmup: 10
   patience: 100
   pretrain_ep: 160

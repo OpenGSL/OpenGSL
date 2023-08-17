@@ -88,7 +88,7 @@ class GCN(nn.Module):
             x = F.relu(layer(x, adj))
             x = F.dropout(x, dropout if dropout else self.dropout, training=self.training)
         output = self.layers[-1](x, adj)
-        return x, output
+        return x, output.squeeze(1)
 
     def initialize(self):
         """Initialize parameters of GCN.
