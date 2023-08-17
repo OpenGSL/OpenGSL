@@ -11,7 +11,7 @@ model:
   use_act: false
   use_jk: false
   K: 10
-  rb_order: 3
+  rb_order: 1
   rb_trans: sigmoid
   tau: 0.25
 

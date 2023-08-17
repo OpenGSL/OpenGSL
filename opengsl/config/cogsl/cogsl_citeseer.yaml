@@ -34,7 +34,7 @@ training:
 
 dataset:
   name: citeseer
-  init: False    # True : generate view, False : read view
+  init: true    # True : generate view, False : read view
   feat_norm: True
   cora_split: false
   name_view1: view_adj
