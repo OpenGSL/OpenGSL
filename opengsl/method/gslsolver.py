@@ -2257,7 +2257,7 @@ class COGSLSolver(Solver):
             self.view2_indices = torch.load(self.conf.dataset['view2_indices_path'])
         self.view1 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view1, False))
         self.view2 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view2, False))
-        self.loss_fn = F.binary_cross_entropy if self.num_targets == 1 else F.nll_loss
+        self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.nll_loss
         #self.train_mask = np.load('/root/dataset/citeseer/train.npy')
         #self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
         #self.test_mask = np.load('/root/dataset/citeseer/test.npy')
