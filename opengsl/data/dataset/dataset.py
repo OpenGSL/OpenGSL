@@ -33,10 +33,13 @@ class Dataset:
         Path to save dataset files.
     '''
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/', without_structure=None):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/',
+                 without_structure=None, train_percent=None, val_percent=None):
         self.name = data
         self.path = path
         self.device = torch.device('cuda')
+        self.train_percent = train_percent
+        self.val_percent = val_percent
         self.prepare_data(data, feat_norm, verbose)
         self.split_data(n_splits, verbose)
         if homophily_control:
@@ -66,7 +69,7 @@ class Dataset:
 
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
-                       'flickr', 'wikics', 'csbm20', 'csbm40', 'csbm60', 'csbm80']:
+                       'flickr', 'wikics'] or 'csbm' in ds_name:
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
@@ -83,7 +86,7 @@ class Dataset:
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device)
             
-            if ds_name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+            if 'csbm' in ds_name:
                 self.labels = self.labels.float()
             
             self.adj = self.adj.to(self.device)
@@ -272,10 +275,10 @@ class Dataset:
                 self.train_masks.append(torch.nonzero(self.g.train_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.val_masks.append(torch.nonzero(self.g.val_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
-        elif self.name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+        elif 'csbm' in self.name:
             for i in range(n_splits):
                 np.random.seed(i)
-                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_size=int(self.n_nodes*0.025), val_size=int(self.n_nodes*0.025))  # 默认采取20-30-rest这种划分
+                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_size=int(self.n_nodes*self.train_percent), val_size=int(self.n_nodes*self.val_percent))
                 self.train_masks.append(train_indices)
                 self.val_masks.append(val_indices)
                 self.test_masks.append(test_indices)

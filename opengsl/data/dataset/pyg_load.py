@@ -24,7 +24,7 @@ def pyg_load_dataset(name, path='./data/'):
            'actor': 'Actor',
            'blogcatalog':'blogcatalog',
            'flickr':'flickr'}
-    if name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+    if 'csbm' in name:
         name = name
     else:
         name = dic[name]
@@ -45,7 +45,7 @@ def pyg_load_dataset(name, path='./data/'):
         dataset = Actor(root=os.path.join(path, name))
     elif name in ['blogcatalog', 'flickr']:
         dataset = AttributedGraphDataset(root=os.path.join(path, name), name=name)
-    elif name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+    elif 'csbm' in name:
         dataset = dataset_ContextualSBM(root=path, name=name)
     else:
         exit("wrong dataset")
