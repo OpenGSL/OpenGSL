@@ -1,0 +1,57 @@
+model:
+  type: gin
+  n_hidden: 32
+  n_layers: 1
+  mlp_layers: 1 
+
+
+gsl:
+  model_type: diag
+  K: 50
+  normalize: true
+
+dataset:
+  cora_split: false # for cora,citeseer and pubmed
+  feat_norm: false
+  sparse: true
+#  homophily_control: 0.4
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-2
+  n_epochs: 500
+  weight_decay: 5e-3
+  lr_graph: 0.1
+  patience: ~
+  criterion: ~
+
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph
+
+tune:
+  flag: true
+  study: grcn_roman-empire_gin
+  n_trials: ~
+  database: sqlite:///grcn_roman-empire_gin.db
+  n_exp_per_trial: 1
+  params:
+    lr:
+      type: categorical
+      values: [1e-1,1e-2,1e-3,1e-4]
+    weight_decay:
+      type: categorical
+      values: [5e-4,5e-5,5e-6,5e-7,0]
+    K:
+      type: categorical
+      values: [5,50,100,200]
+    lr_graph:
+      type: categorical
+      values: [1e-1,1e-2,1e-3,1e-4]
+    n_hidden:
+      type: categorical
+      values: [32, 64, 128, 256]
+    n_layers:
+      type: categorical
+      values: [1, 2, 3, 4, 6]
