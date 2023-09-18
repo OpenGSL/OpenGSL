@@ -22,6 +22,7 @@ dataset:
   normalize: true
   add_loop: true
   sparse: true
+  without_structure: ~
 #  homophily_control: 0.8
 
 training:
