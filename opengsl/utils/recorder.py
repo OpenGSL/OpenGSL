@@ -20,8 +20,8 @@ class Recorder:
     def __init__(self, patience=100, criterion=None):
         self.patience = patience
         self.criterion = criterion
-        self.best_loss = 100
-        self.best_metric = 0
+        self.best_loss = 1e8
+        self.best_metric = -1
         self.wait = 0
 
     def add(self, loss_val, metric_val):

@@ -37,6 +37,7 @@ dataset:
   cora_split: false
   load_graph: false
   sparse: true
+#  without_structure: knn
 
 training:
   patience: ~

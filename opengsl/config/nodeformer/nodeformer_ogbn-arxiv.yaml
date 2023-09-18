@@ -2,16 +2,16 @@ model:
   n_layers: 3
   act: relu
   n_hidden: 64
-  n_heads: 1
+  n_heads: 4
   dropout: 0.5
-  use_bn: false
+  use_bn: true
   M: 30
   use_gumbel: true
-  use_residual: false
+  use_residual: true
   use_act: false
   use_jk: false
   K: 10
-  rb_order: 2
+  rb_order: 1
   rb_trans: sigmoid
   tau: 0.25
 
@@ -19,14 +19,15 @@ model:
 dataset:
   feat_norm: false
   cora_split: false
+  load_graph: false
   sparse: true
 
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
-  lr: 1e-3
-  n_epochs: 1000
-  weight_decay: 5e-5
-  lambda: 0.01
+  lr: 1e-2
+  n_epochs: 500
+  weight_decay: 0
+  lambda: 1.0
   patience: ~
   criterion: ~
 

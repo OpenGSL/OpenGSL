@@ -1,9 +1,20 @@
 model:
   type: gin
-  n_hidden: 256
-  n_layers: 3
-  mlp_layers: 1 
+  mlp_layers: 1
+  n_hidden: 32
+  n_layers: 2
+  n_linear: 1 # layers of linear per gcn layer
+  act: relu # [relu, elu, gelu, leakyrelu, identity]
+  dropout: 0.5
+  input_dropout: 0
+  norm:
+    flag: false
+    norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  input_layer: false
+  output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
+  K: 6
+  alpha: 0.5
 
 gsl:
   n_hidden: 128
@@ -20,23 +31,24 @@ gsl:
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
   gae: true
-  alpha: 0.9
-  temperature: 0.6
+  alpha: 0.1
+  temperature: 0.3
 
 dataset:
   feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
+#  without_structure: knn
 
 training:
-  lr: 1e-2
-  n_epochs: 300
-  weight_decay: 0
-  warmup: 0
+  lr: 1e-1
+  n_epochs: 500
+  weight_decay: 5e-5
+  warmup: 10
   patience: 100
-  pretrain_ep: 160
-  pretrain_nc: 30
-  beta: 0.8
+  pretrain_ep: 5
+  pretrain_nc: 100
+  beta: 2.5
   criterion: ~
 
 # analysis

@@ -66,7 +66,7 @@ class Dataset:
 
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
-                       'flickr', 'wikics']:
+                       'flickr', 'wikics', 'csbm20', 'csbm40', 'csbm60', 'csbm80']:
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
@@ -82,6 +82,10 @@ class Dataset:
 
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device)
+            
+            if ds_name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+                self.labels = self.labels.float()
+            
             self.adj = self.adj.to(self.device)
             # normalize features
             if feat_norm:
@@ -118,6 +122,64 @@ class Dataset:
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device).view(-1)
             self.adj = self.adj.to(self.device)
+        
+        elif ds_name in ['regression']:
+            def read_regression(input_folder):
+                import pandas as pd
+                import json
+                import networkx as nx
+                X = pd.read_csv(f'{input_folder}/X.csv')
+                y = pd.read_csv(f'{input_folder}/y.csv')
+
+                networkx_graph = nx.read_graphml(f'{input_folder}/graph.graphml')
+                networkx_graph = nx.relabel_nodes(networkx_graph, {str(i): i for i in range(len(networkx_graph))})
+
+                categorical_columns = []
+                if os.path.exists(f'{input_folder}/cat_features.txt'):
+                    with open(f'{input_folder}/cat_features.txt') as f:
+                        for line in f:
+                            if line.strip():
+                                categorical_columns.append(line.strip())
+
+                cat_features = None
+                if categorical_columns:
+                    columns = X.columns
+                    cat_features = np.where(columns.isin(categorical_columns))[0]
+
+                    for col in list(columns[cat_features]):
+                        X[col] = X[col].astype(str)
+
+
+                if os.path.exists(f'{input_folder}/masks.json'):
+                    with open(f'{input_folder}/masks.json') as f:
+                        masks = json.load(f)
+                else:
+                    print('no inside split masks')
+                
+                X = torch.from_numpy(X.values).to(torch.float)
+                y = torch.from_numpy(y.values).squeeze(1).to(torch.float)
+                
+                adj = nx.to_scipy_sparse_array(networkx_graph).tocoo()
+                # 获取非零元素行索引
+                row = torch.from_numpy(adj.row.astype(np.int64)).to(torch.long)
+                # 获取非零元素列索引
+                col = torch.from_numpy(adj.col.astype(np.int64)).to(torch.long)
+                # 将行和列进行拼接，shape变为[2, num_edges], 包含两个列表，第一个是row, 第二个是col
+                edge_index = torch.stack([row, col], dim=0)
+                adj = torch.sparse_coo_tensor(edge_index, torch.ones_like(row))
+                    
+                return X, adj, y, masks
+            
+            self.feats,self.adj,self.labels,masks = read_regression('./data/regression')
+            
+            self.feats = self.feats.to(self.device)
+            self.labels = self.labels.to(self.device)
+            self.adj = self.adj.to(self.device)
+            self.n_nodes = self.feats.shape[0]
+            self.dim_feats = self.feats.shape[1]
+            self.n_edges = len(self.adj.coalesce().values())/2
+            self.n_classes = 1
+            self.masks = masks
 
         else:
             print('dataset not implemented')
@@ -210,6 +272,18 @@ class Dataset:
                 self.train_masks.append(torch.nonzero(self.g.train_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.val_masks.append(torch.nonzero(self.g.val_mask[:,i], as_tuple=False).squeeze().numpy())
                 self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
+        elif self.name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+            for i in range(n_splits):
+                np.random.seed(i)
+                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_size=int(self.n_nodes*0.025), val_size=int(self.n_nodes*0.025))  # 默认采取20-30-rest这种划分
+                self.train_masks.append(train_indices)
+                self.val_masks.append(val_indices)
+                self.test_masks.append(test_indices)
+        elif self.name in ['regression']:
+            for i in range(n_splits):
+                self.train_masks.append(self.masks[str(i)]['train'])
+                self.val_masks.append(self.masks[str(i)]['val'])
+                self.test_masks.append(self.masks[str(i)]['test'])
         else:
             print('dataset not implemented')
             exit(0)

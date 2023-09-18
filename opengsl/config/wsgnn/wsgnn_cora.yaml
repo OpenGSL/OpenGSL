@@ -1,4 +1,5 @@
 model:
+  type: gcn
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]

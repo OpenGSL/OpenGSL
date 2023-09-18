@@ -6,7 +6,7 @@ import torch
 # from torch_geometric.nn import GCNConv, GATConv, APPNP
 from torch_geometric.nn import GCNConv, GATConv
 import torch_sparse
-from .gnn_modules import APPNP
+from .gnn_modules import APPNP, GIN
 from .gcn import GCN
 
 class GraphLearner(nn.Module):
@@ -108,11 +108,15 @@ INF = 1e20
 VERY_SMALL_NUMBER = 1e-12
 
 class QModel(nn.Module):
-    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c):
+    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c, conf):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
-        # self.encoder = APPNP(d,nhid,c,dropout,hops,alpha)
-        self.encoder = GCN(d, nhid, c, n_layers, dropout)
+        if conf.model['type'] == 'gcn':
+            self.encoder = GCN(d, nhid, c, n_layers, dropout)
+        elif conf.model['type'] == 'appnp':
+            self.encoder = APPNP(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
+        elif conf.model['type'] == 'gin':
+            self.encoder = GIN(d,nhid,c,n_layers,conf.model['mlp_gin'])
         # self.encoder = Dense_APPNP_Net(in_channels=d,
         #                                hidden_channels=nhid,
         #                                out_channels=c,
@@ -165,10 +169,14 @@ class QModel(nn.Module):
 
 
 class PModel(nn.Module):
-    def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
+    def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf):
         super(PModel, self).__init__()
-        # self.encoder1 = APPNP(d,nhid,c,dropout,hops,alpha)
-        self.encoder1 = GCN(d, nhid, c, n_layers, dropout)
+        if conf.model['type'] == 'gcn':
+            self.encoder1 = GCN(d, nhid, c, n_layers, dropout)
+        elif conf.model['type'] == 'appnp':
+            self.encoder1 = APPNP(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
+        elif conf.model['type'] == 'gin':
+            self.encoder1 = GIN(d, nhid, c, n_layers, conf.model['mlp_gin'])
         # self.encoder1 = Dense_APPNP_Net(in_channels=d,
         #                                 hidden_channels=nhid,
         #                                 out_channels=c,
@@ -216,10 +224,10 @@ class PModel(nn.Module):
 
 
 class WSGNN(nn.Module):
-    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c):
+    def __init__(self, graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf):
         super(WSGNN, self).__init__()
-        self.P_Model = PModel(nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c)
-        self.Q_Model = QModel(graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c)
+        self.P_Model = PModel(nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf)
+        self.Q_Model = QModel(graph_skip_conn, nhid, dropout, n_layers, graph_learn_num_pers, d, n, c, conf)
 
     def reset_parameters(self):
         self.P_Model.reset_parameters()

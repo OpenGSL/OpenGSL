@@ -1,14 +1,13 @@
 model:
+  type: gcn
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
   act: relu # [relu, elu, gelu, leakyrelu]
-  n_hidden: 64
-  dropout: 0.5
-  graph_skip_conn: 0.5
+  n_hidden: 128
+  dropout: 0.8
+  graph_skip_conn: 0.9
   graph_learn_num_pers: 1
   no_bn: false
-  hops: 5
-  alpha: 0.1
   mlp_layers: 2
   input_dropout: 0
   norm:
@@ -20,7 +19,7 @@ model:
 
 dataset:
   cora_split: false # for cora,citeseer and pubmed
-  feat_norm: true
+  feat_norm: false
   normalize: true
   add_loop: true
   sparse: true
@@ -29,7 +28,7 @@ dataset:
 training:
   data_cpu: false # whether data should be placed in cpu instead of gpu to save space
   lr: 1e-1
-  n_epochs: 500
+  n_epochs: 300
   weight_decay: 0
   patience: ~
   criterion: metric
@@ -41,29 +40,3 @@ analysis:
   save_graph: false
   load_graph: false
   load_graph_path: results/graph/gen
-
-tune:
-  flag: false
-  study: wsgnn_blogcatalog
-  n_trials: ~
-  database: sqlite:///wsgnn_blogcatalog.db
-  n_exp_per_trial: 1
-  params:
-    lr:
-      type: categorical
-      values: [1e-1,1e-2,1e-3,1e-4]
-    weight_decay:
-      type: categorical
-      values: [5e-4,5e-5,0]
-    n_hidden:
-      type: categorical
-      values: [64,128]
-    hops:
-      type: discrete_uniform
-      values: [1,10,1]
-    graph_skip_conn:
-      type: discrete_uniform
-      values: [0.5, 0.9, 9.1]
-    graph_learn_num_pers:
-      type: categorical
-      values: [1,2,4,6,8]

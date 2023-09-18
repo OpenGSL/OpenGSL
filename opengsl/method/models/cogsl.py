@@ -111,6 +111,7 @@ class GCN_one(nn.Module):
 class Classification(nn.Module):
     def __init__(self, num_feature, cls_hid_1, num_class, dropout, pyg):
         super(Classification, self).__init__()
+        self.num_class = num_class
         if pyg==False:
             self.encoder_v1 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
             self.encoder_v2 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
@@ -125,12 +126,26 @@ class Classification(nn.Module):
         #self.encoder_v2 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
 
     def forward(self, feat, view, flag):
-        if flag == "v1":
-            prob = F.softmax(self.encoder_v1(feat, view), dim=1)
-        elif flag == "v2":
-            prob = F.softmax(self.encoder_v2(feat, view), dim=1)
-        elif flag == "v":
-            prob = F.softmax(self.encoder_v(feat, view), dim=1)
+        if (self.num_class == 1):
+            if flag == "v1":
+                # prob = F.softmax(self.encoder_v1(feat, view), dim=1)
+                prob = F.sigmoid(self.encoder_v1(feat, view))
+            elif flag == "v2":
+                # prob = F.softmax(self.encoder_v2(feat, view), dim=1)
+                prob = F.sigmoid(self.encoder_v2(feat, view))
+            elif flag == "v":
+                # prob = F.softmax(self.encoder_v(feat, view), dim=1)
+                prob = F.sigmoid(self.encoder_v(feat, view))
+        else:
+            if flag == "v1":
+                prob = F.softmax(self.encoder_v1(feat, view), dim=1)
+                # prob = F.sigmoid(self.encoder_v1(feat, view))
+            elif flag == "v2":
+                prob = F.softmax(self.encoder_v2(feat, view), dim=1)
+                # prob = F.sigmoid(self.encoder_v2(feat, view))
+            elif flag == "v":
+                prob = F.softmax(self.encoder_v(feat, view), dim=1)
+                # prob = F.sigmoid(self.encoder_v(feat, view))
         return prob
 
 class Contrast:

@@ -3,6 +3,7 @@ load data via pyg
 '''
 
 from torch_geometric.datasets import Planetoid, Amazon, Coauthor, WikiCS, WikipediaNetwork, WebKB, Actor, AttributedGraphDataset
+from .csbm_load import dataset_ContextualSBM
 import os
 
 
@@ -23,7 +24,10 @@ def pyg_load_dataset(name, path='./data/'):
            'actor': 'Actor',
            'blogcatalog':'blogcatalog',
            'flickr':'flickr'}
-    name = dic[name]
+    if name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+        name = name
+    else:
+        name = dic[name]
 
     if name in ["Cora", "CiteSeer", "PubMed"]:
         dataset = Planetoid(root=os.path.join(path, name), name=name)
@@ -41,6 +45,8 @@ def pyg_load_dataset(name, path='./data/'):
         dataset = Actor(root=os.path.join(path, name))
     elif name in ['blogcatalog', 'flickr']:
         dataset = AttributedGraphDataset(root=os.path.join(path, name), name=name)
+    elif name in ['csbm20', 'csbm40', 'csbm60', 'csbm80']:
+        dataset = dataset_ContextualSBM(root=path, name=name)
     else:
         exit("wrong dataset")
     return dataset
