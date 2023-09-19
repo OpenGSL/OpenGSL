@@ -447,6 +447,8 @@ class GENSolver(Solver):
         return adj
 
     def train_gcn(self, iter, adj, debug=False):
+        if iter == 1:
+            self.result['valid'] = 0
         if debug:
             print('==== Iteration {:04d} ===='.format(iter+1))
         t = time.time()
@@ -482,7 +484,8 @@ class GENSolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.best_iter = iter+1
-                    self.hidden_output = hidden_output
+                    if iter == 0:
+                        self.hidden_output = hidden_output
                     self.output = output if len(output.shape)>1 else output.unsqueeze(1)
                     self.output = F.log_softmax(self.output, dim=1)
                     self.weights = deepcopy(self.model.state_dict())
@@ -1864,8 +1867,8 @@ class SUBLIMESolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.weights = deepcopy(model.state_dict())
-                    # current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
-                    # self.best_graph = deepcopy(current_adj)
+                    current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
+                    self.best_graph = deepcopy(current_adj)
                     self.best_graph_test = deepcopy(adj)
 
             if debug:
