@@ -1,0 +1,20 @@
+model:
+  n_hidden: 128
+  n_layers: 1
+  mlp_layers: 1
+
+training:
+  lr: 1e-2
+  weight_decay: 5e-5
+  n_epochs: 300
+  patience: ~
+  criterion: metric
+
+dataset:
+  feat_norm: false
+  sparse: true
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false

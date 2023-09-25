@@ -21,6 +21,7 @@ dataset:
   feat_norm: true
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
+  without_structure: ~
 
 training:
   n_iters: 10

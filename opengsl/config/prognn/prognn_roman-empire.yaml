@@ -21,6 +21,7 @@ training:
   lr_adj: 1e-3
   inner_steps: 2
   outer_steps: 1
+  criterion: either
 
 gsl:
   symmetric: false

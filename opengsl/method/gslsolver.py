@@ -4,7 +4,7 @@ import numpy as np
 import random
 from copy import deepcopy
 from .models.gcn import GCN
-from .models.gnn_modules import APPNP
+from .models.gnn_modules import APPNP, GIN
 from .models.grcn import GRCN
 from .models.gaug import GAug, eval_edge_pred, MultipleOptimizer, get_lr_schedule_by_sigmoid
 from .models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
@@ -94,7 +94,7 @@ class GRCNSolver(Solver):
             self.optim2.zero_grad()
 
             # forward and backward
-            output, _ = self.model(self.feats, self.adj)
+            output, _, _ = self.model(self.feats, self.adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
@@ -102,7 +102,7 @@ class GRCNSolver(Solver):
             self.optim2.step()
 
             # Evaluate
-            loss_val, acc_val, adj = self.evaluate(self.val_mask)
+            loss_val, acc_val, adj_mid, adj = self.evaluate(self.val_mask)
 
             # save
             if acc_val > self.result['valid']:
@@ -114,6 +114,7 @@ class GRCNSolver(Solver):
                 self.weights = deepcopy(self.model.state_dict())
                 if self.conf.analysis['save_graph']:
                     self.best_graph = deepcopy(adj.to_dense())
+                    self.best_adj_mid = deepcopy(adj_mid.to_dense())
 
             # print
 
@@ -124,10 +125,10 @@ class GRCNSolver(Solver):
 
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test, _ = self.test()
+        loss_test, acc_test, _, _= self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph
+        return self.result, self.best_adj_mid, self.best_graph
 
     def evaluate(self, test_mask):
         '''
@@ -149,11 +150,11 @@ class GRCNSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            output, adj = self.model(self.feats, self.adj)
+            output, adj_mid, adj = self.model(self.feats, self.adj)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss=self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj_mid, adj
 
     def set_method(self):
         '''
@@ -447,6 +448,8 @@ class GENSolver(Solver):
         return adj
 
     def train_gcn(self, iter, adj, debug=False):
+        # if iter == 1:
+        #     self.result['valid'] = 0
         if debug:
             print('==== Iteration {:04d} ===='.format(iter+1))
         t = time.time()
@@ -482,6 +485,7 @@ class GENSolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.best_iter = iter+1
+                    # if iter == 0:
                     self.hidden_output = hidden_output
                     self.output = output if len(output.shape)>1 else output.unsqueeze(1)
                     self.output = F.log_softmax(self.output, dim=1)
@@ -599,6 +603,10 @@ class GENSolver(Solver):
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)        
+        
         self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_mask, self.labels, self.homophily)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
@@ -670,7 +678,10 @@ class IDGLSolver(Solver):
         # cur_raw_adj是根据输入Z直接产生的adj, cur_adj是前者归一化并和原始adj加权求和的结果
         cur_raw_adj = F.dropout(cur_raw_adj, self.conf.gsl['feat_adj_dropout'], training=training)
         cur_adj = F.dropout(cur_adj, self.conf.gsl['feat_adj_dropout'], training=training)
-        node_vec, output = network.encoder(init_node_vec, cur_adj)
+        if self.conf.model['type'] == 'gcn':
+            node_vec, output = network.encoder(init_node_vec, cur_adj)
+        else:
+            node_vec, output = network.encoder([init_node_vec, cur_adj, False])
         score = self.metric(self.labels[idx].cpu().numpy(), output[idx].detach().cpu().numpy())
         loss1 = self.loss_fn(output[idx], self.labels[idx])
         loss1 += self.get_graph_loss(cur_raw_adj, init_node_vec)
@@ -692,7 +703,10 @@ class IDGLSolver(Solver):
             cur_raw_adj, cur_adj = network.learn_graph(network.graph_learner2, node_vec, self.conf.gsl['graph_skip_conn'], graph_include_self=self.conf.gsl['graph_include_self'], init_adj=init_adj)
             update_adj_ratio = self.conf.gsl['update_adj_ratio']
             cur_adj = update_adj_ratio * cur_adj + (1 - update_adj_ratio) * first_adj   # 这里似乎和论文中有些出入？？
-            node_vec, output = network.encoder(init_node_vec, cur_adj, self.conf.gsl['gl_dropout'])
+            if self.conf.model['type'] == 'gcn':
+                node_vec, output = network.encoder(init_node_vec, cur_adj, self.conf.gsl['gl_dropout'])
+            else:
+                node_vec, output = network.encoder([init_node_vec, cur_adj, False])
             score = self.metric(self.labels[idx].cpu().numpy(), output[idx].detach().cpu().numpy())
             loss += self.loss_fn(output[idx], self.labels[idx])
             loss += self.get_graph_loss(cur_raw_adj, init_node_vec)
@@ -707,7 +721,7 @@ class IDGLSolver(Solver):
             loss.backward()
             self.optimizer.step()
 
-        return loss, score, cur_adj
+        return loss, score, first_raw_adj, cur_raw_adj, cur_adj
 
     def _scalable_run_whole_epoch(self, mode='train', debug=False):
 
@@ -815,11 +829,11 @@ class IDGLSolver(Solver):
             improve = ''
 
             # training phase
-            loss_train, acc_train, _ = self.run_epoch(mode='train', debug=debug)
+            loss_train, acc_train, _, _, _ = self.run_epoch(mode='train', debug=debug)
 
             # validation phase
             with torch.no_grad():
-                loss_val, acc_val, adj = self.run_epoch(mode='valid', debug=debug)
+                loss_val, acc_val, _, _, _ = self.run_epoch(mode='valid', debug=debug)
 
             if loss_val < self.best_val_loss:
                 wait = 0
@@ -829,7 +843,6 @@ class IDGLSolver(Solver):
                 self.result['train'] = acc_train
                 self.result['valid'] = acc_val
                 improve = '*'
-                self.best_graph = deepcopy(adj.clone().detach())
             else:
                 wait += 1
                 if wait == self.conf.training['patience']:
@@ -846,10 +859,13 @@ class IDGLSolver(Solver):
         print('Time(s): {:.4f}'.format(self.total_time))
         self.model.load_state_dict(self.weights)
         with torch.no_grad():
-            loss_test, acc_test, _ = self.run_epoch(mode='test', debug=debug)
+            loss_test, acc_test, first_adj, cur_adj, final_adj = self.run_epoch(mode='test', debug=debug)
         self.result['test']=acc_test
+        self.adjs['first_adj'] = first_adj
+        self.adjs['cur_adj'] = cur_adj
+        self.adjs['final_adj'] = final_adj
         print(acc_test)
-        return self.result, self.best_graph
+        return self.result, self.adjs
 
     def set_method(self):
         '''
@@ -858,6 +874,7 @@ class IDGLSolver(Solver):
         '''
         self.model = IDGL(self.conf, self.dim_feats, self.num_targets).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
+        self.adjs = {'first_adj':None, 'cur_adj':None, 'final_adj':None}
 
 
 class PROGNNSolver(Solver):
@@ -1090,10 +1107,13 @@ class PROGNNSolver(Solver):
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
                              self.conf.model['input_layer'], self.conf.model['output_layer'],
                              weight_initializer='uniform').to(self.device)
-        else:
+        elif self.conf.model['type'] == 'appnp':
             self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
         self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
@@ -2244,7 +2264,7 @@ class COGSLSolver(Solver):
             self.view2_indices = torch.load(self.conf.dataset['view2_indices_path'])
         self.view1 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view1, False))
         self.view2 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view2, False))
-        self.loss_fn = F.binary_cross_entropy if self.num_targets == 1 else F.nll_loss
+        self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.nll_loss
         #self.train_mask = np.load('/root/dataset/citeseer/train.npy')
         #self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
         #self.test_mask = np.load('/root/dataset/citeseer/test.npy')
@@ -2538,8 +2558,9 @@ class WSGNNSolver(Solver):
             self.optimizer.zero_grad()
 
             p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
-            p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-            q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+            if self.num_targets > 1:
+                p_y = torch.nn.functional.log_softmax(p_y, dim=1)
+                q_y = torch.nn.functional.log_softmax(q_y, dim=1)
             mask = torch.zeros(self.n_nodes, dtype=bool)
             mask[self.train_mask] = 1
             loss = self.criterion(self.labels, mask, p_y, q_y, )
@@ -2586,8 +2607,9 @@ class WSGNNSolver(Solver):
         self.model.eval()
         with torch.no_grad():
             p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
-        p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-        q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+        if self.num_targets > 1:
+            p_y = torch.nn.functional.log_softmax(p_y, dim=1)
+            q_y = torch.nn.functional.log_softmax(q_y, dim=1)
         mask = torch.zeros(self.n_nodes, dtype=bool)
         mask[val_mask] = 1
         loss = self.criterion(self.labels, mask, p_y, q_y)
@@ -2595,7 +2617,7 @@ class WSGNNSolver(Solver):
         return loss, acc
 
     def set_method(self):
-        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'],self.conf.model['n_layers'], 
-                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets).to(self.device)
+        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'], self.conf.model['n_layers'],
+                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets, self.conf).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
-        self.criterion = ELBONCLoss()
+        self.criterion = ELBONCLoss(binary=(self.num_targets==1))

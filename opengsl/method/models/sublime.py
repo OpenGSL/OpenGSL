@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import kneighbors_graph
 from .gcn import GCN
-from .gnn_modules import APPNP
+from .gnn_modules import APPNP, GIN
 import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
@@ -329,8 +329,11 @@ class GraphEncoder(nn.Module):
                                  input_layer=False, output_layer=False, spmm_type=0)
             elif conf.model['type']=='appnp':
                 self.model = APPNP(in_dim, hidden_dim, emb_dim,
-                                    dropout=conf.model['dropout'], K=conf.model['K'],
+                                    dropout=dropout, K=conf.model['K'],
                                     alpha=conf.model['alpha'])
+            elif conf.model['type'] == 'gin':
+                self.model = GIN(in_dim, hidden_dim, emb_dim,
+                               nlayers, conf.model['mlp_layers'])
         self.proj_head = nn.Sequential(nn.Linear(emb_dim, proj_dim), nn.ReLU(inplace=True),
                                            nn.Linear(proj_dim, proj_dim))
 

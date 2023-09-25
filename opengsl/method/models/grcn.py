@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
-from .gnn_modules import APPNP
+from .gnn_modules import APPNP, GIN
 
 
 class GCNConv_diag(torch.nn.Module):
@@ -34,10 +34,13 @@ class GRCN(torch.nn.Module):
                                  conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
                                  conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
                                  conf.model['input_layer'], conf.model['output_layer'])
-        else:
+        elif conf.model['type']=='appnp':
             self.conv_task = APPNP(num_features, conf.model['n_hidden'], num_classes,
                                dropout=conf.model['dropout'], K=conf.model['K_APPNP'],
                                alpha=conf.model['alpha'], spmm_type=1)
+        elif conf.model['type'] == 'gin':
+            self.conv_task = GIN(num_features, conf.model['n_hidden'], num_classes,
+                               conf.model['n_layers'], conf.model['mlp_layers'], spmm_type=1)
         self.model_type = conf.gsl['model_type']
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNConv_diag(num_features)
@@ -106,6 +109,7 @@ class GRCN(torch.nn.Module):
         Adj_new = self.cal_similarity_graph(node_embeddings)
 
         Adj_new_indices, Adj_new_values = self._sparse_graph(Adj_new, self.K)
+        Adj_mid = torch.sparse.FloatTensor(Adj_new_indices, Adj_new_values, Adj.size()).to(self.device)
         new_inds = torch.cat([Adj.indices(), Adj_new_indices], dim=1)
         new_values = torch.cat([Adj.values(), Adj_new_values])
         Adj_new = torch.sparse.FloatTensor(new_inds, new_values, Adj.size()).to(self.device)
@@ -116,4 +120,4 @@ class GRCN(torch.nn.Module):
         # x = self.conv2(x, Adj_new_norm)
         _, x = self.conv_task((input, Adj_new_norm, False))
 
-        return x, Adj_new
+        return x, Adj_mid, Adj_new

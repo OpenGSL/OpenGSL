@@ -1,0 +1,83 @@
+// gin
+    "n_hidden":{"_type":"choice","_value":[32, 64, 128, 256]},
+    "n_layers":{"_type":"choice","_value":[1, 2, 3, 4, 6]},
+    "lr":{"_type":"choice","_value":[0.0001, 0.001, 0.01, 0.1]},
+    "weight_decay":{"_type":"choice","_value":[0, 0.005, 0.0005, 0.00005]}
+
+// appnp
+    "n_hidden":{"_type":"choice","_value":[16,32,64,128]},
+    "alpha":{"_type":"choice","_value":[0.1,0.3,0.5,0.7,0.9]},
+    "K":{"_type":"choice","_value":[2,4,6,8,10]},
+    "lr":{"_type":"choice","_value":[0.0001, 0.001, 0.01, 0.1]},
+    "weight_decay":{"_type":"choice","_value":[0, 0.005, 0.0005, 0.00005]}
+
+// all
+    "lr":{"_type":"choice","_value":[0.0001, 0.001, 0.01, 0.1]},
+    "weight_decay":{"_type":"choice","_value":[0, 5e-4, 5e-5, 5e-6, 5e-7]}
+
+// gcn
+    "n_layers":{"_type":"choice","_value":[2, 3, 4, 5]},
+    "n_hidden":{"_type":"choice","_value":[16, 32, 64, 128]},
+    "dropout":{"_type":"choice","_value":[0, 0.2, 0.5, 0.8]},
+
+// prognn
+
+
+// idgl
+    "num_anchors":{"_type":"choice","_value":[300, 500, 700]},
+    "graph_learn_num_pers":{"_type":"choice","_value":[2, 4, 6, 8]},
+    "graph_skip_conn":{"_type":"choice","_value":[0.7, 0.8, 0.9]},
+    "update_adj_ratio":{"_type":"choice","_value":[0.1, 0.2, 0.3]},
+
+// grcn
+    "K":{"_type":"choice","_value":[5, 50, 100, 200]},
+    "lr_graph":{"_type":"choice","_value":[1e-1, 1e-2, 1e-3, 1e-4]},
+
+// gaug
+    "alpha":{"_type":"choice","_value":[0, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 1]},
+    "temperature":{"_type":"choice","_value":[0.3, 0.6, 0.9, 1.2]},
+    "warmup":{"_type":"choice","_value":[0, 10, 20]},
+
+// slaps
+    "lr_dae":{"_type":"choice","_value":[1e-2, 1e-3]},
+    "dropout_adj1":{"_type":"choice","_value":[0.25, 0.5]},
+    "dropout_adj2":{"_type":"choice","_value":[0.25, 0.5]},
+    "k":{"_type":"choice","_value":[10, 15, 20, 30]},
+    "lamda":{"_type":"choice","_value":[0.1, 1, 10, 100, 500]},
+    "ratio":{"_type":"choice","_value":[1,5,10]},
+    "nr":{"_type":"choice","_value":[1, 5]},
+
+// gen
+    "K":{"_type":"choice","_value":[7, 8, 9, 10]},
+    "tolerance":{"_type":"choice","_value":[1e-2, 1e-3, 1e-4]},
+    "threshold":{"_type":"choice","_value":[0.5, 0.6, 0.7, 0.8]},
+
+// ndoeformer
+    "n_layers":{"_type":"choice","_value":[2, 3, 4, 5]},
+    "n_hidden":{"_type":"choice","_value":[16, 32, 64, 128]},
+    "n_heads":{"_type":"choice","_value":[1, 2, 4, 8]},
+    "dropout":{"_type":"choice","_value":[0, 0.2, 0.5, 0.8]},
+    "K":{"_type":"choice","_value":[5, 10, 20]},
+    "lambda":{"_type":"choice","_value":[1, 0.1, 0.01]},
+
+// cogsl
+    "cls_hid_1":{"_type":"choice","_value":[16,32,64,128]},
+    "ve_dropout":{"_type":"choice","_value":[0,0.2,0.5,0.8]},
+    "ve_lr":{"_type":"choice","_value":[1e-4,1e-1]},
+    "temp_r":{"_type":"choice","_value":[1e-3,1e-4]},
+    "com_lambda_v1":{"_type":"choice","_value":[0,0.2,0.5,0.8,1]},
+    "com_lambda_v2":{"_type":"choice","_value":[0,0.2,0.5,0.8,1]},
+    "tau":{"_type":"choice","_value":[0,0.2,0.5,0.8]},
+    "inner_ne_epoch":{"_type":"choice","_value":[1,5]},
+    "inner_cls_epoch":{"_type":"choice","_value":[1,5,10]},
+    "inner_mi_epoch":{"_type":"choice","_value":[5,10]},
+    "lam":{"_type":"choice","_value":[0,0.2,0.5,0.8,1]},
+
+// sublime
+    "dropedge_rate":{"_type":"choice","_value":[0, 0.25, 0.5]},
+    "tau":{"_type":"choice","_value":[0.99, 0.999, 0.9999]},
+
+// wsgnn
+    "n_hidden":{"_type":"choice","_value":[64,128]},
+    "graph_skip_conn":{"_type":"choice","_value":[0.5, 0.9, 9.1]},
+    "graph_learn_num_pers":{"_type":"choice","_value":[1,2,4,6,8]},

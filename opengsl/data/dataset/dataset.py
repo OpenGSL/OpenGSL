@@ -2,12 +2,14 @@ import torch
 from .pyg_load import pyg_load_dataset
 from .hetero_load import hetero_load
 from .split import get_split
+from opengsl.data.preprocess.knn import knn
 from opengsl.data.preprocess.normalize import normalize
 import numpy as np
 from opengsl.data.preprocess.control_homophily import control_homophily
 import pickle
 import os
 import urllib.request
+from ogb.nodeproppred import PygNodePropPredDataset
 
 
 class Dataset:
@@ -31,14 +33,23 @@ class Dataset:
         Path to save dataset files.
     '''
 
-    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/'):
+    def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/',
+                 without_structure=None, train_percent=None, val_percent=None):
         self.name = data
         self.path = path
         self.device = torch.device('cuda')
+        self.train_percent = train_percent
+        self.val_percent = val_percent
         self.prepare_data(data, feat_norm, verbose)
         self.split_data(n_splits, verbose)
         if homophily_control:
             self.adj = control_homophily(self.adj, self.labels.cpu().numpy(), homophily_control)
+        # zero knowledge on structure
+        if without_structure:
+            if without_structure == 'i':
+                self.adj = torch.eye(self.n_nodes).to(self.device).to_sparse()
+            elif without_structure == 'knn':
+                self.adj = knn(self.feats, int(self.n_edges//self.n_nodes)).to_sparse()
 
     def prepare_data(self, ds_name, feat_norm=False, verbose=True):
         '''
@@ -58,7 +69,7 @@ class Dataset:
 
         '''
         if ds_name in ['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho', 'coauthorcs', 'coauthorph', 'blogcatalog',
-                       'flickr']:
+                       'flickr', 'wikics'] or 'csbm' in ds_name:
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
@@ -74,6 +85,10 @@ class Dataset:
 
             self.feats = self.feats.to(self.device)
             self.labels = self.labels.to(self.device)
+            
+            if 'csbm' in ds_name:
+                self.labels = self.labels.float()
+            
             self.adj = self.adj.to(self.device)
             # normalize features
             if feat_norm:
@@ -92,6 +107,82 @@ class Dataset:
                 self.feats = normalize(self.feats, style='row')
                 # exit(0)
             self.n_classes = len(self.labels.unique())
+
+        elif ds_name in ['ogbn-arxiv']:
+            self.data_raw = PygNodePropPredDataset(name='ogbn-arxiv', root='./data')
+            self.g = self.data_raw[0]
+            self.feats = self.g.x  # unnormalized
+            self.n_nodes = self.feats.shape[0]
+            self.dim_feats = self.feats.shape[1]
+            self.labels = self.g.y
+            reverse_edge_index = torch.stack([self.g.edge_index[1], self.g.edge_index[0]])
+
+            self.adj = torch.sparse.FloatTensor(torch.cat([reverse_edge_index, self.g.edge_index], dim=1), torch.ones(self.g.edge_index.shape[1]*2),
+                                                [self.n_nodes, self.n_nodes])
+            self.n_edges = self.g.num_edges
+            self.n_classes = self.data_raw.num_classes
+
+            self.feats = self.feats.to(self.device)
+            self.labels = self.labels.to(self.device).view(-1)
+            self.adj = self.adj.to(self.device)
+        
+        elif ds_name in ['regression']:
+            def read_regression(input_folder):
+                import pandas as pd
+                import json
+                import networkx as nx
+                X = pd.read_csv(f'{input_folder}/X.csv')
+                y = pd.read_csv(f'{input_folder}/y.csv')
+
+                networkx_graph = nx.read_graphml(f'{input_folder}/graph.graphml')
+                networkx_graph = nx.relabel_nodes(networkx_graph, {str(i): i for i in range(len(networkx_graph))})
+
+                categorical_columns = []
+                if os.path.exists(f'{input_folder}/cat_features.txt'):
+                    with open(f'{input_folder}/cat_features.txt') as f:
+                        for line in f:
+                            if line.strip():
+                                categorical_columns.append(line.strip())
+
+                cat_features = None
+                if categorical_columns:
+                    columns = X.columns
+                    cat_features = np.where(columns.isin(categorical_columns))[0]
+
+                    for col in list(columns[cat_features]):
+                        X[col] = X[col].astype(str)
+
+
+                if os.path.exists(f'{input_folder}/masks.json'):
+                    with open(f'{input_folder}/masks.json') as f:
+                        masks = json.load(f)
+                else:
+                    print('no inside split masks')
+                
+                X = torch.from_numpy(X.values).to(torch.float)
+                y = torch.from_numpy(y.values).squeeze(1).to(torch.float)
+                
+                adj = nx.to_scipy_sparse_array(networkx_graph).tocoo()
+                # 获取非零元素行索引
+                row = torch.from_numpy(adj.row.astype(np.int64)).to(torch.long)
+                # 获取非零元素列索引
+                col = torch.from_numpy(adj.col.astype(np.int64)).to(torch.long)
+                # 将行和列进行拼接，shape变为[2, num_edges], 包含两个列表，第一个是row, 第二个是col
+                edge_index = torch.stack([row, col], dim=0)
+                adj = torch.sparse_coo_tensor(edge_index, torch.ones_like(row))
+                    
+                return X, adj, y, masks
+            
+            self.feats,self.adj,self.labels,masks = read_regression('./data/regression')
+            
+            self.feats = self.feats.to(self.device)
+            self.labels = self.labels.to(self.device)
+            self.adj = self.adj.to(self.device)
+            self.n_nodes = self.feats.shape[0]
+            self.dim_feats = self.feats.shape[1]
+            self.n_edges = len(self.adj.coalesce().values())/2
+            self.n_classes = 1
+            self.masks = masks
 
         else:
             print('dataset not implemented')
@@ -170,6 +261,32 @@ class Dataset:
         #     self.train_mask = generate_mask_tensor(sample_mask(train_indices, self.n_nodes))
         #     self.val_mask = generate_mask_tensor(sample_mask(val_indices, self.n_nodes))
         #     self.test_mask = generate_mask_tensor(sample_mask(test_indices, self.n_nodes))
+        elif self.name in ['ogbn-arxiv']:
+            split_idx = self.data_raw.get_idx_split()
+            train_idx = split_idx['train']
+            val_idx = split_idx['valid']
+            test_idx = split_idx['test']
+            for i in range(n_splits):
+                self.train_masks.append(train_idx.numpy())
+                self.val_masks.append(val_idx.numpy())
+                self.test_masks.append(test_idx.numpy())
+        elif self.name in ['wikics']:
+            for i in range(n_splits):
+                self.train_masks.append(torch.nonzero(self.g.train_mask[:,i], as_tuple=False).squeeze().numpy())
+                self.val_masks.append(torch.nonzero(self.g.val_mask[:,i], as_tuple=False).squeeze().numpy())
+                self.test_masks.append(torch.nonzero(self.g.test_mask, as_tuple=False).squeeze().numpy())
+        elif 'csbm' in self.name:
+            for i in range(n_splits):
+                np.random.seed(i)
+                train_indices, val_indices, test_indices = get_split(self.labels.cpu().numpy(), train_size=int(self.n_nodes*self.train_percent), val_size=int(self.n_nodes*self.val_percent))
+                self.train_masks.append(train_indices)
+                self.val_masks.append(val_indices)
+                self.test_masks.append(test_indices)
+        elif self.name in ['regression']:
+            for i in range(n_splits):
+                self.train_masks.append(self.masks[str(i)]['train'])
+                self.val_masks.append(self.masks[str(i)]['val'])
+                self.test_masks.append(self.masks[str(i)]['test'])
         else:
             print('dataset not implemented')
             exit(0)

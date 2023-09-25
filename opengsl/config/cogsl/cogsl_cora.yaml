@@ -54,6 +54,7 @@ dataset:
   big: False
   batch: 0
   sparse: true
+  without_structure: ~
 
 analysis:
   flag: false

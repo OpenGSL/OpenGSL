@@ -1,0 +1,41 @@
+model:
+  type: gcn
+  n_layers: 2
+  n_linear: 1 # layers of linear per gcn layer
+  act: relu # [relu, elu, gelu, leakyrelu]
+  n_hidden: 32
+  dropout: 0.2
+  input_dropout: 0
+  norm:
+    flag: false
+    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
+  input_layer: false
+  output_layer: false
+  spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
+  K: 10
+  alpha: 0.1
+
+gsl:
+  k: 9
+  tolerance: 0.01
+  threshold: 0.5
+
+dataset:
+  feat_norm: false
+  cora_split: false
+  sparse: true
+
+training:
+  n_iters: 50
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  lr: 1e-1
+  n_epochs: 200
+  weight_decay: 5e-4
+  patience: ~
+  criterion: ~
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

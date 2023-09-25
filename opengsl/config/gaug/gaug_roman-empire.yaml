@@ -37,6 +37,7 @@ dataset:
   feat_norm: false
   cora_split: false # for cora,citeseer and pubmed
   sparse: true
+  without_structure: ~
 
 training:
   lr: 1e-1

@@ -1,0 +1,48 @@
+model:
+  type: gin
+  mlp_layers: 1
+sparse: false
+epochs_cls: 400
+lr_cls: 1e-2
+w_decay_cls: 5e-7
+hidden_dim_cls: 64
+dropout_cls: 0.5
+dropedge_cls: 0.75
+n_layers_cls: 2
+patience_cls: 100
+epochs: 2000
+lr: 0.01
+wd: 0.0
+n_hidden: 256
+n_embed: 256
+n_proj: 256
+dropout: 0.5
+dropedge_rate: 0.25
+n_layers: 4
+type_learner: att
+k: 20
+sim_function: cosine
+activation_learner: tanh
+eval_freq: 200
+tau: 0.999
+maskfeat_rate_learner: 0.6
+maskfeat_rate_anchor: 0.8
+contrast_batch_size: 0
+c: 0
+
+
+training:
+  patience: ~
+  criterion: ~
+
+dataset:
+  feat_norm: false   # sublime does not normalize feats
+  cora_split: false
+  load_graph: false
+  sparse: true
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

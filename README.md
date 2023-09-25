@@ -103,8 +103,8 @@ exp.run(n_runs = 10)
 ## Adding New GSL Method
 if you want to use your own GSL method, see [customized_gsl.py](https://github.com/OpenGSL/OpenGSL/blob/main/examples/customized_gsl.py) for detail.
 
-
 ## Node Classification Results
+
 ### Results in Our Paper
 
 | **Model**      |   **Cora**   | **Citeseer** |  **Pubmed**  | **Questions** | **Minesweeper** |
@@ -161,7 +161,18 @@ if you want to use your own GSL method, see [customized_gsl.py](https://github.c
 | **SUBLIME**    | 79.34 ± 2.54  |    55.29     |
 | **STABLE**     | 78.66 ± 0.25  |      --      |
 
+## Update
+
+2023.7.14 A scalable version of CoGSL added.
+
+2023.7.31 A new GSL method WSGNN added.
+
+2023.8.9 Enabling the use of APPNP and GIN as backbones for various GSL methods.
+
+2023.8.14 New datasets including Wikics, Ogbn-arxiv and CSBM synthetic graphs.
+
 ## How to Contribute
+
 As an active research topic, we are witnessing the rapid development of GSL methods.
 Hence, this project will be frequently updated, and we welcome everyone interested in this topic to contribute! 
 
@@ -186,15 +197,17 @@ If you use our benchmark in your works, we would appreciate citations to the pap
 |**ID**| **Paper** | **Method** | **Conference** |
 |---------|---------|:----------:|:--------------:|
 |1| [Semi-supervised classification with graph convolutional networks](https://arxiv.org/pdf/1609.02907.pdf%EF%BC%89)      | GCN        | ICLR 2017 |
-|2| [Graph Structure Learning for Robust Graph Neural Networks](https://dl.acm.org/doi/pdf/10.1145/3394486.3403049)  | ProGNN     | KDD 2020 |
-|3| [Iterative Deep Graph Learning for Graph Neural Networks: Better and Robust Node Embeddings](https://proceedings.neurips.cc/paper/2020/file/e05c7ba4e087beea9410929698dc41a6-Paper.pdf)  | IDGL       | NeurIPS 2020 |
-|4| [Graph-Revised Convolutional Network](https://arxiv.org/pdf/1911.07123)  | GRCN       | ECML-PKDD 2020 |
-|5| [Data Augmentation for Graph Neural Networks](https://ojs.aaai.org/index.php/AAAI/article/view/17315/17122)  | GAug(O)    | AAAI 2021 |
-|6| [SLAPS: Self-Supervision Improves Structure Learning for Graph Neural Networks](https://proceedings.neurips.cc/paper/2021/file/bf499a12e998d178afd964adf64a60cb-Paper.pdf)  | SLAPS      | ICML 2021 |
-|7| [Masked label prediction: Unified message passing model for semi-supervised classification](https://arxiv.org/pdf/2009.03509)  | GT         | IJCAI 2021 |
-|8| [Nodeformer: A scalable graph structure learning transformer for node classification](https://proceedings.neurips.cc/paper_files/paper/2022/file/af790b7ae573771689438bbcfc5933fe-Paper-Conference.pdf)  | Nodeformer | NeurIPS 2022 |
-|9| [Graph Structure Estimation Neural Networks](http://shichuan.org/doc/103.pdf)  | GEN        | WWW 2021 |
-|10| [Compact Graph Structure Learning via Mutual Information Compression](https://arxiv.org/pdf/2201.05540)  | CoGSL      | WWW 2022 |
-|11| [SE-GSL: A General and Effective Graph Structure Learning Framework through Structural Entropy Optimization](https://arxiv.org/pdf/2303.09778)  | SEGSL      | WWW 2023 |
-|12| [Towards Unsupervised Deep Graph Structure Learning](https://arxiv.org/pdf/2201.06367)  | SUBLIME    | WWW 2022 |
-|13| [Reliable Representations Make A Stronger Defender: Unsupervised Structure Refinement for Robust GNN](https://dl.acm.org/doi/pdf/10.1145/3534678.3539484)  | STABLE     | KDD 2022 |
+|2| [Learning Discrete Structures for Graph Neural Networks](https://arxiv.org/abs/1903.11960) | LDS | ICML 2019 |
+|3| [Graph Structure Learning for Robust Graph Neural Networks](https://dl.acm.org/doi/pdf/10.1145/3394486.3403049)  | ProGNN     | KDD 2020 |
+|4| [Iterative Deep Graph Learning for Graph Neural Networks: Better and Robust Node Embeddings](https://proceedings.neurips.cc/paper/2020/file/e05c7ba4e087beea9410929698dc41a6-Paper.pdf)  | IDGL       | NeurIPS 2020 |
+|5| [Graph-Revised Convolutional Network](https://arxiv.org/pdf/1911.07123)  | GRCN       | ECML-PKDD 2020 |
+|6| [Data Augmentation for Graph Neural Networks](https://ojs.aaai.org/index.php/AAAI/article/view/17315/17122)  | GAug(O)    | AAAI 2021 |
+|7| [SLAPS: Self-Supervision Improves Structure Learning for Graph Neural Networks](https://proceedings.neurips.cc/paper/2021/file/bf499a12e998d178afd964adf64a60cb-Paper.pdf)  | SLAPS      | ICML 2021 |
+|8| [Variational Inference for Training Graph Neural Networks in Low-Data Regime through Joint Structure-Label Estimation](https://dl.acm.org/doi/abs/10.1145/3534678.3539283) | WSGNN | KDD 2022 |
+|9| [Nodeformer: A scalable graph structure learning transformer for node classification](https://proceedings.neurips.cc/paper_files/paper/2022/file/af790b7ae573771689438bbcfc5933fe-Paper-Conference.pdf)  | Nodeformer | NeurIPS 2022 |
+|10| [Graph Structure Estimation Neural Networks](http://shichuan.org/doc/103.pdf)  | GEN        | WWW 2021 |
+|11| [Compact Graph Structure Learning via Mutual Information Compression](https://arxiv.org/pdf/2201.05540)  | CoGSL      | WWW 2022 |
+|12| [SE-GSL: A General and Effective Graph Structure Learning Framework through Structural Entropy Optimization](https://arxiv.org/pdf/2303.09778)  | SEGSL      | WWW 2023 |
+|13| [Towards Unsupervised Deep Graph Structure Learning](https://arxiv.org/pdf/2201.06367)  | SUBLIME    | WWW 2022 |
+|14| [Reliable Representations Make A Stronger Defender: Unsupervised Structure Refinement for Robust GNN](https://dl.acm.org/doi/pdf/10.1145/3534678.3539484)  | STABLE     | KDD 2022 |
+

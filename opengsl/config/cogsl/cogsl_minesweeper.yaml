@@ -1,0 +1,63 @@
+model:
+  seed: 3
+  cls_hid_1: 64
+  com_lambda_v1: 0.3472770035277527
+  com_lambda_v2: 0.05396756737147368
+  gen_hid: 32
+  lam: 0.15749832523740093
+  alpha: 1.0
+  mi_hid_1: 256
+  cls_coe: 0.3
+  mi_coe: 0.3
+  tau: 0.6710341977583687
+  cls_dropout: 0.5
+  ve_dropout: 0.2
+
+
+training:
+  cls_lr: 0.01
+  cls_weight_decay: 5e-4
+  ve_lr: 0.08203481819780925
+  ve_weight_decay: 1e-10
+  mi_lr: 0.01
+  mi_weight_decay: 0
+
+  main_epoch: 100
+  inner_ne_epoch: 1
+  inner_cls_epoch: 10
+  inner_mi_epoch: 5
+  temp_r: 1e-3
+  patience: ~
+  criterion: metric
+
+
+dataset:
+  name: roman-empire
+  init: True    # True : generate view, False : read view
+  feat_norm: false
+  cora_split: false
+  name_view1: view_adj
+  name_view2: view_sub
+  view1_path: # *.npz
+  view2_path: # *.npz
+  view1_indices_path: #*.pt
+  view2_indices_path: #*.pt
+  diff_alpha: 0.5 #
+  knn_k: 3
+  sub_k: 70000
+  view1_indices: 1
+  view2_indices: 1
+  view1_k: 0     # choose the biggest k values for view1_indices
+  view2_k: 0    # if k is 0, all of values will be chosen
+  to_sparse: False
+  pyg: True
+  big: true
+  batch: 1000
+  sparse: true
+  sub_rate: 0.6930903154038006
+
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  save_graph_path: results/graph

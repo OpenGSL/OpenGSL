@@ -1,7 +1,5 @@
 model:
   type: gcn
-model:
-  type: gcn
 sparse: false
 epochs_cls: 400
 lr_cls: 1e-2

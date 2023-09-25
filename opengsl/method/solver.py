@@ -3,7 +3,7 @@ from copy import deepcopy
 import time
 from ..utils.utils import accuracy
 from ..utils.recorder import Recorder
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, r2_score, mean_squared_error
 import torch.nn.functional as F
 
 
@@ -45,6 +45,9 @@ class Solver:
         self.model = None
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.cross_entropy
         self.metric = roc_auc_score if self.num_targets == 1 else accuracy
+        if self.n_classes == 1:        
+            self.loss_fn = torch.nn.MSELoss()
+            self.metric = r2_score
         self.model = None
 
         self.feats = dataset.feats
@@ -94,10 +97,10 @@ class Solver:
         self.val_mask = self.val_masks[split]
         self.test_mask = self.test_masks[split]
         self.total_time = 0
-        self.best_val_loss = 10
+        self.best_val_loss = 1e15
         self.weights = None
         self.best_graph = None
-        self.result = {'train': 0, 'valid': 0, 'test': 0}
+        self.result = {'train': -1, 'valid': -1, 'test': -1}
         self.start_time = time.time()
         self.recoder = Recorder(self.conf.training['patience'], self.conf.training['criterion'])
         self.set_method()

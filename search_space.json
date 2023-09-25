@@ -1,0 +1,7 @@
+{
+    "n_hidden":{"_type":"choice","_value":[32, 64, 128, 256]},
+    "n_layers":{"_type":"choice","_value":[1, 2, 3, 4, 6]},
+    "lr":{"_type":"choice","_value":[0.0001, 0.001, 0.01, 0.1]},
+    "weight_decay":{"_type":"choice","_value":[0, 0.005, 0.0005, 0.00005]}
+
+}

@@ -1,0 +1,48 @@
+training:
+  lr: 1e-2
+  weight_decay: 5e-4
+  max_iter: 10
+  max_epochs: 1000
+  patience: 100
+  smoothness_ratio: 0.2
+  degree_ratio: 0
+  sparsity_ratio: 0
+  criterion: ~
+
+model:
+  type: gin
+  mlp_layers: 1
+  n_layers: 2
+  n_hidden: 16
+  dropout: 0.5
+  norm: false
+  scalable_run: false
+  num_anchors: 300
+
+
+gsl:
+  graph_skip_conn: 0.8
+  update_adj_ratio: 0.1
+  graph_include_self: false
+
+  graph_learn_epsilon: 0
+  graph_learn_epsilon2: 0
+  graph_learn_topk: null
+  graph_learn_topk2: null
+  graph_learn_num_pers: 4
+
+  feat_adj_dropout: 0.5
+  gl_dropout: 0.5
+
+  eps_adj: 4e-5
+  test_eps_adj: 4e-5
+
+dataset:
+  feat_norm: true
+  sparse: true
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false

@@ -1,0 +1,35 @@
+model:
+  type: gin
+  n_hidden: 256
+  n_layers: 3
+  mlp_layers: 1  
+  spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
+
+training:
+  lr: 1e-3
+  n_epochs: 100
+  weight_decay: 5e-3
+  patience_iter: 10000
+  lr_adj: 1e-4
+  inner_steps: 2
+  outer_steps: 1
+  patience: ~
+  criterion: either
+
+gsl:
+  symmetric: false
+  lambda_: 0.001
+  alpha: 5e-4
+  beta: 1.5
+  gamma: 1
+
+dataset:
+  feat_norm: false # feats not normalized for prognn
+  sparse: true
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  save_graph_path: results/graph

@@ -1,0 +1,50 @@
+model:
+  type: appnp
+  K: 6
+  alpha: 0.5
+sparse: false
+epochs_cls: 400
+lr_cls: 1e-1
+w_decay_cls: 5e-5
+hidden_dim_cls: 128
+dropout_cls: 0.5
+dropedge_cls: 0.25
+n_layers_cls: 2
+patience_cls: 100
+
+epochs: 2000
+lr: 0.001
+wd: 0.0
+n_hidden: 128
+n_embed: 64
+n_proj: 64
+dropout: 0.5
+dropedge_rate: 0.25
+n_layers: 2
+type_learner: mlp
+k: 10
+sim_function: cosine
+activation_learner: relu
+eval_freq: 500
+tau: 0.999
+maskfeat_rate_learner: 0.4
+maskfeat_rate_anchor: 0.4
+contrast_batch_size: 2000
+c: 50
+
+dataset:
+  feat_norm: false   # sublime does not normalize feats
+  cora_split: false
+  load_graph: false
+  sparse: true
+#  without_structure: knn
+
+training:
+  patience: ~
+  criterion: ~
+
+# analysis
+analysis:
+  flag: false
+  save_graph: false
+  save_graph_path: results/graph

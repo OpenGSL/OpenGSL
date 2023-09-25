@@ -262,3 +262,42 @@ class GAT(nn.Module):
             x = F.elu(x)
         x = self.convs[-1](x, edge_index)
         return x.squeeze(1)
+
+
+class GIN(nn.Module):
+    def __init__(self, n_feat, n_hidden, n_class, n_layers=3, mlp_layers=1, learn_eps=True, spmm_type=0):
+        super(GIN, self).__init__()
+        self.n_layers = n_layers
+        self.learn_eps = learn_eps
+        self.eps = nn.Parameter(torch.zeros(self.n_layers))
+        self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
+        
+        self.mlps = nn.ModuleList()
+        if n_layers == 1:
+            self.mlps.append(MLP(n_feat, n_hidden, n_class, mlp_layers, 0))
+        else:
+            self.mlps.append(MLP(n_feat, n_hidden, n_hidden, mlp_layers, 0))
+            for layer in range(self.n_layers-2):
+                self.mlps.append(MLP(n_hidden, n_hidden, n_hidden, mlp_layers, 0))
+            self.mlps.append(MLP(n_hidden, n_hidden, n_class, mlp_layers, 0))
+        
+    def forward(self, input):
+        x = input[0]
+        adj = input[1]
+        only_z = input[2] if len(input) > 2 else True
+
+        if self.learn_eps:
+            for i in range(self.n_layers-1):
+                x = self.mlps[i]((1+self.eps[i])*x + self.spmm(adj,x))
+                x = F.relu(x)
+            z = self.mlps[-1]((1+self.eps[-1])*x + self.spmm(adj,x))
+        else:
+            for i in range(self.n_layers-1):
+                x = self.mlps[i](x + self.spmm(adj,x))
+                x = F.relu(x)
+            z = self.mlps[-1](x + self.spmm(adj,x))
+        
+        if only_z:
+            return z.squeeze(1)
+        else:
+            return x, z.squeeze(1)
