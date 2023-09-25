@@ -94,7 +94,7 @@ class GRCNSolver(Solver):
             self.optim2.zero_grad()
 
             # forward and backward
-            output, _ = self.model(self.feats, self.adj)
+            output, _, _ = self.model(self.feats, self.adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
@@ -102,7 +102,7 @@ class GRCNSolver(Solver):
             self.optim2.step()
 
             # Evaluate
-            loss_val, acc_val, adj = self.evaluate(self.val_mask)
+            loss_val, acc_val, adj_mid, adj = self.evaluate(self.val_mask)
 
             # save
             if acc_val > self.result['valid']:
@@ -114,6 +114,7 @@ class GRCNSolver(Solver):
                 self.weights = deepcopy(self.model.state_dict())
                 if self.conf.analysis['save_graph']:
                     self.best_graph = deepcopy(adj.to_dense())
+                    self.best_adj_mid = deepcopy(adj_mid.to_dense())
 
             # print
 
@@ -124,10 +125,10 @@ class GRCNSolver(Solver):
 
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test, _ = self.test()
+        loss_test, acc_test, _, _= self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph
+        return self.result, self.best_adj_mid, self.best_graph
 
     def evaluate(self, test_mask):
         '''
@@ -149,11 +150,11 @@ class GRCNSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            output, adj = self.model(self.feats, self.adj)
+            output, adj_mid, adj = self.model(self.feats, self.adj)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss=self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj_mid, adj
 
     def set_method(self):
         '''
@@ -447,8 +448,8 @@ class GENSolver(Solver):
         return adj
 
     def train_gcn(self, iter, adj, debug=False):
-        if iter == 1:
-            self.result['valid'] = 0
+        # if iter == 1:
+        #     self.result['valid'] = 0
         if debug:
             print('==== Iteration {:04d} ===='.format(iter+1))
         t = time.time()
@@ -484,8 +485,8 @@ class GENSolver(Solver):
                     self.result['valid'] = acc_val
                     self.result['train'] = acc_train
                     self.best_iter = iter+1
-                    if iter == 0:
-                        self.hidden_output = hidden_output
+                    # if iter == 0:
+                    self.hidden_output = hidden_output
                     self.output = output if len(output.shape)>1 else output.unsqueeze(1)
                     self.output = F.log_softmax(self.output, dim=1)
                     self.weights = deepcopy(self.model.state_dict())
@@ -720,7 +721,7 @@ class IDGLSolver(Solver):
             loss.backward()
             self.optimizer.step()
 
-        return loss, score, cur_adj
+        return loss, score, first_raw_adj, cur_raw_adj, cur_adj
 
     def _scalable_run_whole_epoch(self, mode='train', debug=False):
 
@@ -828,11 +829,11 @@ class IDGLSolver(Solver):
             improve = ''
 
             # training phase
-            loss_train, acc_train, _ = self.run_epoch(mode='train', debug=debug)
+            loss_train, acc_train, _, _, _ = self.run_epoch(mode='train', debug=debug)
 
             # validation phase
             with torch.no_grad():
-                loss_val, acc_val, adj = self.run_epoch(mode='valid', debug=debug)
+                loss_val, acc_val, _, _, _ = self.run_epoch(mode='valid', debug=debug)
 
             if loss_val < self.best_val_loss:
                 wait = 0
@@ -842,7 +843,6 @@ class IDGLSolver(Solver):
                 self.result['train'] = acc_train
                 self.result['valid'] = acc_val
                 improve = '*'
-                self.best_graph = deepcopy(adj.clone().detach())
             else:
                 wait += 1
                 if wait == self.conf.training['patience']:
@@ -859,10 +859,13 @@ class IDGLSolver(Solver):
         print('Time(s): {:.4f}'.format(self.total_time))
         self.model.load_state_dict(self.weights)
         with torch.no_grad():
-            loss_test, acc_test, _ = self.run_epoch(mode='test', debug=debug)
+            loss_test, acc_test, first_adj, cur_adj, final_adj = self.run_epoch(mode='test', debug=debug)
         self.result['test']=acc_test
+        self.adjs['first_adj'] = first_adj
+        self.adjs['cur_adj'] = cur_adj
+        self.adjs['final_adj'] = final_adj
         print(acc_test)
-        return self.result, self.best_graph
+        return self.result, self.adjs
 
     def set_method(self):
         '''
@@ -871,6 +874,7 @@ class IDGLSolver(Solver):
         '''
         self.model = IDGL(self.conf, self.dim_feats, self.num_targets).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
+        self.adjs = {'first_adj':None, 'cur_adj':None, 'final_adj':None}
 
 
 class PROGNNSolver(Solver):

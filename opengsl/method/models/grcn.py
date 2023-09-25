@@ -109,6 +109,7 @@ class GRCN(torch.nn.Module):
         Adj_new = self.cal_similarity_graph(node_embeddings)
 
         Adj_new_indices, Adj_new_values = self._sparse_graph(Adj_new, self.K)
+        Adj_mid = torch.sparse.FloatTensor(Adj_new_indices, Adj_new_values, Adj.size()).to(self.device)
         new_inds = torch.cat([Adj.indices(), Adj_new_indices], dim=1)
         new_values = torch.cat([Adj.values(), Adj_new_values])
         Adj_new = torch.sparse.FloatTensor(new_inds, new_values, Adj.size()).to(self.device)
@@ -119,4 +120,4 @@ class GRCN(torch.nn.Module):
         # x = self.conv2(x, Adj_new_norm)
         _, x = self.conv_task((input, Adj_new_norm, False))
 
-        return x, Adj_new
+        return x, Adj_mid, Adj_new

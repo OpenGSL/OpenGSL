@@ -230,12 +230,13 @@ def ContextualSBM(n, d, Lambda, p, mu, train_percent=0.01):
     # creating node features
     x = np.zeros([n, p])
     u = np.random.normal(0, 1/np.sqrt(p), [1, p])
+    # Z = np.random.normal(0, 1, [1, p])
     for i in range(n):
         Z = np.random.normal(0, 1, [1, p])
         x[i] = np.sqrt(mu/n)*y[i]*u + Z/np.sqrt(p)
     data = Data(x=torch.tensor(x, dtype=torch.float32),
                 edge_index=torch.tensor(edge_index),
-                y=torch.tensor((y + 1) // 2, dtype=torch.int64))
+                y=torch.tensor((y + 1) // 2, dtype=torch.long))
     # order edge list and remove duplicates if any.
     data.coalesce()
 

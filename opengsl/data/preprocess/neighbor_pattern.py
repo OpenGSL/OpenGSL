@@ -43,7 +43,7 @@ def add_edges_np(adj, labels, D, n_add_edges=None, target_homophily=None, seed=4
             if adj[i, j] == 0:
                 adj[i, j] = 1
                 break
-    return adj.to_sparse(), target_homophily
+    return adj.to_sparse(), n_add_edges, target_homophily
 
 
 if __name__ == '__main__':
