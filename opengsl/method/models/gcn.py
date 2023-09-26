@@ -92,7 +92,7 @@ class GCN(nn.Module):
     def forward(self, input):
         x=input[0]
         adj=input[1]
-        only_z=input[2]
+        only_z = input[2] if len(input) > 2 else True
         if self.input_layer:
             x = self.input_linear(x)
             x = self.input_drop(x)
