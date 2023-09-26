@@ -103,6 +103,19 @@ exp.run(n_runs = 10)
 ## Adding New GSL Method
 if you want to use your own GSL method, see [customized_gsl.py](https://github.com/OpenGSL/OpenGSL/blob/main/examples/customized_gsl.py) for detail.
 
+## Update
+2023.9.26 A New GSL method GLCN added.
+
+2023.9.15 New synthetic datasets to control the neighborhood pattern.
+
+2023.8.14 New datasets including Wikics, Ogbn-arxiv and CSBM synthetic graphs.
+
+2023.8.9 Enabling the use of APPNP and GIN as backbones for various GSL methods.
+
+2023.7.31 A new GSL method WSGNN added.
+
+2023.7.14 A scalable version of CoGSL added.
+
 ## Node Classification Results
 
 ### Results in Our Paper
@@ -161,15 +174,6 @@ if you want to use your own GSL method, see [customized_gsl.py](https://github.c
 | **SUBLIME**    | 79.34 ± 2.54  |    55.29     |
 | **STABLE**     | 78.66 ± 0.25  |      --      |
 
-## Update
-
-2023.7.14 A scalable version of CoGSL added.
-
-2023.7.31 A new GSL method WSGNN added.
-
-2023.8.9 Enabling the use of APPNP and GIN as backbones for various GSL methods.
-
-2023.8.14 New datasets including Wikics, Ogbn-arxiv and CSBM synthetic graphs.
 
 ## How to Contribute
 
