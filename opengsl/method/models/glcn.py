@@ -1,0 +1,35 @@
+import torch
+import torch.nn.functional as F
+from .gcn import GCN
+from opengsl.method.metric import OneLayerNN
+from opengsl.method.regularizer import frobenius_regularizer, smoothness_regularizer
+
+
+class GLCN(torch.nn.Module):
+
+    def __init__(self, n_feat, n_classes, conf):
+        super(GLCN, self).__init__()
+        if conf.model['type'] == 'gcn':
+            self.gnn_encoder = GCN(n_feat, conf.model['n_hidden'], n_classes, conf.model['n_layers'],
+                                 conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
+                                 conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
+                                 conf.model['input_layer'], conf.model['output_layer'])
+        self.graph_learner = OneLayerNN(n_feat, conf.model['n_hidden_graph'], p_dropout=conf.model['dropout'])
+        self.loss_lamb1 = conf.training['loss_lamb1']
+        self.loss_lamb2 = conf.training['loss_lamb2']
+
+    def forward(self, x, adj):
+        adjs = {'ori': adj}
+        others = {}
+        edge = adj.indices()
+        new_adj, new_x = self.graph_learner(x, edge)
+        adjs['new'] = new_adj
+        adjs['final'] = new_adj
+        z = self.gnn_encoder([x, new_adj])
+
+        # calculate some loss items
+        loss1 = smoothness_regularizer(new_x, new_adj, sparse=True)
+        print(loss1)
+        loss2 = frobenius_regularizer(new_adj.to_dense())
+        others['loss'] = self.loss_lamb1 * loss1 + self.loss_lamb2 * loss2
+        return z, adjs, others

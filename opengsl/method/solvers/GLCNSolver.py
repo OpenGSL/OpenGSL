@@ -72,7 +72,7 @@ class GLCNSolver(Solver):
             loss_train += others['loss']
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             self.optim.zero_grad()
-            loss_train.backward(retain_graph=True)
+            loss_train.backward()
             self.optim.step()
 
 
