@@ -103,7 +103,7 @@ class Solver:
         self.result = {'train': -1, 'valid': -1, 'test': -1}
         self.start_time = time.time()
         self.recoder = Recorder(self.conf.training['patience'], self.conf.training['criterion'])
-        self.adjs = {}
+        self.adjs = {'ori':self.adj, 'final':None}
         self.set_method()
 
     def set_method(self):

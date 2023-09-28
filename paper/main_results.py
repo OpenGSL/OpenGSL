@@ -10,16 +10,16 @@ parser.add_argument('--data', type=str, default='cora',
                              'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                              'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
                              'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv', 'csbm20', 'csbm40', 'csbm60', 'csbm80', 'regression'], help='dataset')
-parser.add_argument('--method', type=str, default='gcn', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
+parser.add_argument('--method', type=str, default='slaps', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
                                                                   'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn',
                                                                    'gin', 'glcn'], help="Select methods")
 parser.add_argument('--config', type=str, default=None)
-parser.add_argument('--debug', action='store_true')
+parser.add_argument('--debug', action='store_false')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
 parser.add_argument('--n_splits', type=int, default=1)
-parser.add_argument('--n_runs', type=int, default=10)
+parser.add_argument('--n_runs', type=int, default=1)
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)

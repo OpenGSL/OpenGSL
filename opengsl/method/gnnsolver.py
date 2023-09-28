@@ -5,7 +5,7 @@ from .models.jknet import JKNet
 from .solver import Solver
 import torch
 from copy import deepcopy
-from opengsl.data.preprocess.normalize import normalize
+from opengsl.method.transform import normalize
 
 
 class SGCSolver(Solver):
@@ -132,7 +132,7 @@ class GCNSolver(Solver):
             self.normalize = normalize
         else:
             self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'], sparse=self.conf.dataset['sparse'])
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
 
 class LPASolver(Solver):

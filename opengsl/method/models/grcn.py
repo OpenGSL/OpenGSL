@@ -3,6 +3,7 @@ import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
 from .gnn_modules import APPNP, GIN
+from opengsl.method.transform import normalize
 
 
 class GCNConv_diag(torch.nn.Module):
@@ -74,13 +75,6 @@ class GRCN(torch.nn.Module):
         similarity_graph += torch.mm(node_embeddings[:, int(self.num_features/2):], node_embeddings[:, int(self.num_features/2):].t())
         return similarity_graph
 
-    def normalize(self, adj):
-        adj = adj.coalesce()
-        inv_sqrt_degree = 1. / (torch.sqrt(torch.sparse.sum(adj, dim=1).values()) + 1e-10)
-        D_value = inv_sqrt_degree[adj.indices()[0]] * inv_sqrt_degree[adj.indices()[1]]
-        new_values = adj.values() * D_value
-        return torch.sparse.FloatTensor(adj.indices(), new_values, adj.size()).to(self.device)
-
     def _sparse_graph(self, raw_graph, K):
         values, indices = raw_graph.topk(k=int(K), dim=-1)
         assert torch.sum(torch.isnan(values)) == 0
@@ -93,7 +87,7 @@ class GRCN(torch.nn.Module):
         return inds, values
 
     def _node_embeddings(self, input, Adj):
-        norm_Adj = self.normalize(Adj)
+        norm_Adj = normalize(Adj, add_loop=False)
         if self.model_type == 'diag':
             node_embeddings = torch.tanh(self.conv_graph(input, norm_Adj))
             node_embeddings = self.conv_graph2(node_embeddings, norm_Adj)
@@ -113,7 +107,7 @@ class GRCN(torch.nn.Module):
         new_inds = torch.cat([Adj.indices(), Adj_new_indices], dim=1)
         new_values = torch.cat([Adj.values(), Adj_new_values])
         Adj_new = torch.sparse.FloatTensor(new_inds, new_values, Adj.size()).to(self.device)
-        Adj_new_norm = self.normalize(Adj_new)
+        Adj_new_norm = normalize(Adj_new.coalesce(), add_loop=False)
 
         # x = self.conv1(input, Adj_new_norm)
         # x = F.dropout(F.relu(x), training=self.training, p=self.dropout)

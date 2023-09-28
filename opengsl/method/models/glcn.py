@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from .gcn import GCN
 from opengsl.method.metric import OneLayerNN
-from opengsl.method.regularizer import frobenius_regularizer, smoothness_regularizer
+from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer, smoothness_regularizer_direct
 
 
 class GLCN(torch.nn.Module):
@@ -19,17 +19,15 @@ class GLCN(torch.nn.Module):
         self.loss_lamb2 = conf.training['loss_lamb2']
 
     def forward(self, x, adj):
-        adjs = {'ori': adj}
+        adjs = {}
         others = {}
         edge = adj.indices()
         new_adj, new_x = self.graph_learner(x, edge)
-        adjs['new'] = new_adj
         adjs['final'] = new_adj
         z = self.gnn_encoder([x, new_adj])
 
         # calculate some loss items
-        loss1 = smoothness_regularizer(new_x, new_adj, sparse=True)
-        print(loss1)
-        loss2 = frobenius_regularizer(new_adj.to_dense())
+        loss1 = smoothness_regularizer(new_x, new_adj, symmetric=True)
+        loss2 = norm_regularizer(new_adj, p='norm')
         others['loss'] = self.loss_lamb1 * loss1 + self.loss_lamb2 * loss2
         return z, adjs, others

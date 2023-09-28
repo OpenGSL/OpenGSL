@@ -27,6 +27,6 @@ class OneLayerNN(torch.nn.Module):
         adj = torch.sparse.FloatTensor(edge, values, [n,n]).to(device)
         adj = torch.sparse.softmax(adj, 1)
         if return_h:
-            return adj, h
+            return adj.coalesce(), h
         else:
-            return adj
+            return adj.coalesce()
