@@ -5,7 +5,7 @@ from opengsl.method.models.segsl import knn_maxE1, add_knn, get_weight, get_adj_
 import torch
 import time
 from .solver import Solver
-from opengsl.method.transform import normalize
+from opengsl.method.functional import normalize
 import dgl
 
 

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import time
 from .solver import Solver
 from opengsl.utils.utils import get_homophily
-from opengsl.data.preprocess.normalize import normalize
+from opengsl.method.functional import normalize
 
 
 class GENSolver(Solver):

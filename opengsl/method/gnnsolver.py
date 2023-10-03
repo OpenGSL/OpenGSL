@@ -5,7 +5,7 @@ from .models.jknet import JKNet
 from .solver import Solver
 import torch
 from copy import deepcopy
-from opengsl.method.transform import normalize
+from opengsl.method.functional import normalize
 
 
 class SGCSolver(Solver):

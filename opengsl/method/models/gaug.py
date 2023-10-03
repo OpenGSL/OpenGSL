@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pyro as pyro
-from opengsl.data.preprocess.normalize import normalize
+from opengsl.method.functional import normalize
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
 

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from opengsl.method.transform import normalize
+from opengsl.method.functional import normalize
 from torch.optim import Optimizer
 from torch.optim.optimizer import required
 import scipy.sparse as sp

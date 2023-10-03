@@ -3,7 +3,7 @@ import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 from .gcn import GCN
 from .gnn_modules import APPNP, GIN
-from opengsl.method.transform import normalize
+from opengsl.method.functional import normalize
 
 
 class GCNConv_diag(torch.nn.Module):

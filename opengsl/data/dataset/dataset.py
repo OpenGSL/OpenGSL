@@ -3,7 +3,7 @@ from .pyg_load import pyg_load_dataset
 from .hetero_load import hetero_load
 from .split import get_split
 from opengsl.data.preprocess.knn import knn
-from opengsl.data.preprocess.normalize import normalize
+from opengsl.method.functional import normalize
 import numpy as np
 from opengsl.data.preprocess.control_homophily import control_homophily
 import pickle

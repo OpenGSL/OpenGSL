@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 import time
 from .solver import Solver
-from opengsl.method.transform import normalize
+from opengsl.method.functional import normalize
 
 
 class GAUGSolver(Solver):

@@ -21,7 +21,6 @@ class WSGNNSolver(Solver):
     ----------
     method_name : str
         The name of the method.
-
     Examples
     --------
     >>> # load dataset
@@ -40,7 +39,6 @@ class WSGNNSolver(Solver):
         self.method_name = 'wsgnn'
         self.edge_index = self.adj.coalesce().indices()
 
-
     def learn(self, debug=False):
         '''
         Learning process of WSGNN.
@@ -55,46 +53,44 @@ class WSGNNSolver(Solver):
         result : dict
             A dict containing train, valid and test metrics.
         '''
-        best_node_val = 0
-        best_node_test = 0
-        best_node_epoch = -1
         for epoch in range(self.conf.training['n_epochs']):
+            improve = ''
+            t0 = time.time()
             self.model.train()
             self.optimizer.zero_grad()
 
-            p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
+            p_y, adj_p, q_y, adj_q = self.model(self.feats, self.adj.to_dense())
             if self.num_targets > 1:
-                p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-                q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+                p_y = F.log_softmax(p_y, dim=1)
+                q_y = F.log_softmax(q_y, dim=1)
             mask = torch.zeros(self.n_nodes, dtype=bool)
             mask[self.train_mask] = 1
-            loss = self.criterion(self.labels, mask, p_y, q_y, )
-            loss.backward()
+            loss_train = self.criterion(self.labels, mask, p_y, q_y)
+            loss_train.backward()
             self.optimizer.step()
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), q_y[self.train_mask].detach().cpu().numpy())
-            loss_val, acc_val = self.evaluate(self.val_mask)
+            loss_val, acc_val, adj_p, adj_q = self.evaluate(self.val_mask)
             flag, flag_earlystop = self.recoder.add(loss_val, acc_val)
 
             if flag:
                 self.total_time = time.time() - self.start_time
-                best_loss = loss_val
                 self.result['train'] = acc_train
                 self.result['valid'] = acc_val
                 self.weights = deepcopy(self.model.state_dict())
+                self.adjs['p'] = adj_p.detach().clone()
+                self.adjs['q'] = adj_q.detach().clone()
+                improve = '*'
 
-            if (epoch + 1) % 10 == 0:
-                print(f'Epoch: {epoch:02d}, '
-                    f'Loss: {loss:.4f}, '
-                    f'Train_acc: {100 * acc_train:.2f}%, '
-                    f'Valid_acc: {100 * acc_val:.2f}%, ')
+            if debug:
+                print(
+                    "Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
+                        epoch + 1, time.time() - t0, loss_train.item(), acc_train, loss_val, acc_val, improve))
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, None
-
-
+        return self.result, self.adjs
 
     def evaluate(self, val_mask):
         '''
@@ -111,15 +107,15 @@ class WSGNNSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            p_y, _, q_y, _ = self.model(self.feats, self.n_nodes, self.edge_index)
+            p_y, adj_p, q_y, adj_q = self.model(self.feats, self.adj.to_dense())
         if self.num_targets > 1:
-            p_y = torch.nn.functional.log_softmax(p_y, dim=1)
-            q_y = torch.nn.functional.log_softmax(q_y, dim=1)
+            p_y = F.log_softmax(p_y, dim=1)
+            q_y = F.log_softmax(q_y, dim=1)
         mask = torch.zeros(self.n_nodes, dtype=bool)
         mask[val_mask] = 1
         loss = self.criterion(self.labels, mask, p_y, q_y)
         acc = self.metric(self.labels[val_mask].cpu().numpy(), q_y[val_mask].detach().cpu().numpy())
-        return loss, acc
+        return loss, acc, adj_p, adj_q
 
     def set_method(self):
         self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'], self.conf.model['n_layers'],

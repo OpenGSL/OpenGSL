@@ -4,7 +4,7 @@ from opengsl.method.models.gcn import GCN
 from opengsl.method.models.gnn_modules import APPNP, GIN
 from opengsl.method.models.prognn import EstimateAdj
 from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer, PGD, ProxOperators
-from opengsl.method.transform import normalize, symmetry
+from opengsl.method.functional import normalize, symmetry
 import torch
 import time
 

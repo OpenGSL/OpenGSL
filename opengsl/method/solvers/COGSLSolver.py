@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import time
 from .solver import Solver
 from opengsl.utils.utils import sparse_tensor_to_scipy_sparse, scipy_sparse_to_sparse_tensor
-from opengsl.method.transform import normalize_sp_matrix
+from opengsl.method.functional import normalize_sp_matrix
 
 
 class COGSLSolver(Solver):

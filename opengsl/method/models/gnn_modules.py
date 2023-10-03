@@ -72,8 +72,9 @@ class LINK(nn.Module):
 class MLP(nn.Module):
     """ adapted from https://github.com/CUAI/CorrectAndSmooth/blob/master/gen_models.py """
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers,
-                 dropout=.5):
+                 dropout=.5, use_bn=True):
         super(MLP, self).__init__()
+        self.use_bn = use_bn
         self.lins = nn.ModuleList()
         self.bns = nn.ModuleList()
         if num_layers == 1:
@@ -100,7 +101,8 @@ class MLP(nn.Module):
         for i, lin in enumerate(self.lins[:-1]):
             x = lin(x)
             x = F.relu(x, inplace=True)
-            x = self.bns[i](x)
+            if self.use_bn:
+                x = self.bns[i](x)
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.lins[-1](x)
         return x

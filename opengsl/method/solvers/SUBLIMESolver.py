@@ -1,9 +1,10 @@
 from copy import deepcopy
-from opengsl.method.models.sublime import torch_sparse_to_dgl_graph, FGP_learner, ATT_learner, GNN_learner, MLP_learner, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
+from opengsl.method.models.sublime import torch_sparse_to_dgl_graph, GCL, get_feat_mask, split_batch, dgl_graph_to_torch_sparse, GCN_SUB
 import torch
 import time
 from .solver import Solver
-from opengsl.method.transform import normalize, symmetry
+from opengsl.method.functional import normalize, symmetry
+from opengsl.method.graphlearner import FGPLearner, AttLearner, MLPLearner
 import copy
 
 
@@ -117,7 +118,7 @@ class SUBLIMESolver(Solver):
                     self.result['train'] = acc_train
                     self.weights = deepcopy(model.state_dict())
                     current_adj = dgl_graph_to_torch_sparse(adj).to_dense() if self.conf.sparse else adj
-                    self.best_graph = deepcopy(current_adj)
+                    self.adjs['final'] = current_adj.detach().clone()
                     self.best_graph_test = deepcopy(adj)
 
             if debug:
@@ -240,7 +241,7 @@ class SUBLIMESolver(Solver):
         loss_test, acc_test = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph
+        return self.result, self.adjs
 
     def set_method(self):
         '''
@@ -253,16 +254,14 @@ class SUBLIMESolver(Solver):
             self.anchor_adj_raw = self.adj.to_dense()
         anchor_adj = normalize(self.anchor_adj_raw, add_loop=False)
         if self.conf.type_learner == 'fgp':
-            self.graph_learner = FGP_learner(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6, self.conf.sparse)
+            self.graph_learner = FGPLearner(self.feats.shape[0])
+            self.graph_learner.reset_parameters(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6)
         elif self.conf.type_learner == 'mlp':
-            self.graph_learner = MLP_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                 self.conf.activation_learner)
+            self.graph_learner = MLPLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
+                                            self.conf.activation_learner)
         elif self.conf.type_learner == 'att':
-            self.graph_learner = ATT_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                      self.conf.activation_learner)
-        elif self.conf.type_learner == 'gnn':
-            self.graph_learner = GNN_learner(2, self.feats.shape[1], self.conf.k, self.conf.sim_function, 6, self.conf.sparse,
-                                 self.conf.activation_learner, anchor_adj)
+            self.graph_learner = AttLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
+                                            self.conf.activation_learner)
         self.graph_learner = self.graph_learner.to(self.device)
         self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
                     emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,

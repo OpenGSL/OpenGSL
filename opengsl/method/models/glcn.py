@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from .gcn import GCN
-from opengsl.method.metric import OneLayerNN
+from opengsl.method.graphlearner import OneLayerNN
 from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer, smoothness_regularizer_direct
 
 
