@@ -3,7 +3,7 @@ model:
   n_hidden: 128
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
-  act: relu # [relu, elu, gelu, leakyrelu, identity]
+  act: F.relu # [relu, elu, gelu, leakyrelu, identity]
   dropout: 0
   input_dropout: 0
   norm:
@@ -18,7 +18,7 @@ gsl:
   n_embed: 32
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
-  act: identity # [relu, elu, gelu, leakyrelu, identity]
+  act: 'lambda x: x' # [relu, elu, gelu, leakyrelu, identity]
   dropout: 0
   input_dropout: 0
   norm:

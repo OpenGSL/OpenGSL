@@ -1,10 +1,9 @@
 from copy import deepcopy
 from .solver import Solver
-from opengsl.method.models.gcn import GCN
-from opengsl.method.models.gnn_modules import APPNP, GIN
-from opengsl.method.models.prognn import EstimateAdj
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder, GINEncoder
 from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer, PGD, ProxOperators
 from opengsl.method.functional import normalize, symmetry
+from opengsl.method.graphlearner import FGPLearner
 import torch
 import time
 
@@ -45,7 +44,7 @@ class PROGNNSolver(Solver):
         self.adj = self.adj.to_dense()
 
     def train_gcn(self, epoch, debug=False):
-        normalized_adj = symmetry(self.estimator.estimated_adj) if self.conf.gsl['symmetric'] else self.estimator.estimated_adj
+        normalized_adj = symmetry(self.estimator.Adj) if self.conf.gsl['symmetric'] else self.estimator.Adj
         normalized_adj = normalize(normalized_adj)
 
         t = time.time()
@@ -54,7 +53,7 @@ class PROGNNSolver(Solver):
         self.optimizer.zero_grad()
 
         # forward and backward
-        output = self.model((self.feats, normalized_adj, False))[-1]
+        output = self.model(self.feats, normalized_adj)
         loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
         acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
         loss_train.backward()
@@ -72,7 +71,7 @@ class PROGNNSolver(Solver):
             self.result['train'] = acc_train
             self.result['valid'] = acc_val
             improve = '*'
-            self.adjs['final'] = self.estimator.estimated_adj.clone().detach()
+            self.adjs['final'] = self.estimator.Adj.clone().detach()
             self.weights = deepcopy(self.model.state_dict())
 
         #print
@@ -87,21 +86,21 @@ class PROGNNSolver(Solver):
         estimator.train()
         self.optimizer_adj.zero_grad()
 
-        loss_l1 = norm_regularizer(estimator.estimated_adj, 1)
-        loss_fro = norm_regularizer(estimator.estimated_adj - self.adj, p='fro')
-        normalized_adj = symmetry(estimator.estimated_adj) if self.conf.gsl['symmetric'] else estimator.estimated_adj
+        loss_l1 = norm_regularizer(estimator.Adj, 1)
+        loss_fro = norm_regularizer(estimator.Adj - self.adj, p='fro')
+        normalized_adj = symmetry(estimator.Adj) if self.conf.gsl['symmetric'] else estimator.Adj
         normalized_adj = normalize(normalized_adj)
 
         if self.conf.gsl['lambda_']:
-            loss_smooth_feat = smoothness_regularizer(self.feats, estimator.estimated_adj, style='symmetric', symmetric=True)
+            loss_smooth_feat = smoothness_regularizer(self.feats, estimator.Adj, style='symmetric', symmetric=True)
         else:
             loss_smooth_feat = 0 * loss_l1
 
-        output = self.model((self.feats, normalized_adj, False))[-1]
+        output = self.model(self.feats, normalized_adj)
         loss_gcn = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
         acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
 
-        #loss_symmetric = torch.norm(estimator.estimated_adj - estimator.estimated_adj.t(), p="fro")
+        #loss_symmetric = torch.norm(estimator.Adj - estimator.Adj.t(), p="fro")
         #loss_differential =  loss_fro + self.conf.gamma * loss_gcn + self.conf.lambda_ * loss_smooth_feat + args.phi * loss_symmetric
         loss_differential = loss_fro + self.conf.gsl['gamma'] * loss_gcn + self.conf.gsl['lambda_'] * loss_smooth_feat
         loss_differential.backward()
@@ -123,11 +122,11 @@ class PROGNNSolver(Solver):
                      + self.conf.gsl['beta'] * loss_nuclear
                      #+ self.conf.phi * loss_symmetric
 
-        estimator.estimated_adj.data.copy_(torch.clamp(estimator.estimated_adj.data, min=0, max=1))
+        estimator.Adj.data.copy_(torch.clamp(estimator.Adj.data, min=0, max=1))
 
         # evaluate
         self.model.eval()
-        normalized_adj = symmetry(estimator.estimated_adj) if self.conf.gsl['symmetric'] else estimator.estimated_adj
+        normalized_adj = symmetry(estimator.Adj) if self.conf.gsl['symmetric'] else estimator.Adj
         normalized_adj = normalize(normalized_adj)
         loss_val, acc_val = self.evaluate(self.val_mask, normalized_adj)
         flag, flag_earlystop = self.recoder.add(loss_val, acc_val)
@@ -140,7 +139,7 @@ class PROGNNSolver(Solver):
             self.result['train'] = acc_train
             self.result['valid'] = acc_val
             improve = '*'
-            self.adjs['final'] = estimator.estimated_adj.clone().detach()
+            self.adjs['final'] = estimator.Adj.clone().detach()
             self.weights = deepcopy(self.model.state_dict())
 
         #print
@@ -209,7 +208,7 @@ class PROGNNSolver(Solver):
         self.model.eval()
         self.estimator.eval()
         with torch.no_grad():
-            logits = self.model((self.feats, normalized_adj, False))[-1]
+            logits = self.model(self.feats, normalized_adj)
         logits = logits[test_mask]
         labels = self.labels[test_mask]
         loss=self.loss_fn(logits, labels)
@@ -236,19 +235,21 @@ class PROGNNSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
         '''
         if self.conf.model['type'] == 'gcn':
-            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+            self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                              self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
                              self.conf.model['input_layer'], self.conf.model['output_layer'],
                              weight_initializer='uniform').to(self.device)
         elif self.conf.model['type'] == 'appnp':
-            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
         elif self.conf.model['type'] == 'gin':
-            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
-        self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
+        # self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
+        self.estimator = FGPLearner(self.adj.shape[0], nonlinear='lambda x: x').to(self.device)
+        self.estimator.init_estimation(self.adj)
         self.prox_operators = ProxOperators()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                           weight_decay=self.conf.training['weight_decay'])

@@ -2,8 +2,45 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .gcn_idgl import GCN
-from .gnn_modules import APPNP, GIN
+from opengsl.method.encoder import GraphConvolutionLayer, APPNPEncoder, GINEncoder
+from opengsl.method.metric import WeightedCosine
+from opengsl.method.transform import EpsilonNN, KNN
+
+
+class GCN(nn.Module):
+    """
+    This GCN is only used for IGDL for its changeable dropout.
+    """
+    def __init__(self, nfeat, nhid, nclass, n_layers=2, dropout=0.5, with_bias=True, norm=False, norm_type='BatchNorm1d', act='F.relu'):
+
+        super(GCN, self).__init__()
+
+        self.nfeat = nfeat
+        self.hidden_sizes = [nhid]
+        self.nclass = nclass
+        self.n_layers = n_layers
+        self.layers = nn.ModuleList()
+        self.norm_flag = norm
+        self.norm_type = eval('nn.' + norm_type)
+        self.act = eval(act)
+        self.norms = nn.ModuleList()
+        self.layers.append(GraphConvolutionLayer(nfeat, nhid, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
+        self.norms.append(self.norm_type(nhid))
+        for i in range(n_layers-2):
+            self.layers.append(GraphConvolutionLayer(nhid, nhid, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
+            self.norms.append(self.norm_type(nhid))
+        self.layers.append(GraphConvolutionLayer(nhid, nclass, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
+        self.dropout = dropout
+
+    def forward(self, x, adj, dropout=None):
+        for i, layer in enumerate(self.layers[:-1]):
+            x = layer(x, adj)
+            if self.norm_flag:
+                x = self.norms[i](x)
+            x = self.act(x)
+            x = F.dropout(x, dropout if dropout else self.dropout, training=self.training)
+        output = self.layers[-1](x, adj)
+        return x, output.squeeze(1)
 
 
 class AnchorGCNLayer(nn.Module):
@@ -106,52 +143,30 @@ class AnchorGCN(nn.Module):
         return first_vec, init_agg_vec, node_vec, output
 
 
-class GraphLearner(nn.Module):
+class IDGLGraphLearner(nn.Module):
     def __init__(self, input_size, topk=None, epsilon=None, num_pers=16):
-        super(GraphLearner, self).__init__()
+        super(IDGLGraphLearner, self).__init__()
         self.topk = topk
         self.epsilon = epsilon
-
-        self.weight_tensor = torch.Tensor(num_pers, input_size)
-        self.weight_tensor = nn.Parameter(nn.init.xavier_uniform_(self.weight_tensor))
+        self.metric = WeightedCosine(input_size, num_pers)
+        self.enn = EpsilonNN(epsilon)
+        self.knn = KNN(topk)
 
     def forward(self, context, anchor=None):
         # return a new adj according to the representation gived
 
-        expand_weight_tensor = self.weight_tensor.unsqueeze(1)
-        if len(context.shape) == 3:
-            expand_weight_tensor = expand_weight_tensor.unsqueeze(1)
+        # expand_weight_tensor = self.weight_tensor.unsqueeze(1)
+        # if len(context.shape) == 3:
+        #     expand_weight_tensor = expand_weight_tensor.unsqueeze(1)
 
-        context_fc = context.unsqueeze(0) * expand_weight_tensor  # (num_pers, num_node, dim)
-        context_norm = F.normalize(context_fc, p=2, dim=-1)
-
-        if anchor is None:
-            attention = torch.matmul(context_norm, context_norm.transpose(-1, -2)).mean(0)   # (num_node, num_node)
-            markoff_value = 0
-        else:
-            anchors_fc = anchor.unsqueeze(0) * expand_weight_tensor
-            anchors_norm = F.normalize(anchors_fc, p=2, dim=-1)
-            attention = torch.matmul(context_norm, anchors_norm.transpose(-1, -2)).mean(0)  # (num_node, num_anchor)
-            markoff_value = 0
+        attention = self.metric(context, y=anchor)
 
         if self.epsilon is not None:
-            attention = self.build_epsilon_neighbourhood(attention, self.epsilon, markoff_value)
+            attention = self.enn(attention)
 
         if self.topk is not None:
-            attention = self.build_knn_neighbourhood(attention, self.topk, markoff_value)
+            attention = self.knn(attention)
         return attention
-
-    def build_knn_neighbourhood(self, attention, topk, markoff_value):
-        device = attention.device
-        topk = min(topk, attention.size(-1))
-        knn_val, knn_ind = torch.topk(attention, topk, dim=-1)
-        weighted_adjacency_matrix = (markoff_value * torch.ones_like(attention)).scatter_(-1, knn_ind, knn_val).to(device)
-        return weighted_adjacency_matrix
-
-    def build_epsilon_neighbourhood(self, attention, epsilon, markoff_value):
-        mask = (attention > epsilon).detach().float()
-        weighted_adjacency_matrix = attention * mask + markoff_value * (1 - mask)
-        return weighted_adjacency_matrix
 
 
 class IDGL(nn.Module):
@@ -169,20 +184,20 @@ class IDGL(nn.Module):
         elif conf.model['type'] == 'gcn':
             self.encoder = GCN(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass,
                                      n_layers=conf.model['n_layers'], dropout=conf.model['dropout'],
-                                     batch_norm=conf.model['norm'])
+                                     norm=conf.model['norm'])
         elif conf.model['type'] == 'appnp':
-            self.encoder = APPNP(in_channels=nfeat, hidden_channels=conf.model['n_hidden'], out_channels=nclass, dropout=conf.model['dropout'], K=conf.model['K'], alpha=conf.model['alpha'])
+            self.encoder = APPNPEncoder(in_channels=nfeat, hidden_channels=conf.model['n_hidden'], out_channels=nclass, dropout=conf.model['dropout'], K=conf.model['K'], alpha=conf.model['alpha'])
         elif conf.model['type'] == 'gin':
-            self.encoder = GIN(n_feat=nfeat, n_hidden=conf.model['n_hidden'], n_class=nclass, n_layers=conf.model['n_layers'], mlp_layers=conf.model['mlp_layers'])
-        self.graph_learner = GraphLearner(nfeat,
-                                        topk=conf.gsl['graph_learn_topk'],
-                                        epsilon=conf.gsl['graph_learn_epsilon'],
-                                        num_pers=conf.gsl['graph_learn_num_pers'])
+            self.encoder = GINEncoder(n_feat=nfeat, n_hidden=conf.model['n_hidden'], n_class=nclass, n_layers=conf.model['n_layers'], mlp_layers=conf.model['mlp_layers'])
+        self.graph_learner = IDGLGraphLearner(nfeat,
+                                              topk=conf.gsl['graph_learn_topk'],
+                                              epsilon=conf.gsl['graph_learn_epsilon'],
+                                              num_pers=conf.gsl['graph_learn_num_pers'])
 
-        self.graph_learner2 = GraphLearner(self.nclass if conf.model['type'] == 'appnp' else self.hidden_size,
-                                        topk=conf.gsl['graph_learn_topk2'],
-                                        epsilon=conf.gsl['graph_learn_epsilon2'],
-                                        num_pers=conf.gsl['graph_learn_num_pers'])
+        self.graph_learner2 = IDGLGraphLearner(self.nclass if conf.model['type'] == 'appnp' else self.hidden_size,
+                                               topk=conf.gsl['graph_learn_topk2'],
+                                               epsilon=conf.gsl['graph_learn_epsilon2'],
+                                               num_pers=conf.gsl['graph_learn_num_pers'])
 
     def learn_graph(self, graph_learner, node_features, graph_skip_conn=None, graph_include_self=False, init_adj=None, anchor_features=None):
         device = node_features.device

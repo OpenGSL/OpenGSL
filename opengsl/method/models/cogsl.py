@@ -1,17 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from module.view_estimator import View_Estimator
-#from module.cls import Classification
-#from module.mi_nce import MI_NCE
-#from module.fusion import Fusion
 from torch_geometric.nn import GCNConv
 from torch_sparse import SparseTensor
-
-#from .gcn import GraphConvolution
 import numpy as np
+from opengsl.method.encoder import GCNEncoder
+
 
 class GCN_two_pyg(nn.Module):
+    # TODO
+    # Inspect this in future versions
     def __init__(self, input_dim, hid_dim1, hid_dim2, dropout=0., activation="relu"):
         super(GCN_two_pyg, self).__init__()
         self.conv1 = GCNConv(input_dim, hid_dim1)
@@ -28,7 +26,10 @@ class GCN_two_pyg(nn.Module):
         x2 = self.conv2(x1, adj)
         return x2
 
+
 class GCN_one_pyg(nn.Module):
+    # TODO
+    # Inspect this in future versions
     def __init__(self, in_ft, out_ft, bias=True, activation=None):
         super(GCN_one_pyg, self).__init__()
         self.conv1 = GCNConv(in_ft, out_ft)
@@ -40,8 +41,6 @@ class GCN_one_pyg(nn.Module):
             self.register_parameter('bias', None)
 
     def forward(self, feat, adj):
-        # print(adj)
-        # exit(0)
         adj = SparseTensor.from_torch_sparse_coo_tensor(adj)
         out = self.conv1(feat, adj)
         if self.bias is not None:
@@ -50,91 +49,30 @@ class GCN_one_pyg(nn.Module):
             out = self.activation(out)
         return out
 
-class GCN_two(nn.Module):
-    def __init__(self, input_dim, hid_dim1, hid_dim2, dropout=0., activation="relu"):
-        super(GCN_two, self).__init__()
-        self.conv1 = GCN_one(input_dim, hid_dim1)
-        self.conv2 = GCN_one(hid_dim1, hid_dim2)
-
-        self.dropout = dropout
-        assert activation in ["relu", "leaky_relu", "elu"]
-        self.activation = getattr(F, activation)
-
-    def forward(self, feature, adj):
-        x1 = self.activation(self.conv1(feature, adj))
-        x1 = F.dropout(x1, p=self.dropout, training=self.training)
-        x2 = self.conv2(x1, adj)
-        return x2  # F.log_softmax(x2, dim=1)
-
-
-class GCN_one(nn.Module):
-    def __init__(self, in_ft, out_ft, bias=True, activation=None):
-        super(GCN_one, self).__init__()
-        self.fc = nn.Linear(in_ft, out_ft, bias=False)
-        self.activation = activation
-        if bias:
-            self.bias = nn.Parameter(torch.FloatTensor(out_ft))
-            self.bias.data.fill_(0.0)
-        else:
-            self.register_parameter('bias', None)
-
-        for m in self.modules():
-            self.weights_init(m)
-
-    def weights_init(self, m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.xavier_uniform_(m.weight.data)
-            if m.bias is not None:
-                m.bias.data.fill_(0.0)
-
-    def forward(self, feat, adj):
-        adj = adj.to_dense()
-        feat = self.fc(feat)
-        out = torch.spmm(adj, feat)
-        if self.bias is not None:
-            out += self.bias
-        if self.activation is not None:
-            out = self.activation(out)
-        return out
-
-#class two_layer_GCN(nn.Module):
-#    def __init__(self, num_feature, cls_hid_1, num_class, dropout = 0.5, act = 'relu'):
-#        super(two_layer_GCN, self).__init__()
-#        self.layer1 = GraphConvolution(num_feature, cls_hid_1, dropout, act= act)
-#        self.layer2 = GraphConvolution(cls_hid_1, num_class, dropout=0, last_layer=True)
-#
-#    def forward(self, feature, adj):
-#        x = self.layer1(feature, adj)
-#        x = self.layer2(x,adj)
-#        return x
 
 class Classification(nn.Module):
     def __init__(self, num_feature, cls_hid_1, num_class, dropout, pyg):
         super(Classification, self).__init__()
         self.num_class = num_class
-        if pyg==False:
-            self.encoder_v1 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
-            self.encoder_v2 = GCN_two(num_feature, cls_hid_1, num_class, dropout)
-            self.encoder_v = GCN_two(num_feature, cls_hid_1, num_class, dropout)
+        self.pyg = pyg
+        if pyg == False:
+            self.encoder_v1 = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v2 = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
         else:
-            #print("pyg")
             self.encoder_v1 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
             self.encoder_v2 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
             self.encoder_v = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-        #self.encoder_v = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
-        #self.encoder_v1 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
-        #self.encoder_v2 = two_layer_GCN(num_feature, cls_hid_1, num_class, dropout)
 
-    def forward(self, feat, view, flag):
+    def forward(self, feat, view_, flag):
+        if not self.pyg:
+            view = view_.to_dense()
         if (self.num_class == 1):
             if flag == "v1":
-                # prob = F.softmax(self.encoder_v1(feat, view), dim=1)
                 prob = F.sigmoid(self.encoder_v1(feat, view))
             elif flag == "v2":
-                # prob = F.softmax(self.encoder_v2(feat, view), dim=1)
                 prob = F.sigmoid(self.encoder_v2(feat, view))
             elif flag == "v":
-                # prob = F.softmax(self.encoder_v(feat, view), dim=1)
                 prob = F.sigmoid(self.encoder_v(feat, view))
         else:
             if flag == "v1":
@@ -147,6 +85,7 @@ class Classification(nn.Module):
                 prob = F.softmax(self.encoder_v(feat, view), dim=1)
                 # prob = F.sigmoid(self.encoder_v(feat, view))
         return prob
+
 
 class Contrast:
     def __init__(self, tau):
@@ -170,6 +109,7 @@ class Contrast:
         matrix_z2z1 = matrix_z2z1 / (torch.sum(matrix_z2z1, dim=1).view(-1, 1) + 1e-8)
         lori_v2v1 = -torch.log(matrix_z2z1.diag()+1e-8).mean()
         return (lori_v1v2 + lori_v2v1) / 2
+
 
 class Fusion(nn.Module):
     def __init__(self, lam, alpha, name):
@@ -203,11 +143,13 @@ class Fusion(nn.Module):
             v = beta_v1 * v1.to_dense() + beta_v2 * v2.to_dense()
             return v.to_sparse()
 
+
 class GenView(nn.Module):
     def __init__(self, num_feature, hid, com_lambda, dropout, pyg):
         super(GenView, self).__init__()
+        self.pyg = pyg
         if pyg == False:
-            self.gen_gcn = GCN_one(num_feature, hid, activation=nn.ReLU())
+            self.gen_gcn = GCNEncoder(num_feature, hid, hid, n_layers=1, dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
             self.gen_gcn = GCN_one_pyg(num_feature, hid, activation=nn.ReLU())  
         #self.gen_gcn = GraphConvolution(num_feature, hid, dropout=0)
@@ -220,7 +162,7 @@ class GenView(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, v_ori, feat, v_indices, num_node):
-        emb = self.gen_gcn(feat, v_ori)
+        emb = self.gen_gcn(feat, v_ori if self.pyg else v_ori.to_dense())
         f1 = emb[v_indices[0]]
         f2 = emb[v_indices[1]]
         ff = torch.cat([f1, f2], dim=-1)
@@ -261,21 +203,20 @@ class View_Estimator(nn.Module):
         new_v2 = self.normalize(self.v2_gen(view2, feats, view2_indices, num_nodes))
         return new_v1, new_v2
 
+
 class MI_NCE(nn.Module):
     def __init__(self, num_feature, mi_hid_1, tau, pyg, big, batch):
         super(MI_NCE, self).__init__()
+        self.pyg = pyg
         if pyg == False:
-            self.gcn = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
-            self.gcn1 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
-            self.gcn2 = GCN_one(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn1 = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn2 = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
             #print("pyg")
             self.gcn = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
             self.gcn1 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
             self.gcn2 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-        #self.gcn = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
-        #self.gcn1 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
-        #self.gcn2 = GraphConvolution(num_feature, mi_hid_1, act='relu', dropout=0)
         self.proj = nn.Sequential(
             nn.Linear(mi_hid_1, mi_hid_1),
             nn.ELU(),
@@ -286,9 +227,9 @@ class MI_NCE(nn.Module):
         self.batch = batch
 
     def forward(self, views, feat):
-        v_emb = self.proj(self.gcn(feat, views[0]))
-        v1_emb = self.proj(self.gcn1(feat, views[1]))
-        v2_emb = self.proj(self.gcn2(feat, views[2]))
+        v_emb = self.proj(self.gcn(feat, views[0] if self.pyg else views[0].to_dense()))
+        v1_emb = self.proj(self.gcn1(feat, views[1] if self.pyg else views[1].to_dense()))
+        v2_emb = self.proj(self.gcn2(feat, views[2] if self.pyg else views[2].to_dense()))
         # if dataset is so big, we will randomly sample part of nodes to perform MI estimation
         if self.big == True:
             idx = np.random.choice(feat.shape[0], self.batch, replace=False)
@@ -302,6 +243,7 @@ class MI_NCE(nn.Module):
         v1v2 = self.con.cal(v1_emb, v2_emb)
 
         return vv1, vv2, v1v2
+
 
 class CoGSL(nn.Module):
     def __init__(self, num_feature, cls_hid_1, num_class, gen_hid, mi_hid_1,

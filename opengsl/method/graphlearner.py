@@ -14,7 +14,7 @@ import dgl
 
 class GraphLearner(nn.Module):
 
-    def __init__(self, encoder=None, metric=None, postprocess=None):
+    def __init__(self, encoder=None, metric=None, postprocess=None, fuse=None):
         super(GraphLearner, self).__init__()
         self.encoder = lambda x, adj: x
         if encoder:
@@ -25,12 +25,15 @@ class GraphLearner(nn.Module):
         self.metric = lambda x, adj: x @ x.T
         if metric:
             self.metric = metric
-
-    def forward(self, x, adj):
-        x = self.encoder(x, adj)
+        self.fuse = lambda adj, raw_adj: adj
+        if fuse:
+            self.fuse = fuse
+    def forward(self, x, raw_adj):
+        x = self.encoder(x, raw_adj)
         adj = self.metric(x)
         for p in self.postprocess:
             adj = p(adj)
+        adj = self.fuse(adj, raw_adj)
         return adj
 
 
@@ -63,9 +66,12 @@ class OneLayerNN(GraphLearner):
 
 
 class FGPLearner(GraphLearner):
-    def __init__(self, n):
+    def __init__(self, n, nonlinear=None):
         super(FGPLearner, self).__init__()
         self.Adj = nn.Parameter(torch.FloatTensor(n, n))
+        self.nonlinear = lambda adj: F.elu(adj) + 1
+        if nonlinear:
+            self.nonlinear = eval(nonlinear)
 
     def reset_parameters(self, features, k, metric, i):
         adj = kneighbors_graph(features, k, metric=metric)
@@ -74,9 +80,11 @@ class FGPLearner(GraphLearner):
         adj = adj * i - i
         self.Adj.data.copy_(torch.tensor(adj))
 
+    def init_estimation(self, adj):
+        self.Adj.data.copy_(adj)
+
     def forward(self, h):
-        Adj = F.elu(self.Adj) + 1
-        return Adj
+        return self.nonlinear(self.Adj)
 
 
 class AttLearner(GraphLearner):
@@ -143,5 +151,5 @@ class MLPLearner(GraphLearner):
             x = self.encoder(x, None)
             adj = self.metric(x)
             for p in self.postprocess:
-                adj = p(adj)
+                adj = p(adj=adj)
             return adj

@@ -1,5 +1,7 @@
 import numpy as np
 from collections import Counter
+import torch
+from opengsl.method.transform import EpsilonNN
 
 
 class EstimateAdj:
@@ -136,21 +138,11 @@ class EstimateAdj:
         return (alpha, beta, O, Q, self.iterations)
 
 
-def get_homophily(label, adj):
-    num_node = len(label)
-    label = label.repeat(num_node).reshape(num_node, -1)
-    n = np.triu((label == label.T) & (adj == 1)).sum(axis=0)
-    d = np.triu(adj).sum(axis=0)
-    homos = []
-    for i in range(num_node):
-        if d[i] > 0:
-            homos.append(n[i] * 1./d[i])
-    return np.mean(homos)
-
-
 def prob_to_adj(mx, threshold):
     mx = np.triu(mx, 1)   # the 2 steps here del the self loop
     mx += mx.T
-    adj = np.zeros_like(mx)
-    adj[mx > threshold] = 1
+
+    adj = torch.tensor(mx, dtype=torch.float32)
+    t = EpsilonNN(threshold, set_value=1)
+    adj = t(adj)
     return adj

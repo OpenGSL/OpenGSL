@@ -3,9 +3,9 @@ import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 import math
 import dgl
-from .gcn import GCN, GraphConvolution
+from .gnns import GCN, GraphConvolution
 from sklearn.neighbors import kneighbors_graph
-from .gnn_modules import APPNP
+from .gnns import APPNP
 import numpy as np
 
 def apply_non_linearity(tensor, non_linearity, i):

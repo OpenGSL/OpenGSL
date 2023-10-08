@@ -1,7 +1,7 @@
 model:
   n_layers: 3
   n_linear: 1 # layers of linear per gcn layer
-  act: relu # [relu, elu, gelu, leakyrelu]
+  act: F.relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 256
   dropout: 0.5
   input_dropout: 0

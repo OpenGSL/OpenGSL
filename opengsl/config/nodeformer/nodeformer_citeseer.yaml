@@ -1,6 +1,6 @@
 model:
   n_layers: 2
-  act: relu
+  act: F.relu
   n_hidden: 32
   n_heads: 4
   dropout: 0.5

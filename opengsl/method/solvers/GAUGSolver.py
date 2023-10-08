@@ -80,7 +80,7 @@ class GAUGSolver(Solver):
             optimizer.zero_grad()
 
             # forward and backward
-            hidden, output = self.model.nc_net((self.feats, self.normalized_adj, False))
+            output = self.model.nc_net(self.feats, self.normalized_adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
@@ -89,7 +89,7 @@ class GAUGSolver(Solver):
             # evaluate
             self.model.eval()
             with torch.no_grad():
-                hidden, output = self.model.nc_net((self.feats, self.normalized_adj, False))
+                output = self.model.nc_net(self.feats, self.normalized_adj)
                 loss_val = self.loss_fn(output[self.val_mask], self.labels[self.val_mask])
             acc_val = self.metric(self.labels[self.val_mask].cpu().numpy(), output[self.val_mask].detach().cpu().numpy())
             if acc_val > self.result['valid']:
@@ -165,7 +165,7 @@ class GAUGSolver(Solver):
             # validate
             self.model.eval()
             with torch.no_grad():
-                hidden, output = self.model.nc_net((self.feats, self.normalized_adj, False))   # the author proposed to validate and test on the original adj
+                output = self.model.nc_net(self.feats, self.normalized_adj)   # the author proposed to validate and test on the original adj
                 loss_val = self.loss_fn(output[self.val_mask], self.labels[self.val_mask])
             acc_val = self.metric(self.labels[self.val_mask].cpu().numpy(), output[self.val_mask].detach().cpu().numpy())
             adj_pred = torch.sigmoid(adj_logits.detach()).cpu()
@@ -179,7 +179,7 @@ class GAUGSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
-                self.best_graph = adj_new.clone().detach()
+                self.adjs['final'] = adj_new.clone().detach()
                 patience_step = 0
             else:
                 patience_step += 1
@@ -204,7 +204,7 @@ class GAUGSolver(Solver):
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
 
-        return self.result, self.best_graph
+        return self.result, self.adjs
 
     def set_method(self):
         '''

@@ -182,7 +182,7 @@ class IDGLSolver(Solver):
             loss.backward()
             self.optimizer.step()
 
-        return loss, score, cur_anchor_adj
+        return loss, score, cur_anchor_adj, 0, 0
 
     def get_graph_loss(self, out_adj, features):
         # Graph regularization

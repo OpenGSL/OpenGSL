@@ -143,6 +143,7 @@ class DGI(nn.Module):
 
 
 class GCN_DGI(nn.Module):
+    # TODO remove in future versions
     def __init__(self, in_ft, out_ft, act, bias=True):
         super(GCN_DGI, self).__init__()
         self.fc = nn.Linear(in_ft, out_ft, bias=False)

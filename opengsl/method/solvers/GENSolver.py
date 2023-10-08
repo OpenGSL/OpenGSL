@@ -1,8 +1,6 @@
 from sklearn.metrics.pairwise import cosine_similarity as cos
 import numpy as np
 from copy import deepcopy
-from opengsl.method.models.gcn import GCN
-from opengsl.method.models.gnn_modules import APPNP, GIN
 from opengsl.method.models.gen import EstimateAdj as GENEstimateAdj, prob_to_adj
 import torch
 import torch.nn.functional as F
@@ -10,6 +8,8 @@ import time
 from .solver import Solver
 from opengsl.utils.utils import get_homophily
 from opengsl.method.functional import normalize
+from opengsl.method.transform import KNN
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder, GINEncoder
 
 
 class GENSolver(Solver):
@@ -54,6 +54,10 @@ class GENSolver(Solver):
         dist = cos(feature.detach().cpu().numpy())
         col = np.argpartition(dist, -(self.conf.gsl['k'] + 1), axis=1)[:, -(self.conf.gsl['k'] + 1):].flatten()
         adj[np.arange(self.n_nodes).repeat(self.conf.gsl['k'] + 1), col] = 1
+
+        # this may cause difference due to different implementations
+        # tmp = KNN(self.conf.gsl['k'] + 1, metric='cosine', set_value=1)
+        # adj = tmp(feature, self.conf.gsl['k'] + 1)
         return adj
 
     def train_gcn(self, iter, adj, debug=False):
@@ -73,7 +77,7 @@ class GENSolver(Solver):
             self.optim.zero_grad()
 
             # forward and backward
-            hidden_output, output = self.model((self.feats, normalized_adj, False))
+            hidden_output, output = self.model(self.feats, normalized_adj, return_mid=True)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(),
                                     output[self.train_mask].detach().cpu().numpy())
@@ -100,7 +104,7 @@ class GENSolver(Solver):
                     self.output = output if len(output.shape) > 1 else output.unsqueeze(1)
                     self.output = F.log_softmax(self.output, dim=1)
                     self.weights = deepcopy(self.model.state_dict())
-                    self.best_graph = deepcopy(adj)
+                    self.adjs['final'] = adj.detach().clone()
 
             # print
             if debug:
@@ -122,8 +126,7 @@ class GENSolver(Solver):
         self.estimator.update_obs(self.knn(self.output))  # 4
         alpha, beta, O, Q, iterations = self.estimator.EM(self.output.max(1)[1].detach().cpu().numpy(),
                                                           self.conf.gsl['tolerance'])
-        adj = torch.tensor(prob_to_adj(Q, self.conf.gsl['threshold']), dtype=torch.float32,
-                           device=self.device).to_sparse()
+        adj = prob_to_adj(Q, self.conf.gsl['threshold']).to(self.device).to_sparse()
         print('Iteration {:04d} | Time(s) {:.4f} | EM step {:04d}'.format(iter + 1, time.time() - t,
                                                                           self.estimator.count))
         return adj
@@ -155,7 +158,7 @@ class GENSolver(Solver):
         loss_test, acc_test, _, _ = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph
+        return self.result, self.adjs
 
     def evaluate(self, test_mask, normalized_adj):
         '''
@@ -181,7 +184,7 @@ class GENSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            hidden_output, output = self.model((self.feats, normalized_adj, False))
+            hidden_output, output = self.model(self.feats, normalized_adj, return_mid=True)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss = self.loss_fn(logits, labels)
@@ -212,18 +215,18 @@ class GENSolver(Solver):
 
         '''
         if self.conf.model['type'] == 'gcn':
-            self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+            self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                              self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
                              self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
                              self.conf.model['input_layer'], self.conf.model['output_layer'],
                              weight_initializer='glorot',
                              bias_initializer='zeros').to(self.device)
         elif self.conf.model['type'] == 'appnp':
-            self.model = APPNP(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],
                                alpha=self.conf.model['alpha']).to(self.device)
         elif self.conf.model['type'] == 'gin':
-            self.model = GIN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                              self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
 
         self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_mask, self.labels,

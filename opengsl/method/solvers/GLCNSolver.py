@@ -60,7 +60,6 @@ class GLCNSolver(Solver):
         graph : torch.tensor
             The learned structure.
         '''
-        print(self.model.graph_learner.W)
         for epoch in range(self.conf.training['n_epochs']):
             improve = ''
             t0 = time.time()
@@ -88,7 +87,7 @@ class GLCNSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
-                self.adjs['final'] = deepcopy(adjs['final'])
+                self.adjs['final'] = adjs['final'].detach().clone()
             elif flag_earlystop:
                 break
 

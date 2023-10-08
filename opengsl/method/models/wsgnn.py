@@ -1,16 +1,10 @@
-from torch_sparse import SparseTensor
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
-# from torch_geometric.nn import GCNConv, GATConv, APPNP
-from torch_geometric.nn import GCNConv, GATConv
-import torch_sparse
-from .gnn_modules import APPNP, GIN
-from .gcn import GCN
 from opengsl.method.metric import WeightedCosine
-from opengsl.method.models.gnn_modules import MLP
-from opengsl.method.functional import normalize
+from opengsl.method.encoder import MLPEncoder, GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.method.transform import Normalize
+from opengsl.method.fuse import Interpolate
 
 
 INF = 1e20
@@ -22,43 +16,49 @@ class QModel(nn.Module):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
         if conf.model['type'] == 'gcn':
-            self.encoder = GCN(d, nhid, c, n_layers, dropout)
+            self.encoder = GCNEncoder(d, nhid, c, n_layers, dropout)
         elif conf.model['type'] == 'appnp':
-            self.encoder = APPNP(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
+            self.encoder = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':
-            self.encoder = GIN(d,nhid,c,n_layers,conf.model['mlp_gin'])
+            self.encoder = GINEncoder(d,nhid,c,n_layers,conf.model['mlp_gin'])
 
-        self.graph_learner1 = WeightedCosine(d_in=d, num_pers=graph_learn_num_pers)
-        self.graph_learner2 = WeightedCosine(d_in=2 * c, num_pers=graph_learn_num_pers)
+        self.metric1 = WeightedCosine(d_in=d, num_pers=graph_learn_num_pers)
+        self.metric2 = WeightedCosine(d_in=2 * c, num_pers=graph_learn_num_pers)
+        self.f1 = Normalize('row')
+        self.f2 = Normalize()
+        self.fuse1 = Interpolate(1-self.graph_skip_conn)
+        self.fuse2 = Interpolate(0.5)
 
     def reset_parameters(self):
         self.encoder.reset_parameters()
-        self.graph_learner1.reset_parameters()
-        self.graph_learner2.reset_parameters()
-
-    def learn_graph(self, graph_learner, node_features, graph_skip_conn=None, init_adj=None):
-        raw_adj = graph_learner(node_features, True)
-        adj = raw_adj / torch.clamp(torch.sum(raw_adj, dim=-1, keepdim=True), min=VERY_SMALL_NUMBER)
-        adj = graph_skip_conn * init_adj + (1 - graph_skip_conn) * adj
-        return raw_adj, adj
+        self.metric1.reset_parameters()
+        self.metric2.reset_parameters()
 
     def forward(self, feats, adj):
         node_features = feats
-        init_adj = normalize(adj)
+        init_adj = self.f2(adj)
 
-        raw_adj_1, adj_1 = self.learn_graph(self.graph_learner1, node_features, self.graph_skip_conn, init_adj)
-        node_vec_1 = self.encoder([node_features, adj_1, True])
+        # adj_1
+        adj_1 = self.metric1(node_features)
+        adj_1 = self.f1(adj_1)
+        adj_1 = self.fuse1(adj_1, init_adj)
 
-        node_vec_2 = self.encoder([node_features, init_adj, True])
+        node_vec_1 = self.encoder(node_features, adj_1)
+
+        node_vec_2 = self.encoder(node_features, init_adj)
         if len(node_vec_2.shape) == 2:
-            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1),
-                                                self.graph_skip_conn, init_adj)
+            # adj_2
+            adj_2 = self.metric2(torch.cat([node_vec_1, node_vec_2], dim=1))
+            adj_2 = self.f1(adj_2)
+            adj_2 = self.fuse1(adj_2, init_adj)
+
         else:
-            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2,
-                                                torch.stack([node_vec_1, node_vec_2]).transpose(0, 1),
-                                                self.graph_skip_conn, init_adj)
-        output = 0.5 * node_vec_1 + 0.5 * node_vec_2
-        adj = 0.5 * adj_1 + 0.5 * adj_2
+            adj_2 = self.metric2(torch.stack([node_vec_1, node_vec_2]).transpose(0, 1))
+            adj_2 = self.f1(adj_2)
+            adj_2 = self.fuse1(adj_2, init_adj)
+
+        output = self.fuse2(node_vec_1, node_vec_2)
+        adj = self.fuse2(adj_1, adj_2)
 
         return output, adj
 
@@ -67,46 +67,41 @@ class PModel(nn.Module):
     def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf):
         super(PModel, self).__init__()
         if conf.model['type'] == 'gcn':
-            self.encoder1 = GCN(d, nhid, c, n_layers, dropout)
+            self.encoder1 = GCNEncoder(d, nhid, c, n_layers, dropout)
         elif conf.model['type'] == 'appnp':
-            self.encoder1 = APPNP(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
+            self.encoder1 = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':
-            self.encoder1 = GIN(d, nhid, c, n_layers, conf.model['mlp_gin'])
+            self.encoder1 = GINEncoder(d, nhid, c, n_layers, conf.model['mlp_gin'])
+        self.encoder2 = MLPEncoder(d, nhid, c, mlp_layers, dropout, not no_bn)
 
-        self.encoder2 = MLP(in_channels=d,
-                            hidden_channels=nhid,
-                            out_channels=c,
-                            num_layers=mlp_layers,
-                            dropout=dropout,
-                            use_bn=not no_bn)
-
-        self.graph_learner1 = WeightedCosine(d_in=d, num_pers=graph_learn_num_pers)
-        self.graph_learner2 = WeightedCosine(d_in=2 * c, num_pers=graph_learn_num_pers)
+        self.metric1 = WeightedCosine(d_in=d, num_pers=graph_learn_num_pers)
+        self.metric2 = WeightedCosine(d_in=2 * c, num_pers=graph_learn_num_pers)
+        self.f1 = Normalize('row')
+        self.fuse2 = Interpolate(0.5)
 
     def reset_parameters(self):
         self.encoder1.reset_parameters()
         self.encoder2.reset_parameters()
-        self.graph_learner.reset_parameters()
-        self.graph_learner2.reset_parameters()
-
-    def learn_graph(self, graph_learner, node_features):
-        raw_adj = graph_learner(node_features, True)
-        adj = raw_adj / torch.clamp(torch.sum(raw_adj, dim=-1, keepdim=True), min=VERY_SMALL_NUMBER)
-        return raw_adj, adj
+        self.metric1.reset_parameters()
+        self.metric2.reset_parameters()
 
     def forward(self, feats):
         node_features = feats
 
-        raw_adj_1, adj_1 = self.learn_graph(self.graph_learner1, node_features)
-        node_vec_1 = self.encoder1([node_features, adj_1, True])
+        adj_1 = self.metric1(node_features)
+        adj_1 = self.f1(adj_1)
+        node_vec_1 = self.encoder1(node_features, adj_1)
 
-        node_vec_2 = self.encoder2(node_features).squeeze(1)
+        node_vec_2 = self.encoder2(node_features, None).squeeze(1)
         if len(node_vec_2.shape) == 2:
-            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.cat([node_vec_1, node_vec_2], dim=1))
+            adj_2 = self.metric2(torch.cat([node_vec_1, node_vec_2], dim=1))
+            adj_2 = self.f1(adj_2)
         else:
-            raw_adj_2, adj_2 = self.learn_graph(self.graph_learner2, torch.stack([node_vec_1, node_vec_2]).transpose(0,1))
-        output = 0.5 * node_vec_1 + 0.5 * node_vec_2
-        adj = 0.5 * adj_1 + 0.5 * adj_2
+            adj_2 = self.metric2(torch.stack([node_vec_1, node_vec_2]).transpose(0, 1))
+            adj_2 = self.f1(adj_2)
+
+        output = self.fuse2(node_vec_1, node_vec_2)
+        adj = self.fuse2(adj_1, adj_2)
 
         return output, adj
 

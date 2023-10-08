@@ -65,13 +65,6 @@ class COGSLSolver(Solver):
         self.view1 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view1, False))
         self.view2 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view2, False))
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.nll_loss
-        # self.train_mask = np.load('/root/dataset/citeseer/train.npy')
-        # self.valid_mask = np.load('/root/dataset/citeseer/val.npy')
-        # self.test_mask = np.load('/root/dataset/citeseer/test.npy')
-        # print(self.view1_indices.shape)
-        # print(self.view1.shape)
-        # print(self.view2_indices.shape)
-        # print(self.view2.shape)
 
     def view_knn(self):
         adj = np.zeros((self.n_nodes, self.n_nodes), dtype=np.int64)
@@ -218,18 +211,17 @@ class COGSLSolver(Solver):
                 self.result['valid'] = acc_val
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.cls.encoder_v.state_dict())
-                self.best_graph = views[0]
-            print("EPOCH ", epoch, "\tCUR_LOSS_VAL ", loss_val, "\tCUR_ACC_Val ", acc_val, "\tBEST_ACC_VAL ",
-                  self.best_acc_val)
+                self.adjs['final'] = views[0].detach().clone()
+            if debug:
+                print("EPOCH ", epoch, "\tCUR_LOSS_VAL ", loss_val, "\tCUR_ACC_Val ", acc_val, "\tBEST_ACC_VAL ",
+                      self.best_acc_val)
         self.total_time = time.time() - self.start_time
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
         loss_test, acc_test = self.test()
-        # test_f1_macro, test_f1_micro, auc  = self.test()
         self.result['test'] = acc_test
-        # print("Test_Macro: ", test_f1_macro, "\tTest_Micro: ", test_f1_micro, "\tAUC: ", auc)
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_graph.to_dense()
+        return self.result, self.adjs
 
     def evaluate(self, test_mask):
         '''
@@ -270,23 +262,6 @@ class COGSLSolver(Solver):
         self.view2 = self.view2.to(self.device)
         self.view1_indices = self.view1_indices.to(self.device)
         self.view2_indices = self.view2_indices.to(self.device)
-
-    # def gen_auc_mima(self, logits, label):
-    #        preds = torch.argmax(logits, dim=1)
-    #        test_f1_macro = f1_score(label.cpu(), preds.cpu(), average='macro')
-    #        test_f1_micro = f1_score(label.cpu(), preds.cpu(), average='micro')
-    #
-    #        best_proba = F.softmax(logits, dim=1)
-    #        if logits.shape[1] != 2:
-    #            auc = roc_auc_score(y_true=label.detach().cpu().numpy(),
-    #                                                    y_score=best_proba.detach().cpu().numpy(),
-    #                                                    multi_class='ovr'
-    #                                                    )
-    #        else:
-    #            auc = roc_auc_score(y_true=label.detach().cpu().numpy(),
-    #                                                    y_score=best_proba[:,1].detach().cpu().numpy()
-    #                                                    )
-    #        return test_f1_macro, test_f1_micro, auc
 
     def test(self):
         '''

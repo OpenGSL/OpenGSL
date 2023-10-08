@@ -68,7 +68,7 @@ class GRCNSolver(Solver):
             self.optim2.zero_grad()
 
             # forward and backward
-            output, _, _ = self.model(self.feats, self.adj)
+            output, _= self.model(self.feats, self.adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
@@ -76,7 +76,7 @@ class GRCNSolver(Solver):
             self.optim2.step()
 
             # Evaluate
-            loss_val, acc_val, adj_mid, adj = self.evaluate(self.val_mask)
+            loss_val, acc_val, adjs = self.evaluate(self.val_mask)
 
             # save
             if acc_val > self.result['valid']:
@@ -87,8 +87,8 @@ class GRCNSolver(Solver):
                 self.result['train'] = acc_train
                 self.weights = deepcopy(self.model.state_dict())
                 if self.conf.analysis['save_graph']:
-                    self.best_graph = deepcopy(adj.to_dense())
-                    self.best_adj_mid = deepcopy(adj_mid.to_dense())
+                    self.adjs['new'] = adjs['new'].to_dense().detach().clone()
+                    self.adjs['final'] = adjs['final'].to_dense().detach().clone()
 
             # print
 
@@ -99,10 +99,10 @@ class GRCNSolver(Solver):
 
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test, _, _= self.test()
+        loss_test, acc_test, _= self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
-        return self.result, self.best_adj_mid, self.best_graph
+        return self.result, self.adjs
 
     def evaluate(self, test_mask):
         '''
@@ -124,11 +124,11 @@ class GRCNSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            output, adj_mid, adj = self.model(self.feats, self.adj)
+            output, adjs = self.model(self.feats, self.adj)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss=self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adj_mid, adj
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), adjs
 
     def set_method(self):
         '''

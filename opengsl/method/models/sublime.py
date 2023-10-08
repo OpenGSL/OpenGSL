@@ -1,8 +1,7 @@
 import dgl
 import torch
 import torch.nn as nn
-from opengsl.method.models.gcn import GCN
-from opengsl.method.models.gnn_modules import APPNP, GIN
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder, GINEncoder
 import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
@@ -71,14 +70,14 @@ class GraphEncoder(nn.Module):
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
             if conf.model['type']=='gcn':
-                self.model = GCN(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
+                self.model = GCNEncoder(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
                                  input_layer=False, output_layer=False, spmm_type=0)
             elif conf.model['type']=='appnp':
-                self.model = APPNP(in_dim, hidden_dim, emb_dim,
+                self.model = APPNPEncoder(in_dim, hidden_dim, emb_dim,
                                     dropout=dropout, K=conf.model['K'],
                                     alpha=conf.model['alpha'])
             elif conf.model['type'] == 'gin':
-                self.model = GIN(in_dim, hidden_dim, emb_dim,
+                self.model = GINEncoder(in_dim, hidden_dim, emb_dim,
                                nlayers, conf.model['mlp_layers'])
         self.proj_head = nn.Sequential(nn.Linear(emb_dim, proj_dim), nn.ReLU(inplace=True),
                                            nn.Linear(proj_dim, proj_dim))
@@ -92,7 +91,7 @@ class GraphEncoder(nn.Module):
                 x = F.dropout(x, p=self.dropout, training=self.training)
             x = self.gnn_encoder_layers[-1](x, Adj_)
         else:
-            x = self.model((x, Adj_, True))
+            x = self.model(x, Adj_)
         z = self.proj_head(x)
         return z, x
 
@@ -140,6 +139,7 @@ class GCL(nn.Module):
 
 
 class GCN_SUB(nn.Module):
+    # TODO
     # to be changed to pyg in future versions
     def __init__(self, nfeat, nhid, nclass, n_layers=5, dropout=0.5, dropout_adj=0.5, sparse=0):
         super(GCN_SUB, self).__init__()
@@ -154,7 +154,7 @@ class GCN_SUB(nn.Module):
                 self.layers.append(GCNConv_dgl(nhid, nhid))
             self.layers.append(GCNConv_dgl(nhid, nclass))
         else:
-            self.model = GCN(nfeat=nfeat, nhid=nhid, nclass=nclass, n_layers=n_layers, dropout=dropout,
+            self.model = GCNEncoder(nfeat=nfeat, nhid=nhid, nclass=nclass, n_layers=n_layers, dropout=dropout,
                              input_layer=False, output_layer=False, spmm_type=0)
 
     def forward(self, x, Adj):
@@ -173,7 +173,7 @@ class GCN_SUB(nn.Module):
             x = self.layers[-1](x, Adj)
             return x.squeeze(1)
         else:
-            return self.model((x, Adj, True))
+            return self.model(x, Adj)
 
 
 if __name__ == '__main__':

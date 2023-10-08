@@ -1,6 +1,6 @@
-from .models.gnn_modules import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
+from .models.gnns import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
 import time
-from .models.gcn import GCN
+from .models.gnns import GCN
 from .models.jknet import JKNet
 from .solver import Solver
 import torch

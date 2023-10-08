@@ -1,8 +1,7 @@
 import torch
-import torch.nn.functional as F
-from .gcn import GCN
+from opengsl.method.encoder import GCNEncoder
 from opengsl.method.graphlearner import OneLayerNN
-from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer, smoothness_regularizer_direct
+from opengsl.method.regularizer import norm_regularizer, smoothness_regularizer
 
 
 class GLCN(torch.nn.Module):
@@ -10,7 +9,7 @@ class GLCN(torch.nn.Module):
     def __init__(self, n_feat, n_classes, conf):
         super(GLCN, self).__init__()
         if conf.model['type'] == 'gcn':
-            self.gnn_encoder = GCN(n_feat, conf.model['n_hidden'], n_classes, conf.model['n_layers'],
+            self.gnn_encoder = GCNEncoder(n_feat, conf.model['n_hidden'], n_classes, conf.model['n_layers'],
                                  conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
                                  conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
                                  conf.model['input_layer'], conf.model['output_layer'])
@@ -24,7 +23,7 @@ class GLCN(torch.nn.Module):
         edge = adj.indices()
         new_adj, new_x = self.graph_learner(x, edge)
         adjs['final'] = new_adj
-        z = self.gnn_encoder([x, new_adj])
+        z = self.gnn_encoder(x, new_adj)
 
         # calculate some loss items
         loss1 = smoothness_regularizer(new_x, new_adj, symmetric=True)

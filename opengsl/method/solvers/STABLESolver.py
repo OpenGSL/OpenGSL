@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 import numpy as np
 from copy import deepcopy
-from opengsl.method.models.gcn import GCN
+from opengsl.method.models.gnns import GCN
 from opengsl.method.models.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 import torch
 import time
@@ -53,12 +53,9 @@ class STABLESolver(Solver):
         adj_delete = self.adj - self.processed_adj
         aug_adj1 = aug_random_edge(self.processed_adj, adj_delete=adj_delete, recover_percent=self.conf.recover_percent)  # random drop edges
         aug_adj2 = aug_random_edge(self.processed_adj, adj_delete=adj_delete, recover_percent=self.conf.recover_percent)  # random drop edges
-        sp_adj = normalize_sp_matrix(self.processed_adj+(sp.eye(self.n_nodes) * self.conf.beta),
-                                  add_loop=False)
-        sp_aug_adj1 = normalize_sp_matrix(aug_adj1 + (sp.eye(self.n_nodes) * self.conf.beta),
-                                  add_loop=False)
-        sp_aug_adj2 = normalize_sp_matrix(aug_adj2 + (sp.eye(self.n_nodes) * self.conf.beta),
-                                  add_loop=False)
+        sp_adj = normalize_sp_matrix(self.processed_adj+(sp.eye(self.n_nodes) * self.conf.beta), add_loop=False)
+        sp_aug_adj1 = normalize_sp_matrix(aug_adj1 + (sp.eye(self.n_nodes) * self.conf.beta), add_loop=False)
+        sp_aug_adj2 = normalize_sp_matrix(aug_adj2 + (sp.eye(self.n_nodes) * self.conf.beta), add_loop=False)
         sp_adj = scipy_sparse_to_sparse_tensor(sp_adj).to(self.device)
         sp_aug_adj1 = scipy_sparse_to_sparse_tensor(sp_aug_adj1).to(self.device)
         sp_aug_adj2 = scipy_sparse_to_sparse_tensor(sp_aug_adj2).to(self.device)
@@ -83,7 +80,7 @@ class STABLESolver(Solver):
             logits = self.model(self.feats.unsqueeze(0), shuf_fts, sp_adj, sp_aug_adj1, sp_aug_adj2)
             loss = b_xent(logits, lbl)
             if debug:
-                print(loss)
+                pass
 
             if loss < best:
                 best = loss

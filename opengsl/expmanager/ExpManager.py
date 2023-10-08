@@ -85,10 +85,10 @@ class ExpManager:
                     if self.conf.dataset['sparse']:
                         self.solver.adj = self.solver.adj.to_sparse()
                 # run an exp
-                try:
-                    result, graph = self.solver.run_exp(split=i, debug=debug)
-                except ValueError:
-                    continue
+                # try:
+                result, graph = self.solver.run_exp(split=i, debug=debug)
+                # except ValueError:
+                #     continue
                 logger.add_result(succeed, result)
 
                 # save graph

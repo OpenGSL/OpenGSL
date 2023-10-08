@@ -1,6 +1,6 @@
 import numpy as np
 from copy import deepcopy
-from opengsl.method.models.gcn import GCN
+from opengsl.method.encoder import GCNEncoder
 from opengsl.method.models.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
 import torch
 import time
@@ -75,7 +75,7 @@ class SEGSLSolver(Solver):
         return self.result, self.best_graph
 
     def train_gcn(self, iter, adj, debug=False):
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+        self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
                          self.conf.model['dropout'], self.conf.model['input_dropout']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
@@ -87,7 +87,7 @@ class SEGSLSolver(Solver):
         improve_1 = ''
         best_loss_val = 10
         best_acc_val = 0
-        normalized_adj = normalize(adj, add_loop=False, sparse=True)
+        normalized_adj = normalize(adj, add_loop=False)
         for epoch in range(self.conf.training['n_epochs']):
             improve_2 = ''
             t0 = time.time()
@@ -95,14 +95,14 @@ class SEGSLSolver(Solver):
             self.optim.zero_grad()
 
             # forward and backward
-            hidden_output, output = self.model((self.feats, normalized_adj, False))
+            output = self.model(self.feats, normalized_adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()
             self.optim.step()
 
             # Evaluate
-            loss_val, acc_val, hidden_output, output = self.evaluate(self.val_mask, normalized_adj)
+            loss_val, acc_val, output = self.evaluate(self.val_mask, normalized_adj)
 
             # save
             if acc_val > best_acc_val:
@@ -195,11 +195,11 @@ class SEGSLSolver(Solver):
         '''
         self.model.eval()
         with torch.no_grad():
-            hidden_output, output = self.model((self.feats, normalized_adj, False))
+            output = self.model(self.feats, normalized_adj)
         logits = output[test_mask]
         labels = self.labels[test_mask]
         loss=self.loss_fn(logits, labels)
-        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), hidden_output, output
+        return loss, self.metric(labels.cpu().numpy(), logits.detach().cpu().numpy()), output
 
     def set_method(self):
         '''

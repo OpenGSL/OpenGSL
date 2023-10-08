@@ -1,5 +1,6 @@
 import torch
-from opengsl.method.functional import normalize, symmetry, knn, apply_non_linearity
+from opengsl.method.functional import normalize, symmetry, knn, enn, apply_non_linearity
+from opengsl.method.metric import Cosine
 
 
 class Normalize:
@@ -15,20 +16,44 @@ class Normalize:
 
 class Symmetry:
 
-    def __init__(self):
-        pass
+    def __init__(self, i=2):
+        self.i = i
 
     def __call__(self, adj):
-        return symmetry(adj)
+        return symmetry(adj, self.i)
 
 
 class KNN:
 
-    def __init__(self, K):
+    def __init__(self, K, self_loop=True, set_value=None, metric='cosine', sparse_out=False):
         self.K = K
+        self.self_loop = self_loop
+        self.set_value = set_value
+        self.sparse_out = sparse_out
+        if metric:
+            if metric == 'cosine':
+                self.metric = Cosine()
+
+    def __call__(self, x=None, adj=None):
+        assert not (x is None and adj is None)
+        if x is not None:
+            dist = self.metric(x)
+            if adj:
+                # TODO add new edge on raw adj
+                pass
+        else:
+            dist = adj
+        return knn(dist, self.K, self.self_loop, set_value=self.set_value, sparse_out=self.sparse_out)
+
+
+class EpsilonNN:
+
+    def __init__(self, epsilon, set_value=None):
+        self.epsilon = epsilon
+        self.set_value = set_value
 
     def __call__(self, adj):
-        return knn(adj, self.K)
+        return enn(adj, self.epsilon, self.set_value)
 
 
 class NonLinear:

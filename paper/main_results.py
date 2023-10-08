@@ -10,7 +10,7 @@ parser.add_argument('--data', type=str, default='cora',
                              'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                              'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
                              'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv', 'csbm20', 'csbm40', 'csbm60', 'csbm80', 'regression'], help='dataset')
-parser.add_argument('--method', type=str, default='slaps', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
+parser.add_argument('--method', type=str, default='segsl', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
                                                                   'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
                                                                   'gprgnn', 'nodeformer', 'segsl', 'sublime',
                                                                   'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn',

@@ -1,12 +1,12 @@
-from .gcn import GCN
-from .gnn_modules import APPNP, GIN
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import pyro as pyro
 from opengsl.method.functional import normalize
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.method.transform import NonLinear
+from opengsl.method.metric import InnerProduct
 
 
 class VGAE(nn.Module):
@@ -14,21 +14,18 @@ class VGAE(nn.Module):
     def __init__(self, dim_feats, conf):
         super(VGAE, self).__init__()
         self.gae = conf.gsl['gae']
-        # self.gcn_base = GraphConvolution(dim_feats, dim_h, with_bias=False)
-        # self.gcn_mean = GraphConvolution(dim_h, dim_z, with_bias=False)
-        # self.gcn_logstd = GraphConvolution(dim_h, dim_z, with_bias=False)
-        self.conv_graph = GCN(dim_feats, conf.gsl['n_hidden'], conf.gsl['n_embed'], conf.gsl['n_layers'],
+        self.encoder = GCNEncoder(dim_feats, conf.gsl['n_hidden'], conf.gsl['n_embed'], conf.gsl['n_layers'],
                               conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
                               conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
                               conf.gsl['input_layer'], conf.gsl['output_layer'], bias=False,
                               weight_initializer='glorot')
+        self.nonlinear = NonLinear('relu')
+        self.metric = InnerProduct()
 
     def forward(self, feats, adj):
         # GCN encoder
-        # hidden = self.gcn_base(feats, adj)
-        # self.mean = F.relu(self.gcn_mean(hidden, adj))
-        _, mean = self.conv_graph((feats, adj, False))
-        mean = F.relu(mean)
+        mean = self.encoder(feats, adj)
+        mean = self.nonlinear(mean)
         if self.gae:
             # GAE (no sampling at bottleneck)
             Z = mean
@@ -40,7 +37,7 @@ class VGAE(nn.Module):
             # Z = sampled_Z
             pass
         # inner product decoder
-        adj_logits = Z @ Z.T
+        adj_logits = self.metric(Z)
         return adj_logits
 
 
@@ -57,16 +54,16 @@ class GAug(nn.Module):
         # node classification network
         # self.nc_net = GCN(dim_feats, dim_h, n_classes, dropout=dropout)
         if conf.model['type']=='gcn':
-            self.nc_net = GCN(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
+            self.nc_net = GCNEncoder(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
                               conf.model['input_dropout'], conf.model['norm'], conf.model['n_linear'],
                               conf.model['spmm_type'], conf.model['act'], conf.model['input_layer'],
                               conf.model['output_layer'], weight_initializer='glorot', bias_initializer='zeros')
         elif conf.model['type']=='appnp':
-            self.nc_net = APPNP(dim_feats, conf.model['n_hidden'], n_classes,
+            self.nc_net = APPNPEncoder(dim_feats, conf.model['n_hidden'], n_classes,
                                dropout=conf.model['dropout'], K=conf.model['K'],
                                alpha=conf.model['alpha'])
         elif conf.model['type']=='gin':            
-            self.nc_net = GIN(dim_feats, conf.model['n_hidden'], n_classes, 
+            self.nc_net = GINEncoder(dim_feats, conf.model['n_hidden'], n_classes,
                               conf.model['n_layers'], conf.model['mlp_layers'])
             
     def sample_adj(self, adj_logits):
@@ -101,7 +98,7 @@ class GAug(nn.Module):
         else:
             adj_new = self.sample_adj_add_bernoulli(adj_logits, adj_orig, self.alpha)
         adj_new_normed = normalize(adj_new)
-        hidden, output = self.nc_net((feats, adj_new_normed, False))
+        output = self.nc_net(feats, adj_new_normed)
         return output, adj_logits, adj_new
 
 

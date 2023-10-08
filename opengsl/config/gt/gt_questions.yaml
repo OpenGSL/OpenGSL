@@ -1,6 +1,6 @@
 model:
   n_layers: 5
-  act: relu # [relu, elu, gelu, leakyrelu]
+  act: F.relu # [relu, elu, gelu, leakyrelu]
   n_hidden: 128
   dropout: 0
   input_dropout: 0
