@@ -1,8 +1,8 @@
-from .models.gnns import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
+from opengsl.method.models.gnns import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
 import time
-from .models.gnns import GCN
-from .models.jknet import JKNet
-from .solver import Solver
+from opengsl.method.models.gnns import GCN
+from opengsl.method.models.jknet import JKNet
+from opengsl.method.solvers.solver import Solver
 import torch
 from copy import deepcopy
 from opengsl.method.functional import normalize

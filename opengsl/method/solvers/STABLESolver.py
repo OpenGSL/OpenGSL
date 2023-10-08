@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 import numpy as np
 from copy import deepcopy
-from opengsl.method.models.gnns import GCN
+from opengsl.method.encoder import GCNEncoder
 from opengsl.method.models.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 import torch
 import time
@@ -105,7 +105,7 @@ class STABLESolver(Solver):
         def evaluate(model, test_mask):
             model.eval()
             with torch.no_grad():
-                output = model((feats, adj, True))
+                output = model(feats, adj)
             logits = output[test_mask]
             labels = self.labels[test_mask]
             loss = self.loss_fn(logits, labels)
@@ -115,7 +115,7 @@ class STABLESolver(Solver):
             return evaluate(model, self.test_mask)
 
 
-        model = GCN(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
+        model = GCNEncoder(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
         optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.weight_decay)
         best_loss_val = 10
         for epoch in range(self.conf.n_epochs):
@@ -125,7 +125,7 @@ class STABLESolver(Solver):
             optim.zero_grad()
 
             # forward and backward
-            output = model((feats, adj, True))
+            output = model(feats, adj)
             loss_train = self.loss_fn(output[self.train_mask], self.labels[self.train_mask])
             acc_train = self.metric(self.labels[self.train_mask].cpu().numpy(), output[self.train_mask].detach().cpu().numpy())
             loss_train.backward()

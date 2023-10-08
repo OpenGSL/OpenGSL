@@ -2,16 +2,16 @@
 method_name = ['gcn', 'sgc', 'gat', 'jknet', 'appnp', 'gprgnn',
 'prognn', 'idgl', 'grcn', 'gaug', 'slaps', 'gen', 'gt', 'nodeformer', 'cogsl', 'sublime', 'stable', 'segsl']
 '''
-from opengsl.method.solver import Solver
-from opengsl.method.gnnsolver import GCNSolver
-from opengsl.method.gnnsolver import SGCSolver
-from opengsl.method.gnnsolver import GATSolver
-from opengsl.method.gnnsolver import JKNetSolver
-from opengsl.method.gnnsolver import APPNPSolver
-from opengsl.method.gnnsolver import GPRGNNSolver
-from opengsl.method.gnnsolver import LINKSolver
-from opengsl.method.gnnsolver import LPASolver
-from opengsl.method.gnnsolver import GINSolver
+from opengsl.method.solvers.solver import Solver
+from opengsl.method.solvers.gnnsolver import GCNSolver
+from opengsl.method.solvers.gnnsolver import SGCSolver
+from opengsl.method.solvers.gnnsolver import GATSolver
+from opengsl.method.solvers.gnnsolver import JKNetSolver
+from opengsl.method.solvers.gnnsolver import APPNPSolver
+from opengsl.method.solvers.gnnsolver import GPRGNNSolver
+from opengsl.method.solvers.gnnsolver import LINKSolver
+from opengsl.method.solvers.gnnsolver import LPASolver
+from opengsl.method.solvers.gnnsolver import GINSolver
 from opengsl.method.solvers.GLCNSolver import GLCNSolver
 from opengsl.method.solvers.WSGNNSolver import WSGNNSolver
 from opengsl.method.solvers.PROGNNSolver import PROGNNSolver
