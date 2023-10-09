@@ -6,7 +6,7 @@ model:
   knn_metric: 'cosine'
   i: 6
   non_linearity: 'relu'
-  normalization: 'sym'
+  normalization: 'symmetric'
   mlp_h: 3703
   mlp_epochs: 100
   mlp_act: 'relu'

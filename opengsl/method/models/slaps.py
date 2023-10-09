@@ -3,21 +3,10 @@ import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 import math
 import dgl
-from .gnns import GCN, GraphConvolution
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder
 from sklearn.neighbors import kneighbors_graph
-from .gnns import APPNP
 import numpy as np
-
-def apply_non_linearity(tensor, non_linearity, i):
-    if non_linearity == 'elu':
-        return F.elu(tensor * i - i) + 1
-    elif non_linearity == 'relu':
-        return F.relu(tensor)
-    elif non_linearity == 'none':
-        return tensor
-    else:
-        raise NameError('We dont support the non-linearity yet')
-
+from opengsl.method.functional import apply_non_linearity, knn_fast, normalize
 
 def nearest_neighbors(X, k, metric):
     adj = kneighbors_graph(X, k, metric=metric)
@@ -25,26 +14,12 @@ def nearest_neighbors(X, k, metric):
     adj += np.eye(adj.shape[0])
     return adj
 
-def normalize(adj, mode):
-    EOS = 1e-10
-    if mode == "sym":
-        inv_sqrt_degree = 1. / (torch.sqrt(adj.sum(dim=1, keepdim=False)) + EOS)
-        return inv_sqrt_degree[:, None] * adj * inv_sqrt_degree[None, :]
-    elif mode == "row":
-        inv_degree = 1. / (adj.sum(dim=1, keepdim=False) + EOS)
-        return inv_degree[:, None] * adj
-    else:
-        exit("wrong norm mode")
-
-
-
 def symmetrize(adj):  # only for non-sparse
     return (adj + adj.T) / 2
 
 def cal_similarity_graph(node_embeddings):
     similarity_graph = torch.mm(node_embeddings, node_embeddings.t())
     return similarity_graph
-
 
 def top_k(raw_graph, K):
     values, indices = raw_graph.topk(k=int(K), dim=-1)
@@ -55,35 +30,6 @@ def top_k(raw_graph, K):
     mask.requires_grad = False
     sparse_graph = raw_graph * mask
     return sparse_graph
-
-
-def knn_fast(X, k, b):
-    X = F.normalize(X, dim=1, p=2)
-    index = 0
-    values = torch.zeros(X.shape[0] * (k + 1), device='cuda')
-    rows = torch.zeros(X.shape[0] * (k + 1), device='cuda')
-    cols = torch.zeros(X.shape[0] * (k + 1), device='cuda')
-    norm_row = torch.zeros(X.shape[0], device='cuda')
-    norm_col = torch.zeros(X.shape[0], device='cuda')
-    while index < X.shape[0]:
-        if (index + b) > (X.shape[0]):
-            end = X.shape[0]
-        else:
-            end = index + b
-        sub_tensor = X[index:index + b]
-        similarities = torch.mm(sub_tensor, X.t())
-        vals, inds = similarities.topk(k=k + 1, dim=-1)
-        values[index * (k + 1):(end) * (k + 1)] = vals.view(-1)
-        cols[index * (k + 1):(end) * (k + 1)] = inds.view(-1)
-        rows[index * (k + 1):(end) * (k + 1)] = torch.arange(index, end, device='cuda').view(-1, 1).repeat(1, k + 1).view(-1)
-        norm_row[index: end] = torch.sum(vals, dim=1)
-        norm_col.index_add_(-1, inds.view(-1), vals.view(-1))
-        index += b
-    norm = norm_row + norm_col
-    rows = rows.long()
-    cols = cols.long()
-    values *= (torch.pow(norm[rows], -0.5) * torch.pow(norm[cols], -0.5))
-    return rows, cols, values
 
 class MLP(torch.nn.Module):
     def __init__(self, nlayers, isize, hsize, osize, features, mlp_epochs, k, knn_metric, non_linearity, i, mlp_act):
@@ -152,9 +98,9 @@ class GCN_DAE(torch.nn.Module):
         super(GCN_DAE, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCN(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=0)
+            self.layers = GCNEncoder(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=0)
         elif cfg_model['type'] == 'appnp':
-            self.layers = APPNP(in_dim, hidden_dim, nclasses, spmm_type=1,
+            self.layers = APPNPEncoder(in_dim, hidden_dim, nclasses, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
 
         self.dropout_adj = torch.nn.Dropout(p=dropout_adj)
@@ -167,14 +113,14 @@ class GCN_DAE(torch.nn.Module):
     def get_adj(self, h):
         Adj_ = self.graph_gen(h)
         Adj_ = symmetrize(Adj_)
-        Adj_ = normalize(Adj_, self.normalization)
+        Adj_ = normalize(Adj_, self.normalization, False)
         return Adj_
 
     def forward(self, features, x):  # x corresponds to masked_features
         Adj_ = self.get_adj(features)
         Adj = self.dropout_adj(Adj_)
 
-        x = self.layers((x, Adj, True))
+        x = self.layers(x, Adj)
 
         return x, Adj_
 
@@ -183,9 +129,9 @@ class GCN_C(torch.nn.Module):
         super(GCN_C, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCN(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=0)
+            self.layers = GCNEncoder(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=0)
         elif cfg_model['type'] == 'appnp':
-            self.layers = APPNP(in_channels, hidden_channels, out_channels, spmm_type=1,
+            self.layers = APPNPEncoder(in_channels, hidden_channels, out_channels, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
 
         self.dropout_adj = torch.nn.Dropout(p=dropout_adj)
@@ -193,7 +139,7 @@ class GCN_C(torch.nn.Module):
     def forward(self, x, adj_t):
         Adj = self.dropout_adj(adj_t)
 
-        x = self.layers((x, Adj, True))
+        x = self.layers(x, Adj)
         return x
 
 

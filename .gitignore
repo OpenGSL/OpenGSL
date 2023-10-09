@@ -6,6 +6,7 @@
 
 # Output files
 /results
+/records
 
 # Packages
 /opengsl.egg-info

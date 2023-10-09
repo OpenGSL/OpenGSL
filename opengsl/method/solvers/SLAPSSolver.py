@@ -56,7 +56,7 @@ class SLAPSSolver(Solver):
         graph : torch.tensor
             The learned structure.
         '''
-        for epoch in range(self.conf.training['n_epochs']):
+        for epoch in range(1, self.conf.training['n_epochs'] + 1):
             improve = ''
             t0 = time.time()
             self.model.train()
