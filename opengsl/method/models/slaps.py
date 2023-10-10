@@ -9,11 +9,6 @@ from opengsl.method.functional import apply_non_linearity, normalize, symmetry, 
 from opengsl.method.metric import InnerProduct
 from opengsl.method.transform import KNN
 
-
-def cal_similarity_graph(node_embeddings):
-    similarity_graph = torch.mm(node_embeddings, node_embeddings.t())
-    return similarity_graph
-
 class MLP(torch.nn.Module):
     def __init__(self, nlayers, isize, hsize, osize, features, mlp_epochs, k, knn_metric, non_linearity, i, mlp_act):
         super(MLP, self).__init__()
