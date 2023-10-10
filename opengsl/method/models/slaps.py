@@ -3,33 +3,16 @@ import torch.nn.functional as F
 # from .GCN3 import GraphConvolution, GCN
 import math
 import dgl
-from opengsl.method.encoder import GCNEncoder, APPNPEncoder
-from sklearn.neighbors import kneighbors_graph
 import numpy as np
-from opengsl.method.functional import apply_non_linearity, knn_fast, normalize
+from opengsl.method.encoder import GCNEncoder, APPNPEncoder
+from opengsl.method.functional import apply_non_linearity, normalize, symmetry, knn
+from opengsl.method.metric import InnerProduct
+from opengsl.method.transform import KNN
 
-def nearest_neighbors(X, k, metric):
-    adj = kneighbors_graph(X, k, metric=metric)
-    adj = np.array(adj.todense(), dtype=np.float32)
-    adj += np.eye(adj.shape[0])
-    return adj
-
-def symmetrize(adj):  # only for non-sparse
-    return (adj + adj.T) / 2
 
 def cal_similarity_graph(node_embeddings):
     similarity_graph = torch.mm(node_embeddings, node_embeddings.t())
     return similarity_graph
-
-def top_k(raw_graph, K):
-    values, indices = raw_graph.topk(k=int(K), dim=-1)
-    assert torch.max(indices) < raw_graph.shape[1]
-    mask = torch.zeros(raw_graph.shape, device='cuda')
-    mask[torch.arange(raw_graph.shape[0], device='cuda').view(-1, 1), indices] = 1.
-
-    mask.requires_grad = False
-    sparse_graph = raw_graph * mask
-    return sparse_graph
 
 class MLP(torch.nn.Module):
     def __init__(self, nlayers, isize, hsize, osize, features, mlp_epochs, k, knn_metric, non_linearity, i, mlp_act):
@@ -73,7 +56,7 @@ class MLP(torch.nn.Module):
                 layer.weight = torch.nn.Parameter(torch.eye(self.input_dim))
         else:
             optimizer = torch.optim.Adam(self.parameters(), 0.01)
-            labels = torch.from_numpy(nearest_neighbors(self.features.cpu(), self.k, self.knn_metric)).cuda()
+            labels = KNN(self.k,metric=self.knn_metric)(self.features)
             for epoch in range(1, self.mlp_epochs):
                 self.train()
                 logits = self.forward(self.features)
@@ -87,8 +70,8 @@ class MLP(torch.nn.Module):
     def forward(self, features):
         embeddings = self.internal_forward(features)
         embeddings = F.normalize(embeddings, dim=1, p=2)
-        similarities = cal_similarity_graph(embeddings)
-        similarities = top_k(similarities, self.k + 1)
+        similarities = InnerProduct()(embeddings)
+        similarities = knn(similarities, self.k + 1)
         similarities = apply_non_linearity(similarities, self.non_linearity, self.i)
         return similarities
 
@@ -112,7 +95,7 @@ class GCN_DAE(torch.nn.Module):
 
     def get_adj(self, h):
         Adj_ = self.graph_gen(h)
-        Adj_ = symmetrize(Adj_)
+        Adj_ = symmetry(Adj_)
         Adj_ = normalize(Adj_, self.normalization, False)
         return Adj_
 
