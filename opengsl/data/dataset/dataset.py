@@ -9,7 +9,7 @@ from opengsl.data.preprocess.control_homophily import control_homophily
 import pickle
 import os
 import urllib.request
-from ogb.nodeproppred import PygNodePropPredDataset
+# from ogb.nodeproppred import PygNodePropPredDataset
 
 
 class Dataset:
@@ -108,23 +108,23 @@ class Dataset:
                 # exit(0)
             self.n_classes = len(self.labels.unique())
 
-        elif ds_name in ['ogbn-arxiv']:
-            self.data_raw = PygNodePropPredDataset(name='ogbn-arxiv', root='./data')
-            self.g = self.data_raw[0]
-            self.feats = self.g.x  # unnormalized
-            self.n_nodes = self.feats.shape[0]
-            self.dim_feats = self.feats.shape[1]
-            self.labels = self.g.y
-            reverse_edge_index = torch.stack([self.g.edge_index[1], self.g.edge_index[0]])
-
-            self.adj = torch.sparse.FloatTensor(torch.cat([reverse_edge_index, self.g.edge_index], dim=1), torch.ones(self.g.edge_index.shape[1]*2),
-                                                [self.n_nodes, self.n_nodes])
-            self.n_edges = self.g.num_edges
-            self.n_classes = self.data_raw.num_classes
-
-            self.feats = self.feats.to(self.device)
-            self.labels = self.labels.to(self.device).view(-1)
-            self.adj = self.adj.to(self.device)
+        # elif ds_name in ['ogbn-arxiv']:
+        #     self.data_raw = PygNodePropPredDataset(name='ogbn-arxiv', root='./data')
+        #     self.g = self.data_raw[0]
+        #     self.feats = self.g.x  # unnormalized
+        #     self.n_nodes = self.feats.shape[0]
+        #     self.dim_feats = self.feats.shape[1]
+        #     self.labels = self.g.y
+        #     reverse_edge_index = torch.stack([self.g.edge_index[1], self.g.edge_index[0]])
+        #
+        #     self.adj = torch.sparse.FloatTensor(torch.cat([reverse_edge_index, self.g.edge_index], dim=1), torch.ones(self.g.edge_index.shape[1]*2),
+        #                                         [self.n_nodes, self.n_nodes])
+        #     self.n_edges = self.g.num_edges
+        #     self.n_classes = self.data_raw.num_classes
+        #
+        #     self.feats = self.feats.to(self.device)
+        #     self.labels = self.labels.to(self.device).view(-1)
+        #     self.adj = self.adj.to(self.device)
         
         elif ds_name in ['regression']:
             def read_regression(input_folder):
