@@ -6,6 +6,10 @@ opengsl.module.solver
        :members:
        :show-inheritance:
 
+    .. autoclass:: opengsl.module.solver.GSLSolver
+       :members:
+       :show-inheritance:
+
     .. autoclass:: opengsl.module.solver.GCNSolver
        :members:
        :show-inheritance:

@@ -23,4 +23,4 @@ from opengsl.module.solver.COGSLSolver import COGSLSolver
 from opengsl.module.solver.SUBLIMESolver import SUBLIMESolver
 from opengsl.module.solver.STABLESolver import STABLESolver
 from opengsl.module.solver.SEGSLSolver import SEGSLSolver
-from opengsl.module.solver.BMGCNSolver import BMGCNSolver
+from opengsl.module.solver.BMGCN import BMGCNSolver
