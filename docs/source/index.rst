@@ -42,6 +42,7 @@ If you use our benchmark in your works, we would appreciate citations to the pap
 
    notes/installation
    notes/example
+   notes/gsl_tutorial
 
 .. toctree::
    :glob:

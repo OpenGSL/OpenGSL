@@ -103,7 +103,7 @@ exp.run(n_runs = 10)
 ## ⚙️Build Your Own GSL
 OpenGSL provides an easy way to build GSL algorithm based on several components.
 
-if you want to learn how to build own GSL method, see [Build Your Own GSL.ipynb](https://github.com/OpenGSL/OpenGSL/blob/main/examples/graph%20structure%20learning%20pipeline.ipynb) for more details.
+if you want to learn how to build own GSL method, see [Build Your Own GSL.ipynb](https://github.com/OpenGSL/OpenGSL/blob/main/examples/Build%20Your%20Own%20GSL.ipynb) for more details.
 
 ## 📱️Updates
 2023.11.1 Version 0.0.6 available!
