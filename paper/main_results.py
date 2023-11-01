@@ -10,11 +10,7 @@ parser.add_argument('--data', type=str, default='cora',
                              'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
                              'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
                              'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv', 'csbm20', 'csbm40', 'csbm60', 'csbm80', 'regression'], help='dataset')
-parser.add_argument('--method', type=str, default='segsl', choices=['gcn', 'appnp', 'gt', 'gat', 'prognn', 'gen',
-                                                                  'gaug', 'idgl', 'grcn', 'sgc', 'jknet', 'slaps',
-                                                                  'gprgnn', 'nodeformer', 'segsl', 'sublime',
-                                                                  'stable', 'cogsl', 'lpa', 'link', 'linkx', 'wsgnn',
-                                                                   'gin', 'glcn'], help="Select methods")
+parser.add_argument('--method', type=str, default='gcn', help="Select methods")
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_false')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
@@ -27,7 +23,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 from opengsl.config import load_conf
 from opengsl.data import Dataset
 from opengsl import ExpManager
-from opengsl.method import *
+from opengsl.module import *
 
 if args.config is None:
     conf = load_conf(method=args.method, dataset=args.data)
@@ -44,7 +40,7 @@ dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', w
 
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))
-exp = ExpManager(method,  save_path='records')
+exp = ExpManager(method)
 acc_save, std_save = exp.run(n_runs=args.n_runs, n_splits=args.n_splits, debug=args.debug)
 text = '{:.2f} ± {:.2f}'.format(acc_save, std_save)
 

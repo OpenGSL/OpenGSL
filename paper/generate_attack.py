@@ -24,7 +24,7 @@ from opengsl.data import Dataset
 from opengsl.data.preprocess.attack import metattack
 from opengsl.utils.utils import sparse_tensor_to_scipy_sparse
 from opengsl import ExpManager
-from opengsl.method import *
+from opengsl.module import *
 
 dataset = Dataset(args.data, feat_norm=False, path='data', n_splits=1)
 new_adj = metattack(dataset.adj, dataset.feats, dataset.labels, dataset.train_masks[0], dataset.val_masks[0],

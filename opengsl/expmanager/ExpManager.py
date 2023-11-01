@@ -15,14 +15,8 @@ class ExpManager:
     ----------
     solver : opengsl.method.Solver
         Solver of the method to solve the task.
-    n_splits : int
-        Number of data splits to run experiment on.
-    n_runs : int
-        Number of experiment runs each split.
     save_path : str
         Path to save the config file.
-    debug : bool
-        Whether to print statistics during training.
 
     Examples
     --------
@@ -68,6 +62,24 @@ class ExpManager:
         assert self.save_graph_path is None or self.load_graph_path is None, 'GNN does not save graph, GSL does not load graph'
 
     def run(self, n_splits=1, n_runs=1, debug=False):
+        '''
+        Run experiments with specified solver for repeated times.
+        Parameters
+        ----------
+        n_splits : int
+            Number of data splits to run experiments on.
+        n_runs : int
+            Number of experiment runs each split.
+        debug : bool
+            Whether to print statistics during training.
+        Returns
+        -------
+        acc : float
+            Mean Accuracy.
+        std : float
+            Standard Deviation.
+
+        '''
         total_runs = n_runs * n_splits
         assert n_splits <= len(self.split_seeds)
         assert total_runs <= len(self.train_seeds)

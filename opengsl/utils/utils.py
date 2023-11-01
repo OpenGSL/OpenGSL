@@ -245,3 +245,9 @@ def get_label_informativeness(_label, adj):
                 LI_1 += p[i][j] * torch.log(p[i][j] / (p_[i] * p_[j]))
 
     return -LI_1 / LI_2
+
+def one_hot(y):
+    device = y.device
+    c = y.max() + 1
+    e = torch.eye(c)
+    return e[y].to(device)

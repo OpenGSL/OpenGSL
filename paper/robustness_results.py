@@ -28,7 +28,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 from opengsl.config import load_conf
 from opengsl.data import Dataset
 from opengsl import ExpManager
-from opengsl.method import *
+from opengsl.module import *
 from opengsl.utils.utils import scipy_sparse_to_sparse_tensor
 import torch
 

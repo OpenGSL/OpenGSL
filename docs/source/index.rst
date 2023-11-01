@@ -8,7 +8,10 @@ OpenGSL Documentation
 
 **OpenGSL** is a benchmark for Graph Structure Learning.
 
-.. figure:: img/timeline.png
+.. figure:: img/timeline.jpg
+   :align: center
+
+.. figure:: img/package.jpg
    :align: center
 
 It provides a fair and comprehensive platform to evaluate existing GSL works and facilitate future GSL researches.
@@ -42,13 +45,13 @@ If you use our benchmark in your works, we would appreciate citations to the pap
 
 .. toctree::
    :glob:
-   :maxdepth: 1
+   :maxdepth: 3
    :caption: Modules
 
    opengsl.config
    opengsl.data
    opengsl.expmanager
-   opengsl.method
+   opengsl.module
    opengsl.utils
 
 Indices and tables

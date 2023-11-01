@@ -66,22 +66,22 @@ pip install -e .
 
 You can use the command `python examples/gcn_cora.py` or follow the 4 steps.
 
-The following example shows you how to perform GCN on the Cora dataset. 
+The following example shows you how to run [GRCN](https://arxiv.org/abs/1911.07123) on the Cora dataset. 
 
 #### Step 1: Load configuration
 
 ``` python
 import opengsl
-conf = opengsl.config.load_conf(method="gcn", dataset="cora")
+conf = opengsl.config.load_conf(method="grcn", dataset="cora")
 ```
 
-##### Method and Dataset parameters in Built-in configuration
+##### Method and Dataset parameters in Built-in configuration (Updated Frequently)
 
 **method** ： 
-`gcn`, `prognn`, `idgl`, `grcn`, `gaug`, `slaps`, `gt`,  `nodeformer`, `gen`, `cogsl`, `segsl`, `sublime`, `stable`
+`gcn`, `prognn`, `idgl`, `grcn`, `gaug`, `slaps`, `nodeformer`, `gen`, `cogsl`, `segsl`, `sublime`, `stable`, `wsgnn`
 
 **dataset** ： 
-`cora`, `pubmed`, `citeseer`, `blogcatalog`, `flickr`, `amazon-ratings`, `questions`,  `minesweeper`, `roman-empire`, `wiki-cooc`
+`cora`, `pubmed`, `citeseer`, `blogcatalog`, `flickr`, `amazon-ratings`, `questions`,  `minesweeper`, `roman-empire`, `wiki-cooc`, `wikics`
 
 
 #### Step 2: Load data
@@ -91,7 +91,7 @@ dataset = opengsl.data.Dataset("cora", n_splits=1, feat_norm=conf.dataset['feat_
 
 #### Step 3: Build Model
 ``` python
-solver = opengsl.method.GCNSolver(conf,dataset)
+solver = opengsl.method.GRCNSolver(conf,dataset)
 ```
 
 #### Step 4: Training and Evaluation
@@ -100,10 +100,12 @@ exp = opengsl.ExpManager(solver)
 exp.run(n_runs = 10)
 ```
 
-## Adding New GSL Method
+## Build Your Own GSL
 if you want to use your own GSL method, see [customized_gsl.py](https://github.com/OpenGSL/OpenGSL/blob/main/examples/customized_gsl.py) for detail.
 
 ## Update
+2023.10.8 **A General GSL Pipeline** enabled.
+
 2023.9.26 A New GSL method GLCN added.
 
 2023.9.15 New synthetic datasets to control the neighborhood pattern.

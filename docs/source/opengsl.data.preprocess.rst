@@ -4,5 +4,5 @@ opengsl.data.preprocess
 
 
 .. automodule:: opengsl.data.preprocess
-   :members: control_homophily, normalize
+   :members: control_homophily
    :show-inheritance:

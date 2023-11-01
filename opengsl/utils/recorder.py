@@ -10,7 +10,7 @@ class Recorder:
     patience : int
         The maximum epochs to keep training since last improvement.
     criterion : str
-        The criterion to determine whether whether the training has improvement.
+        The criterion to determine whether the training has improvement.
         - ``None``: Improvement will be considered achieved in any case.
         - ``loss``: Improvement will be considered achieved when loss decreases.
         - ``metric``: Improvement will be considered achieved when metric increases.
