@@ -19,8 +19,8 @@ from opengsl.module.solver.SLAPSSolver import SLAPSSolver
 from opengsl.module.solver.GENSolver import GENSolver
 from opengsl.module.solver.GTSolver import GTSolver
 from opengsl.module.solver.NODEFORMERSolver import NODEFORMERSolver
-from opengsl.module.solver.COGSL import COGSLSolver
+from opengsl.module.solver.COGSLSolver import COGSLSolver
 from opengsl.module.solver.SUBLIMESolver import SUBLIMESolver
 from opengsl.module.solver.STABLESolver import STABLESolver
 from opengsl.module.solver.SEGSLSolver import SEGSLSolver
-from opengsl.module.solver.BMGCN import BMGCNSolver
+from opengsl.module.solver.BMGCNSolver import BMGCNSolver

@@ -40,7 +40,7 @@ class BMGCNSolver(Solver):
     def __init__(self, conf, dataset):
         super().__init__(conf, dataset)
         self.method_name = "bmgcn"
-        print("Solver Version : [{}]".format("grcn"))
+        print("Solver Version : [{}]".format("bmgcn"))
         self.adj = self.adj.to_dense()
         self.adj = self.adj + torch.eye(self.adj.shape[0], device=self.device) * self.conf.self_loop
 
