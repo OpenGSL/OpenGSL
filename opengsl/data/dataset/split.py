@@ -3,6 +3,9 @@ This file is to split Coauthor/Amazon dataset
 '''
 
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
+import torch
+
 
 def sample_per_class(labels, num_examples_per_class, forbidden_indices=None):
     num_samples = len(labels)
@@ -63,3 +66,21 @@ def get_split(labels, train_examples_per_class=None, val_examples_per_class=None
         assert len(np.concatenate((train_indices, val_indices, test_indices))) == num_samples
 
     return train_indices, val_indices, test_indices
+
+
+def k_fold(dataset, folds):
+    skf = StratifiedKFold(folds, shuffle=True, random_state=6789)
+
+    test_indices, train_indices = [], []
+    for _, idx in skf.split(torch.zeros(len(dataset)), dataset.data.y):
+        test_indices.append(torch.from_numpy(idx).to(torch.long))
+
+    val_indices = [test_indices[i - 1] for i in range(folds)]   # 这一步可能不严谨
+
+    for i in range(folds):
+        train_mask = torch.ones(len(dataset), dtype=torch.bool)
+        train_mask[test_indices[i]] = 0
+        train_mask[val_indices[i]] = 0
+        train_indices.append(train_mask.nonzero(as_tuple=False).view(-1))
+
+    return train_indices, test_indices, val_indices

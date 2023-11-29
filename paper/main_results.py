@@ -5,11 +5,7 @@ import pandas as pd
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data', type=str, default='cora',
-                    choices=['cora', 'pubmed', 'citeseer', 'amazoncom', 'amazonpho',
-                             'coauthorcs', 'coauthorph', 'amazon-ratings', 'questions', 'chameleon-filtered',
-                             'squirrel-filtered', 'minesweeper', 'roman-empire', 'wiki-cooc', 'penn94',
-                             'blogcatalog', 'flickr', 'wikics', 'ogbn-arxiv', 'csbm20', 'csbm40', 'csbm60', 'csbm80', 'regression'], help='dataset')
+parser.add_argument('--data', type=str, default='cora', help='dataset')
 parser.add_argument('--method', type=str, default='gcn', help="Select methods")
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_false')

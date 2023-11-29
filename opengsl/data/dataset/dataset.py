@@ -1,7 +1,7 @@
 import torch
-from .pyg_load import pyg_load_dataset
-from .hetero_load import hetero_load
-from .split import get_split
+from opengsl.data.dataset.pyg_load import pyg_load_dataset
+from opengsl.data.dataset.hetero_load import hetero_load
+from opengsl.data.dataset.split import get_split, k_fold
 from opengsl.data.preprocess.knn import knn
 from opengsl.module.functional import normalize
 import numpy as np
@@ -9,6 +9,8 @@ from opengsl.data.preprocess.control_homophily import control_homophily
 import pickle
 import os
 import urllib.request
+from torch_geometric.utils import degree
+import torch_geometric.transforms as T
 # from ogb.nodeproppred import PygNodePropPredDataset
 
 
@@ -38,10 +40,14 @@ class Dataset:
         self.name = data
         self.path = path
         self.device = torch.device('cuda')
+        self.single_graph = True
         self.train_percent = train_percent
         self.val_percent = val_percent
         self.prepare_data(data, feat_norm, verbose)
-        self.split_data(n_splits, verbose)
+        if self.single_graph:
+            self.split_data(n_splits, verbose)
+        else:
+            self.split_graphs(n_splits, verbose)
         if homophily_control:
             self.adj = control_homophily(self.adj, self.labels.cpu().numpy(), homophily_control)
         # zero knowledge on structure
@@ -184,16 +190,46 @@ class Dataset:
             self.n_classes = 1
             self.masks = masks
 
+        elif ds_name in ["IMDB-BINARY", "REDDIT-BINARY", "COLLAB", "IMDB-MULTI"]:
+            # graph level
+            self.single_graph = False
+            self.data_raw = pyg_load_dataset(ds_name, path=self.path)
+            if self.data_raw.data.x is None:
+                # 如果没有节点特征，使用度数作为节点特征
+                # 所有图的最大度数
+                max_degree = 0
+                degs = []
+                for data in self.data_raw:
+                    degs += [degree(data.edge_index[0], dtype=torch.long)]
+                    max_degree = max(max_degree, degs[-1].max().item())
+
+                # 两种安排度数特征的方式
+                if max_degree < 1000:
+                    self.data_raw.transform = T.OneHotDegree(max_degree)
+                else:
+                    deg = torch.cat(degs, dim=0).to(torch.float)
+                    mean, std = deg.mean().item(), deg.std().item()
+                    self.data_raw.transform = NormalizedDegree(mean, std)
+            self.n_graphs = len(self.data_raw)
+            self.n_classes = self.data_raw.num_classes
+            self.dim_feats = self.data_raw[0].x.shape[1]
+
         else:
             print('dataset not implemented')
             exit(0)
 
         if verbose:
-            print("""----Data statistics------'
-                #Nodes %d
-                #Edges %d
-                #Classes %d""" %
-                  (self.n_nodes, self.n_edges, self.n_classes))
+            if self.single_graph:
+                print("""----Data statistics------'
+                    #Nodes %d
+                    #Edges %d
+                    #Classes %d""" %
+                      (self.n_nodes, self.n_edges, self.n_classes))
+            else:
+                print("""----Data statistics------'
+                                    #Graphs %d
+                                    #Classes %d""" %
+                      (self.n_graphs, self.n_classes))
 
         self.num_targets = self.n_classes
         if self.num_targets == 2:
@@ -297,3 +333,38 @@ class Dataset:
                 #Val samples %d
                 #Test samples %d""" %
                   (n_splits, len(self.train_masks[0]), len(self.val_masks[0]), len(self.test_masks[0])))
+
+    def split_graphs(self, n_splits, verbose=True):
+        '''
+        Function to conduct data splitting for graph-level datasets.
+
+        Parameters
+        ----------
+        n_splits : int
+            Number of data splits.
+        verbose : bool
+            Whether to print statistics.
+
+        '''
+        self.train_masks = []
+        self.val_masks = []
+        self.test_masks = []
+        for fold, (train_idx, test_idx, val_idx) in enumerate(zip(*k_fold(self.data_raw, n_splits))):
+            self.train_masks.append(train_idx)
+            self.val_masks.append(val_idx)
+            self.test_masks.append(test_idx)
+
+class NormalizedDegree(object):
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, data):
+        deg = degree(data.edge_index[0], dtype=torch.float)
+        deg = (deg - self.mean) / self.std
+        data.x = deg.view(-1, 1)
+        return data
+
+
+if __name__ == '__main__':
+    Dataset('IMDB-BINARY', n_splits=10)
