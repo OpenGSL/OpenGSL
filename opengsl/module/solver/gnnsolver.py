@@ -190,7 +190,7 @@ class LPASolver(Solver):
         '''
         self.model = LPA(self.conf.model['n_layers'], self.conf.model['alpha']).to(self.device)
         self.normalize = normalize if self.conf.dataset['normalize'] else lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'], sparse=self.conf.dataset['sparse'])
+        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
     def learn(self, split=None, debug=False):
         '''
