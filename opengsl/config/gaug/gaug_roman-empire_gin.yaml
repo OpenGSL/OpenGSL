@@ -7,9 +7,7 @@ model:
   act: F.relu # [relu, elu, gelu, leakyrelu, identity]
   dropout: 0.5
   input_dropout: 0
-  norm:
-    flag: false
-    norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  norm: ~
   input_layer: false
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
@@ -24,9 +22,7 @@ gsl:
   act: 'lambda x: x' # [relu, elu, gelu, leakyrelu, identity]
   dropout: 0
   input_dropout: 0
-  norm:
-    flag: false
-    norm_type: LayerNorm # [LayerNorm, BatchNorm1d]
+  norm: ~
   input_layer: false
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions

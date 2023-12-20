@@ -272,9 +272,10 @@ class GCNEncoder(nn.Module):
         self.input_layer = input_layer
         self.output_layer = output_layer
         self.n_linear = n_linear
-        self.norm = norm
-        if norm:
-            self.norm_type = eval('nn.'+norm['norm_type'])
+        if norm is None:
+            norm = {'flag':False, 'norm_type':'LayerNorm'}
+        self.norm_flag = norm['flag']
+        self.norm_type = eval('nn.' + norm['norm_type'])
         self.act = eval(act)
         if input_layer:
             self.input_linear = nn.Linear(in_features=nfeat, out_features=nhid)
@@ -283,7 +284,7 @@ class GCNEncoder(nn.Module):
             self.output_linear = nn.Linear(in_features=nhid, out_features=nclass)
             self.output_normalization = self.norm_type(nhid)
         self.convs = nn.ModuleList()
-        if self.norm:
+        if self.norm_flag:
             self.norms = nn.ModuleList()
         else:
             self.norms = None
@@ -301,7 +302,7 @@ class GCNEncoder(nn.Module):
             self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act,
                                                     weight_initializer=weight_initializer, bias_initializer=bias_initializer,
                                                     bias=bias))
-            if self.norm:
+            if self.norm_flag:
                 self.norms.append(self.norm_type(in_hidden))
         self.convs[-1].last_layer = True
 
@@ -328,7 +329,7 @@ class GCNEncoder(nn.Module):
             x = self.input_drop(x)
             x = self.act(x)
         for i, layer in enumerate(self.convs):
-            if self.norm:
+            if self.norm_flag:
                 x_res = self.norms[i](x)
                 x_res = layer(x_res, adj)
                 x = x + x_res

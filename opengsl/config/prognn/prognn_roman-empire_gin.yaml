@@ -7,9 +7,7 @@ model:
   n_hidden: 32
   dropout: 0.5
   input_dropout: 0
-  norm:
-    flag: false
-    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
+  norm: ~
   input_layer: false
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions

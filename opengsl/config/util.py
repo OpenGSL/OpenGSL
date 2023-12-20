@@ -37,7 +37,7 @@ def load_conf(path:str = None, method:str = None, dataset:str = None):
             raise KeyError("The configuration file is not provided.")
     
     conf = open(path, "r").read()
-    conf = yaml.safe_load(conf)
+    conf = yaml.load(conf)
     
     import nni
     if nni.get_trial_id()!="STANDALONE":

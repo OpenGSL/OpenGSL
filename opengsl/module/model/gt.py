@@ -116,7 +116,7 @@ class GT(nn.Module):
         self.use_residual = use_redisual
         self.ff = ff
         self.norm_type = eval('nn.' + norm_type)
-        self.act = eval('F.' + act) if not act == 'identity' else lambda x: x
+        self.act = eval(act) if not act == 'identity' else lambda x: x
         if input_layer:
             self.input_linear = nn.Linear(in_features=nfeat, out_features=nhid)
             self.input_drop = nn.Dropout(input_dropout)

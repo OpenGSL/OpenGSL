@@ -190,7 +190,7 @@ class Dataset:
             self.n_classes = 1
             self.masks = masks
 
-        elif ds_name in ["IMDB-BINARY", "REDDIT-BINARY", "COLLAB", "IMDB-MULTI"]:
+        else:
             # graph level
             self.single_graph = False
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
@@ -213,10 +213,6 @@ class Dataset:
             self.n_graphs = len(self.data_raw)
             self.n_classes = self.data_raw.num_classes
             self.dim_feats = self.data_raw[0].x.shape[1]
-
-        else:
-            print('dataset not implemented')
-            exit(0)
 
         if verbose:
             if self.single_graph:

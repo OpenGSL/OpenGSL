@@ -198,7 +198,7 @@ class GAUGSolver(Solver):
         print('Time(s): {:.4f}'.format(self.total_time))
         self.model.load_state_dict(self.weights)
         with torch.no_grad():
-            hidden, output = self.model.nc_net((self.feats, self.normalized_adj, False))
+            output = self.model.nc_net(self.feats, self.normalized_adj)
             loss_test = self.loss_fn(output[self.test_mask], self.labels[self.test_mask])
         acc_test = self.metric(self.labels[self.test_mask].cpu().numpy(), output[self.test_mask].detach().cpu().numpy())
         self.result['test'] = acc_test
