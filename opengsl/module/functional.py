@@ -77,6 +77,7 @@ def row_nomalize(mx):
 
 
 def row_normalize_sp(mx):
+    adj = mx.coalesce()
     inv_sqrt_degree = 1. / (torch.sparse.sum(mx, dim=1).values() + 1e-12)
     D_value = inv_sqrt_degree[adj.indices()[0]]
     new_values = adj.values() * D_value
@@ -88,7 +89,7 @@ def normalize_sp_tensor_tractable(adj, add_loop=True):
     device = adj.device
     if add_loop:
         adj = adj + torch.eye(n, device=device).to_sparse()
-        adj = adj.coalesce()
+    adj = adj.coalesce()
     inv_sqrt_degree = 1. / (torch.sqrt(torch.sparse.sum(adj, dim=1).values()) + 1e-12)
     D_value = inv_sqrt_degree[adj.indices()[0]] * inv_sqrt_degree[adj.indices()[1]]
     new_values = adj.values() * D_value
