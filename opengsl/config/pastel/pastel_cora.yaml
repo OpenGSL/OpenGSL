@@ -1,0 +1,46 @@
+model:
+  n_layers: 2
+  n_linear: 1 # layers of linear per gcn layer
+  n_hidden: 16
+  act: F.relu # [relu, elu, gelu, leakyrelu]
+  dropout: 0.5
+  feat_adj_dropout: 0.5
+  norm:
+    flag: false
+    norm_type: BatchNorm1d # [LayerNorm, BatchNorm1d]
+  spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
+  graph_learn_hidden_size: 70
+  graph_learn_topk: null
+  graph_learn_epsilon: 4e-5
+  graph_learn_num_pers: 4
+  graph_skip_conn: 0.8
+
+
+dataset:
+  cora_split: false # for cora,citeseer and pubmed
+  feat_norm: true
+  normalize: true
+  add_loop: true
+  sparse: true
+#  homophily_control: 0.8
+
+training:
+  data_cpu: false # whether data should be placed in cpu instead of gpu to save space
+  n_epochs: 1000
+  lr: 1e-2
+  weight_decay: 5e-4
+  smoothness_ratio: 0.2
+  degree_ratio: 0
+  sparsity_ratio: 0
+  pe_every_epochs: 50
+  gpr_every_epochs: 50
+  patience: ~
+  criterion: metric
+
+# analysis
+analysis:
+  flag: false
+  project: gsl
+  save_graph: false
+  load_graph: false
+  load_graph_path: results/graph/pastel
