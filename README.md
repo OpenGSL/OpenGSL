@@ -106,6 +106,10 @@ OpenGSL provides an easy way to build GSL algorithm based on several components.
 if you want to learn how to build own GSL method, see [Build Your Own GSL.ipynb](https://github.com/OpenGSL/OpenGSL/blob/main/examples/Build%20Your%20Own%20GSL.ipynb) for more details.
 
 ## 📱️Updates
+2023.12.21 Update new method PASTEL(CIKM22).
+
+2023.11.27 Update new method PROSE(KDD23).
+
 2023.11.1 Version 0.0.6 available!
 * **A General GSL model** added. 
 * New GSL methods WSGNN, GLCN and BMGCN added.
