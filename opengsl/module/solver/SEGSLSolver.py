@@ -69,7 +69,7 @@ class SEGSLSolver(Solver):
 
         print('Optimization Finished!')
         print('Time(s): {:.4f}'.format(self.total_time))
-        loss_test, acc_test, _, _ = self.test()
+        loss_test, acc_test, _ = self.test()
         self.result['test'] = acc_test
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         return self.result, self.best_graph
@@ -224,5 +224,5 @@ class SEGSLSolver(Solver):
            Output of the model.
         '''
         self.model.load_state_dict(self.weights)
-        normalized_adj = normalize(self.best_graph, add_loop=False, sparse=True)
+        normalized_adj = normalize(self.best_graph, add_loop=False)
         return self.evaluate(self.test_mask, normalized_adj)

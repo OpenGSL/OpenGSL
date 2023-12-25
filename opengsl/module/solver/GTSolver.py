@@ -139,7 +139,7 @@ class GTSolver(Solver):
         homo_heads
         '''
         self.model.load_state_dict(self.weights)
-        return self.evaluate(self.test_mask, graph_analysis=self.conf.analysis['graph_analysis'])
+        return self.evaluate(self.test_mask)
 
     def set_method(self):
         '''

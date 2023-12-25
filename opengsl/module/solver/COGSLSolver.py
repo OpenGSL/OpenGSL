@@ -274,6 +274,6 @@ class COGSLSolver(Solver):
         '''
         self.model.cls.encoder_v.load_state_dict(self.weights)
         self.model.eval()
-        self.view = self.best_graph
+        self.view = self.adjs['final']
 
         return self.evaluate(self.test_mask)

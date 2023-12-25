@@ -206,7 +206,7 @@ class GENSolver(Solver):
             Output of the model.
         '''
         self.model.load_state_dict(self.weights)
-        normalized_adj = normalize(self.best_graph)
+        normalized_adj = normalize(self.adjs['final'])
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
