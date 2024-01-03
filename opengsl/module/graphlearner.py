@@ -161,10 +161,10 @@ class AttLearner(GraphLearner):
         encoder = AttentiveEncoder(n_layers, isize, act)
         metric = WeightedCosine(isize, 1, False)
         knn = KNN(k + 1)
-        self.non_linear = NonLinear('relu', i)
-        postprocess = [knn, self.non_linear]
-
+        non_linear = NonLinear('relu', i)
+        postprocess = [knn, non_linear]
         super(AttLearner, self).__init__(encoder, metric, postprocess)
+        self.non_linear = non_linear
         self.k = k
         self.sparse = sparse
 
@@ -226,11 +226,12 @@ class MLPLearner(GraphLearner):
         encoder.param_init()
         metric = Cosine()
         knn = KNN(k + 1)
-        self.non_linear = NonLinear('relu', i)
-        postprocess = [knn, self.non_linear]
+        non_linear = NonLinear('relu', i)
+        postprocess = [knn, non_linear]
         super(MLPLearner, self).__init__(encoder, metric, postprocess)
         self.k = k
         self.sparse = sparse
+        self.non_linear = non_linear
 
 
     def forward(self, x):

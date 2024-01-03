@@ -64,9 +64,9 @@ class Classification(nn.Module):
             self.encoder_v2 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
             self.encoder_v = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
 
-    def forward(self, feat, view_, flag):
+    def forward(self, feat, view, flag):
         if not self.pyg:
-            view = view_.to_dense()
+            view = view.to_dense()
         if (self.num_class == 1):
             if flag == "v1":
                 prob = F.sigmoid(self.encoder_v1(feat, view))
