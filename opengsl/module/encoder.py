@@ -264,7 +264,7 @@ class GCNEncoder(nn.Module):
     '''
     def __init__(self, nfeat, nclass, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool=False, pyg=False):
+                 bias_initializer=None, bias=True, pool='max', pyg=False):
 
         super(GCNEncoder, self).__init__()
 
@@ -311,7 +311,7 @@ class GCNEncoder(nn.Module):
                 self.norms.append(self.norm_type(out_hidden))
         self.convs[-1].last_layer = True
 
-    def forward(self, data, adj=None, return_mid=False):
+    def forward(self, data, adj=None, return_mid=False, use_edge_attr=True):
         '''
         Parameters
         ----------
@@ -333,7 +333,7 @@ class GCNEncoder(nn.Module):
             assert self.pyg
             x, edge_index, batch = data.x, data.edge_index, data.batch
             edge_attr = None
-            if data.edge_attr is not None and len(data.edge_attr.shape) == 1:
+            if use_edge_attr and data.edge_attr is not None and len(data.edge_attr.shape) == 1:
                 edge_attr = data.edge_attr
             if self.input_layer:
                 x = self.input_linear(x)
@@ -345,8 +345,10 @@ class GCNEncoder(nn.Module):
                     x = self.norms[i](x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
                 x = self.act(x)
-            if self.pool:
+            if self.pool == 'max':
                 x = global_max_pool(x, batch)
+            elif self.pool == 'mean':
+                x = global_mean_pool(x, batch)
             if self.output_layer:
                 x = self.output_linear(x)
             return x

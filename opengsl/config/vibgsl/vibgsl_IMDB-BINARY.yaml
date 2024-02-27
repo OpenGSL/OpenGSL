@@ -1,0 +1,49 @@
+model:
+  n_hidden: 16
+  n_IB: 16
+  feature_denoise: false
+  self_loop: true
+
+training:
+  device: cuda
+  lr: 1e-3
+  n_epochs: 200
+  weight_decay: 5e-5
+  patience: ~
+  criterion: metric
+  batch_size: 100
+  test_batch_size: 256
+  metric: acc
+  lr_decay_step_size: 50
+  lr_decay_factor: 0.5
+  beta: 0.00001
+
+tune:
+  flag: true
+  study: test
+  database: ~
+  params:
+    n_layers:
+      type: categorical
+      values: [2,3,4,5]
+    n_hidden:
+      type: categorical
+      values: [32,64,128]
+    dropout:
+      type: categorical
+      values: [0,0.2,0.5,0.8]
+    lr:
+      type: categorical
+      values: [1e-1,1e-2,1e-3,1e-4]
+    weight_decay:
+      type: categorical
+      values: [5e-4,5e-5,5e-6,0]
+    batch_size:
+      type: categorical
+      values: [32,64,128,256]
+    epsilon:
+      type: categorical
+      values: [0,0.2,0.5,0.8]
+    skip_conn:
+      type: categorical
+      values: [0,0.2,0.5,0.8 ]
