@@ -47,6 +47,6 @@ def pyg_load_dataset(name, path='./data/'):
         dataset = AttributedGraphDataset(root=path, name=name)
     elif 'csbm' in name:
         dataset = dataset_ContextualSBM(root=path, name=name)
-    else:
-        dataset = TUDataset(root=path, name=name)
+    elif name in ["IMDB-BINARY", "IMDB-MULTI", "REDDIT-BINARY", "REDDIT-MULTI-5K", "COLLAB", "DBLP_v1", "DD", "ENZYMES", "PROTEINS", "MUTAG", "NCI1", "NCI109", "Mutagenicity", "FRANKENSTEIN"]:
+        dataset = TUDataset(root=path, name=name, use_edge_attr=False)
     return dataset

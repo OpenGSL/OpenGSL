@@ -60,7 +60,7 @@ class NODEFORMERSolver(Solver):
         self.model.reset_parameters()
         self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=self.conf.training['weight_decay'], lr=self.conf.training['lr'])
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of Nodeformer.
 

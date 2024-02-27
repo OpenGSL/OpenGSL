@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn.dense.linear import Linear
+from torch_geometric.nn import GCNConv, global_mean_pool, global_max_pool
+from torch_geometric.data import Batch
 from torch_geometric.nn import inits
 import torch.nn.init as init
 from sklearn.neighbors import kneighbors_graph
@@ -231,7 +233,7 @@ class GCNEncoder(nn.Module):
     ----------
     nfeat : int
         Dimensions of input features.
-    nhid : int
+    n_hidden : int
         Dimensions of hidden representations.
     nclass : int
         Dimensions of output representations.
@@ -260,9 +262,9 @@ class GCNEncoder(nn.Module):
     bias : bool
         Whether to add bias to linear transform in GCN.
     '''
-    def __init__(self, nfeat, nhid, nclass, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
+    def __init__(self, nfeat, nclass, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True):
+                 bias_initializer=None, bias=True, pool=False, pyg=False):
 
         super(GCNEncoder, self).__init__()
 
@@ -272,17 +274,19 @@ class GCNEncoder(nn.Module):
         self.input_layer = input_layer
         self.output_layer = output_layer
         self.n_linear = n_linear
+        self.dropout = dropout
+        self.pool = pool
+        self.pyg = pyg
         if norm is None:
             norm = {'flag':False, 'norm_type':'LayerNorm'}
         self.norm_flag = norm['flag']
         self.norm_type = eval('nn.' + norm['norm_type'])
         self.act = eval(act)
         if input_layer:
-            self.input_linear = nn.Linear(in_features=nfeat, out_features=nhid)
+            self.input_linear = nn.Linear(in_features=nfeat, out_features=n_hidden)
             self.input_drop = nn.Dropout(input_dropout)
         if output_layer:
-            self.output_linear = nn.Linear(in_features=nhid, out_features=nclass)
-            self.output_normalization = self.norm_type(nhid)
+            self.output_linear = nn.Linear(in_features=n_hidden, out_features=nclass)
         self.convs = nn.ModuleList()
         if self.norm_flag:
             self.norms = nn.ModuleList()
@@ -293,20 +297,21 @@ class GCNEncoder(nn.Module):
             if i == 0 and not self.input_layer:
                 in_hidden = nfeat
             else:
-                in_hidden = nhid
+                in_hidden = n_hidden
             if i == n_layers - 1 and not self.output_layer:
                 out_hidden = nclass
             else:
-                out_hidden = nhid
+                out_hidden = n_hidden
 
-            self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act,
-                                                    weight_initializer=weight_initializer, bias_initializer=bias_initializer,
-                                                    bias=bias))
+            if self.pyg:
+                self.convs.append(GCNConv(in_hidden, out_hidden, bias=bias))
+            else:
+                self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act, weight_initializer=weight_initializer, bias_initializer=bias_initializer, bias=bias))
             if self.norm_flag:
-                self.norms.append(self.norm_type(in_hidden))
+                self.norms.append(self.norm_type(out_hidden))
         self.convs[-1].last_layer = True
 
-    def forward(self, x, adj, return_mid=False):
+    def forward(self, data, adj=None, return_mid=False):
         '''
         Parameters
         ----------
@@ -324,26 +329,49 @@ class GCNEncoder(nn.Module):
             hidden representations. Returned when `return_mid` is True.
 
         '''
-        if self.input_layer:
-            x = self.input_linear(x)
-            x = self.input_drop(x)
-            x = self.act(x)
-        for i, layer in enumerate(self.convs):
-            if self.norm_flag:
-                x_res = self.norms[i](x)
-                x_res = layer(x_res, adj)
-                x = x + x_res
-            else:
-                x = layer(x,adj)
-            if i != self.n_layers - 1:
-                mid = x
-        if self.output_layer:
-            x = self.output_normalization(x)
-            x = self.output_linear(x).squeeze(1)
-        if return_mid:
-            return mid, x.squeeze(1)
+        if isinstance(data, Batch):
+            assert self.pyg
+            x, edge_index, batch = data.x, data.edge_index, data.batch
+            edge_attr = None
+            if data.edge_attr is not None and len(data.edge_attr.shape) == 1:
+                edge_attr = data.edge_attr
+            if self.input_layer:
+                x = self.input_linear(x)
+                x = self.input_drop(x)
+                x = self.act(x)
+            for i, layer in enumerate(self.convs):
+                x = layer(x=x, edge_index=edge_index, edge_weight=edge_attr)
+                if self.norms:
+                    x = self.norms[i](x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+                x = self.act(x)
+            if self.pool:
+                x = global_max_pool(x, batch)
+            if self.output_layer:
+                x = self.output_linear(x)
+            return x
         else:
-            return x.squeeze(1)
+            x = data
+            if self.input_layer:
+                x = self.input_linear(x)
+                x = self.input_drop(x)
+                x = self.act(x)
+            for i, layer in enumerate(self.convs):
+                if self.norm_flag:
+                    x_res = self.norms[i](x)
+                    x_res = layer(x_res, adj)
+                    x = x + x_res
+                else:
+                    x = layer(x,adj)
+                if i != self.n_layers - 1:
+                    mid = x
+            if self.output_layer:
+                x = self.output_normalization(x)
+                x = self.output_linear(x).squeeze(1)
+            if return_mid:
+                return mid, x.squeeze(1)
+            else:
+                return x.squeeze(1)
 
 
 class APPNPEncoder(nn.Module):

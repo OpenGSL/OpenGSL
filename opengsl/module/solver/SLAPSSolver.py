@@ -40,7 +40,7 @@ class SLAPSSolver(Solver):
         self.method_name = "slaps"
         print("Solver Version : [{}]".format("slaps"))
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of SLAPS.
 

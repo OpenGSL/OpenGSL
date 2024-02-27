@@ -197,7 +197,7 @@ class IDGLSolver(Solver):
         graph_loss += self.conf.training['sparsity_ratio'] * norm_regularizer(out_adj, 'fro') / (out_adj.shape[0]*out_adj.shape[1])
         return graph_loss
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of IDGL.
 

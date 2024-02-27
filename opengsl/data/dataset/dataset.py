@@ -2,7 +2,6 @@ import torch
 from opengsl.data.dataset.pyg_load import pyg_load_dataset
 from opengsl.data.dataset.hetero_load import hetero_load
 from opengsl.data.dataset.split import get_split, k_fold
-from opengsl.data.preprocess.knn import knn
 from opengsl.module.functional import normalize
 import numpy as np
 from opengsl.data.preprocess.control_homophily import control_homophily
@@ -11,7 +10,6 @@ import os
 import urllib.request
 from torch_geometric.utils import degree
 import torch_geometric.transforms as T
-# from ogb.nodeproppred import PygNodePropPredDataset
 
 
 class Dataset:
@@ -36,7 +34,7 @@ class Dataset:
     '''
 
     def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, homophily_control=None, path='./data/',
-                 without_structure=None, train_percent=None, val_percent=None):
+                 train_percent=None, val_percent=None):
         self.name = data
         self.path = path
         self.device = torch.device('cuda')
@@ -50,12 +48,6 @@ class Dataset:
             self.split_graphs(n_splits, verbose)
         if homophily_control:
             self.adj = control_homophily(self.adj, self.labels.cpu().numpy(), homophily_control)
-        # zero knowledge on structure
-        if without_structure:
-            if without_structure == 'i':
-                self.adj = torch.eye(self.n_nodes).to(self.device).to_sparse()
-            elif without_structure == 'knn':
-                self.adj = knn(self.feats, int(self.n_edges//self.n_nodes)).to_sparse()
 
     def prepare_data(self, ds_name, feat_norm=False, verbose=True):
         '''
@@ -190,7 +182,7 @@ class Dataset:
             self.n_classes = 1
             self.masks = masks
 
-        else:
+        elif ds_name in ["IMDB-BINARY", "IMDB-MULTI", "REDDIT-BINARY", "REDDIT-MULTI-5K", "COLLAB", "DBLP_v1", "DD", "ENZYMES", "PROTEINS", "MUTAG", "NCI1", "NCI109", "Mutagenicity", "FRANKENSTEIN"]:
             # graph level
             self.single_graph = False
             self.data_raw = pyg_load_dataset(ds_name, path=self.path)
@@ -210,6 +202,7 @@ class Dataset:
                     deg = torch.cat(degs, dim=0).to(torch.float)
                     mean, std = deg.mean().item(), deg.std().item()
                     self.data_raw.transform = NormalizedDegree(mean, std)
+            self.labels = torch.tensor([g.y for g in self.data_raw])
             self.n_graphs = len(self.data_raw)
             self.n_classes = self.data_raw.num_classes
             self.dim_feats = self.data_raw[0].x.shape[1]
@@ -228,8 +221,6 @@ class Dataset:
                       (self.n_graphs, self.n_classes))
 
         self.num_targets = self.n_classes
-        if self.num_targets == 2:
-            self.num_targets = 1
 
     def split_data(self, n_splits, verbose=True):
         '''
@@ -349,6 +340,7 @@ class Dataset:
             self.train_masks.append(train_idx)
             self.val_masks.append(val_idx)
             self.test_masks.append(test_idx)
+
 
 class NormalizedDegree(object):
     def __init__(self, mean, std):

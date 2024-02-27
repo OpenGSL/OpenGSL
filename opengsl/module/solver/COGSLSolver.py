@@ -147,7 +147,7 @@ class COGSLSolver(Solver):
         loss_v, _ = self.loss_acc(logits_v[self.train_mask], self.labels[self.train_mask])
         return self.conf.model['cls_coe'] * loss_v + (loss_v1 + loss_v2) * (1 - self.conf.model['cls_coe']) / 2, views
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of CoGSL.
 

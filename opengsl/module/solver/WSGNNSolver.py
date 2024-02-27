@@ -39,7 +39,7 @@ class WSGNNSolver(Solver):
         self.method_name = 'wsgnn'
         self.edge_index = self.adj.coalesce().indices()
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of WSGNN.
 

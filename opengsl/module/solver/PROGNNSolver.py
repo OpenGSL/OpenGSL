@@ -147,7 +147,7 @@ class PROGNNSolver(Solver):
             print("Epoch {:05d} | Time(s) {:.4f} | Loss(adj) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
                 epoch+1, time.time() - t, total_loss.item(), loss_val, acc_val, improve))
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of PROGNN.
 

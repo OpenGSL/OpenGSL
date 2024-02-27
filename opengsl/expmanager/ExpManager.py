@@ -52,13 +52,14 @@ class ExpManager:
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             self.save_path = save_path
-        if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
-            assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
-            self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)
-        if 'load_graph' in self.conf.analysis and self.conf.analysis['load_graph']:
-            assert 'load_graph_path' in self.conf.analysis and self.conf.analysis[
-                'load_graph_path'] is not None, 'Specify the path to load graph'
-            self.load_graph_path = self.conf.analysis['load_graph_path']
+        if 'analysis' in self.conf:
+            if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
+                assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
+                self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)
+            if 'load_graph' in self.conf.analysis and self.conf.analysis['load_graph']:
+                assert 'load_graph_path' in self.conf.analysis and self.conf.analysis[
+                    'load_graph_path'] is not None, 'Specify the path to load graph'
+                self.load_graph_path = self.conf.analysis['load_graph_path']
         assert self.save_graph_path is None or self.load_graph_path is None, 'GNN does not save graph, GSL does not load graph'
 
     def run(self, n_splits=1, n_runs=1, debug=False):

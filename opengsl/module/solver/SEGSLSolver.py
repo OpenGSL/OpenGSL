@@ -43,7 +43,7 @@ class SEGSLSolver(Solver):
         self.method_name = "segsl"
         print("Solver Version : [{}]".format("segsl"))
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of SEGSL.
 
