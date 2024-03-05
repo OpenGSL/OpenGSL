@@ -10,7 +10,7 @@ from opengsl.module.encoder import GCNEncoder, MLPEncoder
 
 
 class VIBGSL(nn.Module):
-    def __init__(self, num_node_features, n_hidden, num_classes, n_IB, feature_denoise=False, self_loop=False):
+    def __init__(self, num_node_features, n_hidden, num_classes, n_IB, feature_denoise=False, self_loop=False, eps=0.5, use_edge=False):
         super(VIBGSL, self).__init__()
         self.num_node_features = num_node_features
         self.num_classes = num_classes
@@ -18,6 +18,8 @@ class VIBGSL(nn.Module):
         self.IB_size = n_IB
         self.feature_denoise = feature_denoise
         self.self_loop = self_loop
+        self.eps = eps
+        self.use_edge = use_edge
 
         self.backbone_gnn = GCNEncoder(self.num_node_features, self.IB_size*2, self.hidden_dim, dropout=0, pyg=True, pool='mean')
         self.mlp = MLPEncoder(self.num_node_features, self.hidden_dim, self.hidden_dim, 2, dropout=0, use_bn=False)
@@ -59,8 +61,7 @@ class VIBGSL(nn.Module):
         attention = torch.clamp(attention, 0.01, 0.99)
         weighted_adjacency_matrix = RelaxedBernoulli(temperature=torch.Tensor([0.05]).to(attention.device),
                                                      probs=attention).rsample()
-        eps = 0.5
-        mask = (weighted_adjacency_matrix > eps).detach().float()
+        mask = (weighted_adjacency_matrix > self.eps).detach().float()
         new_adj = weighted_adjacency_matrix * mask + 0.0 * (1 - mask)
 
         # add I
@@ -85,8 +86,8 @@ class VIBGSL(nn.Module):
             new_graphs_list.append(new_graph)
         loader = DataLoader(new_graphs_list, batch_size=len(new_graphs_list))
         batch_data = next(iter(loader))
-        graph_embs = self.backbone_gnn(batch_data, use_edge_attr=False)   # edge attr没用
-        # graph_embs = self.backbone_gnn(batch_data)  # edge attr没用
+        graph_embs = self.backbone_gnn(batch_data, use_edge_attr=self.use_edge)   # edge attr没用
+        # graph_embs = self.backbone_gnn(batch_data)
 
         mu = graph_embs[:, :self.IB_size]
         std = F.softplus(graph_embs[:, self.IB_size:]-self.IB_size, beta=1)

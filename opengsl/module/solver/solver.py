@@ -218,7 +218,7 @@ class Solver:
             # forward and backward
             preds = []
             ground_truth = []
-            # self.model.train()
+            self.model.train()
             for data in train_loader:
                 self.optim.zero_grad()
                 data = data.to(self.device)

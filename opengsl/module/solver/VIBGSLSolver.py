@@ -48,7 +48,6 @@ class VIBGSLSolver(Solver):
         val_loader = DataLoader(val_dataset, self.conf.training['test_batch_size'], shuffle=False)
         test_loader = DataLoader(test_dataset, self.conf.training['test_batch_size'], shuffle=False)
         for epoch in range(self.conf.training['n_epochs']):
-            print(self.model.mlp.lins[0].weight)
             improve = ''
             t0 = time.time()
             loss_train = 0
@@ -140,12 +139,12 @@ class VIBGSLSolver(Solver):
     def generate_graph(self, graphs):
         new_graphs_list = []
         for graph in graphs:
-            x, edge_index = graph.x, graph.edge_index
+            x, edge_index, y = graph.x, graph.edge_index, graph.y
             x = x.to(self.device)
             with torch.no_grad():
-                new_adj = self.model.learn_graph(node_features=x, graph_include_self=self.model.self_loop)
+                _, new_adj = self.model.learn_graph(node_features=x, graph_include_self=self.model.self_loop)
             new_edge_index, new_edge_attr = dense_to_sparse(new_adj)
 
-            new_graph = Data(x=x, edge_index=new_edge_index, edge_attr=new_edge_attr)
+            new_graph = Data(x=x, edge_index=new_edge_index, edge_attr=new_edge_attr, y=y)
             new_graphs_list.append(new_graph)
         return new_graphs_list

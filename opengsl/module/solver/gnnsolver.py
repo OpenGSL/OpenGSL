@@ -136,7 +136,7 @@ class GCNSolver(Solver):
             self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
         else:
             self.model = GCNEncoder(self.dim_feats, self.n_classes, **self.conf.model).to(self.device)
-            self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'])
+            self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
 
 class LPASolver(Solver):
     '''

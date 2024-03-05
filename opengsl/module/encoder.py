@@ -264,7 +264,7 @@ class GCNEncoder(nn.Module):
     '''
     def __init__(self, nfeat, nclass, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool='max', pyg=False):
+                 bias_initializer=None, bias=True, pool='max', pyg=False, residual=False):
 
         super(GCNEncoder, self).__init__()
 
@@ -277,6 +277,9 @@ class GCNEncoder(nn.Module):
         self.dropout = dropout
         self.pool = pool
         self.pyg = pyg
+        self.residual = residual
+        if self.residual:
+            assert self.input_layer and self.output_layer
         if norm is None:
             norm = {'flag':False, 'norm_type':'LayerNorm'}
         self.norm_flag = norm['flag']
@@ -340,11 +343,12 @@ class GCNEncoder(nn.Module):
                 x = self.input_drop(x)
                 x = self.act(x)
             for i, layer in enumerate(self.convs):
-                x = layer(x=x, edge_index=edge_index, edge_weight=edge_attr)
+                x1 = layer(x=x, edge_index=edge_index, edge_weight=edge_attr)
                 if self.norms:
-                    x = self.norms[i](x)
-                x = F.dropout(x, p=self.dropout, training=self.training)
-                x = self.act(x)
+                    x1 = self.norms[i](x1)
+                x1 = F.dropout(x1, p=self.dropout, training=self.training)
+                x1 = self.act(x1)
+                x = x1 + x if self.residual else x1
             if self.pool == 'max':
                 x = global_max_pool(x, batch)
             elif self.pool == 'mean':
