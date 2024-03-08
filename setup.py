@@ -5,8 +5,8 @@ ruamel.yaml
 pandas
 scipy
 scikit-learn
-pyro-api==0.1.2
-pyro-ppl==1.8.0
+pyro-api
+pyro-ppl
 numba
 """
 

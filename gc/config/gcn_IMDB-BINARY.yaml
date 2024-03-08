@@ -1,0 +1,49 @@
+model:
+  n_layers: 4
+  n_hidden: 64
+  dropout: 0.5
+  norm:
+    flag: true
+    norm_type: BatchNorm
+  pool: mean
+  jk: ~
+  output_layer: true
+  n_layers_output: 2
+
+training:
+  device: cuda
+  lr: 1e-3
+  n_epochs: 500
+  weight_decay: 5e-5
+  patience: 100
+  criterion: metric
+  batch_size: 256
+  test_batch_size: 256
+  metric: acc
+other:
+  n_subgraph: 3
+  get_node_value: ~
+
+tune:
+  flag: true
+  study: baseline
+  database: ~
+  params:
+    n_layers:
+      type: categorical
+      values: [2,3,4,5]
+    n_hidden:
+      type: categorical
+      values: [16,32,64,128]
+    dropout:
+      type: categorical
+      values: [0,0.2,0.5,0.8]
+    lr:
+      type: categorical
+      values: [1e-1,1e-2,1e-3,1e-4]
+    weight_decay:
+      type: categorical
+      values: [5e-4,5e-5,5e-6,0]
+    batch_size:
+      type: categorical
+      values: [32,64,128,256]

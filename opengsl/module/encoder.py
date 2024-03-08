@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn.dense.linear import Linear
-from torch_geometric.nn import GCNConv, global_mean_pool, global_max_pool
+from torch_geometric.nn import GCNConv, global_mean_pool, global_max_pool, global_add_pool, JumpingKnowledge
 from torch_geometric.data import Batch
+from torch_geometric.nn.norm import BatchNorm, LayerNorm, GraphNorm
 from torch_geometric.nn import inits
 import torch.nn.init as init
 from sklearn.neighbors import kneighbors_graph
@@ -264,7 +265,7 @@ class GCNEncoder(nn.Module):
     '''
     def __init__(self, nfeat, nclass, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool='max', pyg=False, residual=False):
+                 bias_initializer=None, bias=True, pool='max', pyg=True, residual=False, jk=None, n_layers_output=1):
 
         super(GCNEncoder, self).__init__()
 
@@ -273,6 +274,10 @@ class GCNEncoder(nn.Module):
         self.n_layers = n_layers
         self.input_layer = input_layer
         self.output_layer = output_layer
+        self.jk = None
+        if jk in ['cat', 'max', 'lstm']:
+            self.jk = JumpingKnowledge(jk, n_hidden, n_layers)
+            self.output_layer = True
         self.n_linear = n_linear
         self.dropout = dropout
         self.pool = pool
@@ -281,15 +286,22 @@ class GCNEncoder(nn.Module):
         if self.residual:
             assert self.input_layer and self.output_layer
         if norm is None:
-            norm = {'flag':False, 'norm_type':'LayerNorm'}
+            norm = {'flag':False}
         self.norm_flag = norm['flag']
-        self.norm_type = eval('nn.' + norm['norm_type'])
+        if self.norm_flag:
+            self.norm_type = norm['norm_type']
+            self.supports_norm_batch = self.norm_type in ['LayerNorm', 'GraphNorm']
+            norm_layer = eval(self.norm_type)
+            norm_kwargs = norm['norm_kwargs'] if 'norm_kwargs' in norm else dict()
         self.act = eval(act)
-        if input_layer:
+        if self.input_layer:
             self.input_linear = nn.Linear(in_features=nfeat, out_features=n_hidden)
             self.input_drop = nn.Dropout(input_dropout)
-        if output_layer:
-            self.output_linear = nn.Linear(in_features=n_hidden, out_features=nclass)
+        if self.output_layer:
+            if jk == 'cat':
+                self.output_linear = MLPEncoder(in_channels=n_hidden*n_layers, hidden_channels=n_hidden, out_channels=nclass, n_layers=n_layers_output)
+            else:
+                self.output_linear = MLPEncoder(in_channels=n_hidden, hidden_channels=n_hidden, out_channels=nclass, n_layers=n_layers_output)
         self.convs = nn.ModuleList()
         if self.norm_flag:
             self.norms = nn.ModuleList()
@@ -311,8 +323,9 @@ class GCNEncoder(nn.Module):
             else:
                 self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act, weight_initializer=weight_initializer, bias_initializer=bias_initializer, bias=bias))
             if self.norm_flag:
-                self.norms.append(self.norm_type(out_hidden))
-        self.convs[-1].last_layer = True
+                self.norms.append(norm_layer(in_channels=out_hidden, **norm_kwargs))
+        if not self.pyg:
+            self.convs[-1].last_layer = True
 
     def forward(self, data, adj=None, return_mid=False, use_edge_attr=True):
         '''
@@ -335,24 +348,35 @@ class GCNEncoder(nn.Module):
         if isinstance(data, Batch):
             assert self.pyg
             x, edge_index, batch = data.x, data.edge_index, data.batch
+            xs = []
+            batch_size = data.num_graphs
             edge_attr = None
             if use_edge_attr and data.edge_attr is not None and len(data.edge_attr.shape) == 1:
                 edge_attr = data.edge_attr
             if self.input_layer:
                 x = self.input_linear(x)
-                x = self.input_drop(x)
                 x = self.act(x)
+                x = self.input_drop(x)
             for i, layer in enumerate(self.convs):
                 x1 = layer(x=x, edge_index=edge_index, edge_weight=edge_attr)
-                if self.norms:
-                    x1 = self.norms[i](x1)
-                x1 = F.dropout(x1, p=self.dropout, training=self.training)
-                x1 = self.act(x1)
+                if i < self.n_layers - 1 or self.output_layer:
+                    if self.norms:
+                        if self.supports_norm_batch:
+                            x1 = self.norms[i](x1, batch, batch_size)
+                        else:
+                            x1 = self.norms[i](x1)
+                    x1 = self.act(x1)
+                    x1 = F.dropout(x1, p=self.dropout, training=self.training)
+                if self.jk:
+                    xs.append(x1)
                 x = x1 + x if self.residual else x1
+            x = self.jk(xs) if self.jk else x
             if self.pool == 'max':
                 x = global_max_pool(x, batch)
             elif self.pool == 'mean':
                 x = global_mean_pool(x, batch)
+            elif self.pool == 'add':
+                x = global_add_pool(x, batch)
             if self.output_layer:
                 x = self.output_linear(x)
             return x
