@@ -1,6 +1,7 @@
 import ruamel.yaml as yaml
 import argparse
 import os
+import warnings
 
 
 def load_conf(path:str = None, method:str = None, dataset:str = None):
@@ -22,6 +23,7 @@ def load_conf(path:str = None, method:str = None, dataset:str = None):
         The config file converted to Namespace.
 
     '''
+    warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
     if path == None and method == None:
         raise KeyError
     if path == None and dataset == None:

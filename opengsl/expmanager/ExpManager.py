@@ -4,6 +4,7 @@ from opengsl.utils.logger import Logger
 from opengsl.config.util import save_conf
 import os
 import time as time
+from torch_geometric import seed_everything
 
 
 class ExpManager:
@@ -44,7 +45,6 @@ class ExpManager:
         self.device = torch.device('cuda')
         # you can change random seed here
         self.train_seeds = [i for i in range(400)]
-        self.split_seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         self.save_path = None
         self.save_graph_path = None
         self.load_graph_path = None
@@ -52,13 +52,14 @@ class ExpManager:
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             self.save_path = save_path
-        if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
-            assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
-            self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)
-        if 'load_graph' in self.conf.analysis and self.conf.analysis['load_graph']:
-            assert 'load_graph_path' in self.conf.analysis and self.conf.analysis[
-                'load_graph_path'] is not None, 'Specify the path to load graph'
-            self.load_graph_path = self.conf.analysis['load_graph_path']
+        if 'analysis' in self.conf:
+            if 'save_graph' in self.conf.analysis and self.conf.analysis['save_graph']:
+                assert 'save_graph_path' in self.conf.analysis and self.conf.analysis['save_graph_path'] is not None, 'Specify the path to save graph'
+                self.save_graph_path = os.path.join(self.conf.analysis['save_graph_path'], self.method)
+            if 'load_graph' in self.conf.analysis and self.conf.analysis['load_graph']:
+                assert 'load_graph_path' in self.conf.analysis and self.conf.analysis[
+                    'load_graph_path'] is not None, 'Specify the path to load graph'
+                self.load_graph_path = self.conf.analysis['load_graph_path']
         assert self.save_graph_path is None or self.load_graph_path is None, 'GNN does not save graph, GSL does not load graph'
 
     def run(self, n_splits=1, n_runs=1, debug=False):
@@ -80,6 +81,8 @@ class ExpManager:
             Standard Deviation.
 
         '''
+        if n_splits is None:
+            n_splits = self.solver.dataset.total_splits
         total_runs = n_runs * n_splits
         assert n_splits <= len(self.split_seeds)
         assert total_runs <= len(self.train_seeds)
@@ -89,7 +92,7 @@ class ExpManager:
             for j in range(400):
                 idx = i * n_runs + j
                 print("Exp {}/{}".format(idx, total_runs))
-                set_seed(self.train_seeds[idx])
+                seed_everything(self.train_seeds[j])
 
                 # load graph
                 if self.load_graph_path:
