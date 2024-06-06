@@ -236,6 +236,16 @@ def apply_non_linearity(adj, non_linearity, i):
         raise KeyError('We dont support the non-linearity yet')
 
 
+def removeselfloop(adj):
+    if adj.is_sparse:
+        # TODO
+        pass
+    else:
+        n = adj.shape[0]
+        mask = torch.eye(n).bool().to(adj.device)
+        return adj * ~mask
+
+
 if __name__ == '__main__':
     from torch_geometric import seed_everything
     seed_everything(42)

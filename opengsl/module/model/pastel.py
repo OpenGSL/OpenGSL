@@ -92,7 +92,7 @@ class PASTEL(nn.Module):
                                 epsilon=config.model['graph_learn_epsilon'],
                                 n_pers=config.model['graph_learn_num_pers'])
 
-        self.backbone = GCNEncoder(nfeat=n_feat, nhid=config.model['n_hidden'], nclass=nclass, n_layers=config.model['n_layers'], 
+        self.backbone = GCNEncoder(n_feat=n_feat, nhid=config.model['n_hidden'], n_class=nclass, n_layers=config.model['n_layers'],
                                    dropout=config.model['dropout'], input_layer=False, output_layer=False, spmm_type=0).cuda()
         
         

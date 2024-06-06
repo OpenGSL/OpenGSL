@@ -60,8 +60,8 @@ class Stage_GNN_learner(nn.Module):
         print('Stage Internal type =', internal_type)
         self.internal_type = internal_type
         if self.internal_type == 'gnn':
-            self.encoder1 = GCNEncoder(nfeat=isize, nhid=osize, nclass=osize, n_layers=nlayers, dropout=0,
-                                    input_layer=False, output_layer=False, spmm_type=0, act=act)
+            self.encoder1 = GCNEncoder(n_feat=isize, nhid=osize, n_class=osize, n_layers=nlayers, dropout=0,
+                                       input_layer=False, output_layer=False, spmm_type=0, act=act)
         elif self.internal_type == 'mlp':
             self.encoder1 = MLPEncoder(in_channels=isize, hidden_channels=osize, out_channels=osize, n_layers=nlayers, dropout=0,
                                     activation=act, use_bn=False)
@@ -88,8 +88,8 @@ class Stage_GNN_learner(nn.Module):
 
             self.up_gnn_layers = nn.ModuleList()
             if self.share_up_gnn:
-                self.encoder2 = GCNEncoder(nfeat=osize, nhid=osize, nclass=osize, n_layers=nlayers, dropout=self.dropout_up_gnn,
-                                    input_layer=False, output_layer=False, spmm_type=0, act='F.relu')
+                self.encoder2 = GCNEncoder(n_feat=osize, nhid=osize, n_class=osize, n_layers=nlayers, dropout=self.dropout_up_gnn,
+                                           input_layer=False, output_layer=False, spmm_type=0, act='F.relu')
             else:
                 pass
 

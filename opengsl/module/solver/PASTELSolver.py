@@ -49,7 +49,7 @@ class PASTELSolver(Solver):
         self.adj = normalize(self.adj)
         
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of PASTEL.
 

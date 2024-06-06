@@ -84,7 +84,6 @@ class ExpManager:
         if n_splits is None:
             n_splits = self.solver.dataset.total_splits
         total_runs = n_runs * n_splits
-        assert n_splits <= len(self.split_seeds)
         assert total_runs <= len(self.train_seeds)
         logger = Logger(runs=total_runs)
         succeed = 0

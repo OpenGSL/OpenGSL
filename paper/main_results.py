@@ -32,7 +32,7 @@ if 'without_structure' in conf.dataset and conf.dataset['without_structure']:
     without_structure = conf.dataset['without_structure']
 else:
     without_structure = None
-dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', without_structure=without_structure, n_splits=args.n_splits)
+dataset = Dataset(args.data, feat_norm=conf.dataset['feat_norm'], path='data', n_splits=args.n_splits)
 
 
 method = eval('{}Solver(conf, dataset)'.format(args.method.upper()))

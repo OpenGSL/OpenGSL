@@ -70,8 +70,8 @@ class GraphEncoder(nn.Module):
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
             if conf.model['type']=='gcn':
-                self.model = GCNEncoder(nfeat=in_dim, nhid=hidden_dim, nclass=emb_dim, n_layers=nlayers, dropout=dropout,
-                                 input_layer=False, output_layer=False, spmm_type=0)
+                self.model = GCNEncoder(n_feat=in_dim, nhid=hidden_dim, n_class=emb_dim, n_layers=nlayers, dropout=dropout,
+                                        input_layer=False, output_layer=False, spmm_type=0)
             elif conf.model['type']=='appnp':
                 self.model = APPNPEncoder(in_dim, hidden_dim, emb_dim,
                                     dropout=dropout, K=conf.model['K'],
@@ -154,8 +154,8 @@ class GCN_SUB(nn.Module):
                 self.layers.append(GCNConv_dgl(nhid, nhid))
             self.layers.append(GCNConv_dgl(nhid, nclass))
         else:
-            self.model = GCNEncoder(nfeat=nfeat, nhid=nhid, nclass=nclass, n_layers=n_layers, dropout=dropout,
-                             input_layer=False, output_layer=False, spmm_type=0)
+            self.model = GCNEncoder(n_feat=nfeat, nhid=nhid, n_class=nclass, n_layers=n_layers, dropout=dropout,
+                                    input_layer=False, output_layer=False, spmm_type=0)
 
     def forward(self, x, Adj):
 

@@ -79,7 +79,7 @@ class PROSESolver(Solver):
             loss = model.calc_loss(z1, z2)
         return loss, learned_adj, prediction_adj
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         adj_original = self.adj.to_dense()
         anchor_adj = normalize(adj_original, add_loop=True)  # 归一化
 

@@ -155,7 +155,7 @@ class STABLESolver(Solver):
         print("Loss(test) {:.4f} | Acc(test) {:.4f}".format(loss_test.item(), acc_test))
         return self.result
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of STABLE.
 

@@ -106,7 +106,7 @@ class GAUGSolver(Solver):
                 print("NCNet pretrain, Epoch {:05d} | Time(s) {:.4f} | Loss(train) {:.4f} | Acc(train) {:.4f} | Loss(val) {:.4f} | Acc(val) {:.4f} | {}".format(
                     epoch+1, time.time() -t, loss_train.item(), acc_train, loss_val, acc_val, improve))
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of GAUG.
 

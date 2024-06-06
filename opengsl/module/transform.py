@@ -1,5 +1,5 @@
 import torch
-from opengsl.module.functional import normalize, symmetry, knn, enn, apply_non_linearity
+from opengsl.module.functional import normalize, symmetry, knn, enn, apply_non_linearity, removeselfloop
 from opengsl.module.metric import Cosine
 import torch.nn as nn
 
@@ -185,6 +185,15 @@ class NonLinear(nn.Module):
         new_adj : torch.tensor
         '''
         return apply_non_linearity(adj, self.non_linearity, self.i)
+
+
+class RemoveSelfLoop(nn.Module):
+
+    def __init__(self):
+        super(RemoveSelfLoop, self).__init__()
+
+    def forward(self, adj):
+        return removeselfloop(adj)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 from opengsl.module.model.gnns import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
 import time
-from opengsl.module.model.gnns import GCN
+from opengsl.module.encoder import GCNEncoder, GNNEncoder
 from opengsl.module.model.jknet import JKNet
 from opengsl.module.solver.solver import Solver
 import torch
@@ -115,25 +115,26 @@ class GCNSolver(Solver):
             Adjacency matrix.
         True : constant bool
         '''
-        return self.feats, self.normalized_adj, True
+        return {'x':self.feats, 'adj':self.normalized_adj}
 
     def set_method(self):
         '''
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = GCN(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                    self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                    self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                    self.conf.model['input_layer'], self.conf.model['output_layer']).to(self.device)
-        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
-                                      weight_decay=self.conf.training['weight_decay'])
-        if self.conf.dataset['normalize']:
-            self.normalize = normalize
+        if self.single_graph:
+            self.model = GCNEncoder(self.dim_feats, n_class=self.num_targets, **self.conf.model).to(self.device)
+            self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                          weight_decay=self.conf.training['weight_decay'])
+            if self.conf.dataset['normalize']:
+                self.normalize = normalize
+            else:
+                self.normalize = lambda x, y: x
+            self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
         else:
-            self.normalize = lambda x, y: x
-        self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
-
+            self.model = GNNEncoder(self.dim_feats, self.n_classes, **self.conf.model).to(self.device)
+            self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
+                                          weight_decay=self.conf.training['weight_decay'])
 
 class LPASolver(Solver):
     '''
@@ -192,7 +193,7 @@ class LPASolver(Solver):
         self.normalize = normalize if self.conf.dataset['normalize'] else lambda x, y: x
         self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
 
-    def learn(self, split=None, debug=False):
+    def learn_nc(self, split=None, debug=False):
         '''
         Learning process of LPA.
 

@@ -45,7 +45,7 @@ class BMGCNSolver(Solver):
         self.adj = self.adj + torch.eye(self.adj.shape[0], device=self.device) * self.conf.self_loop
 
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of BMGCN.
 

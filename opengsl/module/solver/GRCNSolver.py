@@ -44,7 +44,7 @@ class GRCNSolver(Solver):
         self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(self.device).coalesce()
 
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of GRCN.
 

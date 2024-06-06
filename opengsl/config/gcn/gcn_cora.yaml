@@ -9,6 +9,7 @@ model:
   input_layer: false
   output_layer: false
   spmm_type: 0 # specilized for sparse mltiply [0,1], expected to remove in future versions
+  pool: ~
 
 dataset:
   cora_split: false # for cora,citeseer and pubmed

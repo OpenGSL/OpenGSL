@@ -45,7 +45,7 @@ class GTSolver(Solver):
         self.graph = dgl.add_self_loop(self.graph).to(self.device)
 
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of GRCN.
 

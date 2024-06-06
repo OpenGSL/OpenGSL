@@ -131,7 +131,7 @@ class GENSolver(Solver):
                                                                           self.estimator.count))
         return adj
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of GEN.
 

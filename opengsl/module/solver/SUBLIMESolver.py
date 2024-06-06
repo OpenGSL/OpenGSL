@@ -175,7 +175,7 @@ class SUBLIMESolver(Solver):
         adj = self.best_graph_test
         return self.evaluate(model, self.test_mask, adj)
 
-    def learn(self, debug=False):
+    def learn_nc(self, debug=False):
         '''
         Learning process of SUBLIME.
 
