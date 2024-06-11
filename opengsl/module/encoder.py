@@ -21,9 +21,13 @@ from torch_geometric.utils import cumsum, scatter
 
 class AttentiveLayer(nn.Module):
 
-    def __init__(self, d):
+    def __init__(self, d, **kwargs):
         super(AttentiveLayer, self).__init__()
+        self.d = d
         self.w = nn.Parameter(torch.ones(d))
+
+    def reset_parameters(self):
+        self.w = nn.Parameter(self.w.new_ones(self.d))
 
     def forward(self, x):
         return x @ torch.diag(self.w)
@@ -43,12 +47,17 @@ class AttentiveEncoder(nn.Module):
         Specify the activation function used.
     '''
 
-    def __init__(self, n_layers, d, activation='F.relu'):
+    def __init__(self, n_layers, d, activation='F.relu', **kwargs):
         super(AttentiveEncoder, self).__init__()
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(AttentiveLayer(d))
         self.activation = eval(activation)
+
+    def reset_parameters(self):
+        for layer in self.layers:
+            layer.reset_parameters()
+
 
     def forward(self, x, adj=None):
         '''
@@ -102,10 +111,10 @@ class MLPEncoder(nn.Module):
             self.lins.append(nn.Linear(n_feat, n_class))
         else:
             self.lins.append(nn.Linear(n_feat, n_hidden))
-            self.bns.append(nn.BatchNorm1d(n_hidden))
+            self.bns.append(BatchNorm(n_hidden))
             for _ in range(n_layers - 2):
                 self.lins.append(nn.Linear(n_hidden, n_hidden))
-                self.bns.append(nn.BatchNorm1d(n_hidden))
+                self.bns.append(BatchNorm(n_hidden))
             self.lins.append(nn.Linear(n_hidden, n_class))
 
         self.dropout = dropout
@@ -147,7 +156,7 @@ class MLPEncoder(nn.Module):
 class GraphConvolutionLayer(nn.Module):
 
     def __init__(self, in_features, out_features, dropout=0.5, n_linear=1, bias=True, spmm_type=1, act='F.relu',
-                 last_layer=False, weight_initializer=None, bias_initializer=None):
+                 last_layer=False, weight_initializer=None, bias_initializer=None, **kwargs):
         super(GraphConvolutionLayer, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -159,6 +168,10 @@ class GraphConvolutionLayer(nn.Module):
         self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
         self.act = eval(act)
         self.last_layer = last_layer
+
+    def reset_parameters(self):
+        for layer in self.mlp:
+            layer.reset_parameters()
 
     def forward(self, input, adj):
         """ Graph Convolutional Layer forward function
@@ -186,7 +199,11 @@ class GraphConvolutionDiagLayer(nn.Module):
     '''
     def __init__(self, input_size):
         super(GraphConvolutionDiagLayer, self).__init__()
+        self.input_size = input_size
         self.W = torch.nn.Parameter(torch.ones(input_size))
+
+    def reset_parameters(self):
+        self.W = torch.nn.Parameter(self.W.new_ones(self.input_size))
 
     def forward(self, x, adj):
         hidden = x @ torch.diag(self.W)
@@ -213,6 +230,10 @@ class GCNDiagEncoder(nn.Module):
         for _ in range(n_layers):
             self.layers.append(GraphConvolutionDiagLayer(d))
         self.activation = eval(activation)
+
+    def reset_parameters(self):
+        for layer in self.layers:
+            layer.reset_parameters()
 
     def forward(self, x, adj):
         '''
@@ -329,6 +350,17 @@ class GCNEncoder(nn.Module):
             if self.norm_flag:
                 self.norms.append(norm_layer(in_channels=out_hidden, **norm_kwargs))
         self.convs[-1].last_layer = True
+
+    def reset_parameters(self):
+        if self.input_layer:
+            self.input_linear.reset_parameters()
+        if self.output_layer:
+            self.output_linear.reset_parameters()
+        for layer in self.convs:
+            layer.reset_parameters()
+        if self.norms:
+            for norm in self.norms:
+                norm.reset_parameters()
 
     def forward(self, x, adj=None, return_mid=False):
         '''
@@ -635,6 +667,10 @@ class GINEncoder(nn.Module):
             for layer in range(self.n_layers - 2):
                 self.mlps.append(MLPEncoder(n_hidden, n_hidden, n_hidden, mlp_layers, 0))
             self.mlps.append(MLPEncoder(n_hidden, n_hidden, n_class, mlp_layers, 0))
+
+    def reset_parameters(self):
+        for layer in self.mlps:
+            layer.reset_parameters()
 
     def forward(self, x, adj, return_mid=False):
         '''

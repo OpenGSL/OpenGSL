@@ -1,0 +1,31 @@
+use_deterministic: true
+
+model:
+  n_layers: 2
+  n_hidden: 128
+  dropout: 0.5
+  norm:
+    flag: true
+    norm_type: BatchNorm
+  pool: mean
+  jk: ~
+  output_layer: false
+  n_layers_output: 2
+  backbone: gcn
+
+dataset:
+  split: random
+  cv: 10
+
+#  homophily_control: 0.8
+
+training:
+  device: cuda
+  lr: 1e-2
+  n_epochs: 200
+  weight_decay: 0
+  patience: 100
+  criterion: loss
+  batch_size: 64
+  test_batch_size: 256
+  metric: acc

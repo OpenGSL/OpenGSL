@@ -106,12 +106,12 @@ def k_fold(labels, folds):
     skf = StratifiedKFold(folds, shuffle=True)
     test_indices, train_indices = [], []
     for _, idx in skf.split(np.zeros(len(labels)), labels):
-        test_indices.append(idx)
+        test_indices.append(idx.astype(np.int64))
 
     val_indices = [test_indices[i - 1] for i in range(folds)]
 
     for i in range(folds):
-        train_mask = np.ones(len(labels))
+        train_mask = np.ones(len(labels), dtype=np.int64)
         train_mask[test_indices[i]] = 0
         train_mask[val_indices[i]] = 0
         train_indices.append(train_mask.nonzero()[0])
