@@ -29,4 +29,5 @@ from opengsl.module.solver.SEGSLSolver import SEGSLSolver
 from opengsl.module.solver.BMGCNSolver import BMGCNSolver
 from opengsl.module.solver.PROSESolver import PROSESolver
 from opengsl.module.solver.PASTELSolver import PASTELSolver
+from opengsl.module.solver.MOSGSLSolver import MOSGSLSolver
 from opengsl.module.graphlearner import GraphLearner

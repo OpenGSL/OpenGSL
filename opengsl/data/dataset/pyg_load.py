@@ -75,7 +75,7 @@ def pyg_load_dataset(name, path='./data/'):
         dataset = dataset_ContextualSBM(root=path, name=name)
     elif name in ["IMDB-BINARY", "IMDB-MULTI", "REDDIT-BINARY", "REDDIT-MULTI-5K", "COLLAB", "DBLP_v1", "DD",
                   "ENZYMES", "PROTEINS", "MUTAG", "NCI1", "NCI109", "Mutagenicity", "FRANKENSTEIN"]:
-        dataset = TUDataset(root=path, name=name)
+        dataset = TUDatasetPlus(root=path, name=name)
     else:
         raise NotImplementedError
     return dataset

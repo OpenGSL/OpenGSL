@@ -1,0 +1,108 @@
+use_select: false
+mode: train
+use_deterministic: true
+
+parsing_module:
+  parsing: parse_bfs
+  parsing_params:
+    max_n_sub: 2
+    max_sub_size: 10
+
+selecting_module:
+  topk: 0.8
+  conf_encoder:
+    type: gnn
+    n_layers: 2
+    n_hidden: 128
+    n_class: 128
+    dropout: 0.5
+    norm:
+      flag: true
+      norm_type: BatchNorm
+    pool: mean
+    jk: ~
+    output_layer: false
+    n_layers_output: 2
+    backbone: gcn
+  conf_estimator:
+    type: projection
+    n_hidden: 64
+    n_layers: 2
+    dropout: 0
+    act: sigmoid
+
+classifier:
+  n_layers: 2
+  n_hidden: 64
+  dropout: 0
+
+use_seperate_encoder: true
+backbone:
+  n_layers: 2
+  n_hidden: 128
+  dropout: 0.5
+  norm:
+    flag: true
+    norm_type: BatchNorm
+  pool: mean
+  jk: ~
+  output_layer: true
+  n_layers_output: 2
+  backbone: gcn
+
+use_gsl: true
+gsl_module:
+  conf_encoder:
+    type: mlp
+    n_layers: 2
+    n_hidden: 128
+    n_class: 128
+    dropout: 0.5
+    norm:
+      flag: true
+      norm_type: BatchNorm
+    pool: mean
+    jk: ~
+    output_layer: false
+    n_layers_output: 2
+    backbone: gcn
+  conf_metric:
+    weighted: true
+  epsilon: 0.8
+  lamb1: 0.5
+  gsl_one_by_one: false
+
+use_motif: true
+motif:
+  n_motif_per_class: 2
+  sim_type: cosine
+  update_type: kmeans
+  k2: 0.2
+  k1: 0.6
+  tau: 0.7
+  weighted_mean: false
+
+
+training:
+  device: cuda
+  lr: 1e-3
+  n_epochs: 200
+  weight_decay: 5e-4
+  patience: 100
+  criterion: loss
+  batch_size: 64
+  test_batch_size: 256
+  metric: acc
+  n_pretrain: 200
+  n_motif_update_min: 10
+  n_motif_update_each: 5
+  lambda: 0.1
+
+dataset:
+  split: random
+  cv: 10
+
+
+
+
+
