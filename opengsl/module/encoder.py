@@ -295,7 +295,7 @@ class GCNEncoder(nn.Module):
     '''
     def __init__(self, n_feat, n_class, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
                  spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool='max', residual=False, jk=None, n_layers_output=1):
+                 bias_initializer=None, bias=True, pool='max', residual=False, jk=None, n_layers_output=1, **kwargs):
 
         super(GCNEncoder, self).__init__()
 

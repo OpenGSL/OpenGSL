@@ -35,7 +35,7 @@ class Dataset:
     '''
 
     def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, split='public', split_params=None, homophily_control=None,
-                 path='./data/', cv=None):
+                 path='./data/', cv=None, **kwargs):
         self.name = data
         self.feat_norm = feat_norm
         self.verbose = verbose

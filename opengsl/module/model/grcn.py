@@ -13,10 +13,7 @@ class GRCN(torch.nn.Module):
         self.num_nodes = num_nodes
         self.num_features = num_features
         if conf.model['type'] == 'gcn':
-            self.conv_task = GCNEncoder(num_features, conf.model['n_hidden'], num_classes, conf.model['n_layers'],
-                                 conf.model['dropout'], conf.model['input_dropout'], conf.model['norm'],
-                                 conf.model['n_linear'], conf.model['spmm_type'], conf.model['act'],
-                                 conf.model['input_layer'], conf.model['output_layer'])
+            self.conv_task = GCNEncoder(n_feat=num_features, n_class=num_classes, **conf.model)
         elif conf.model['type'] == 'appnp':
             self.conv_task = APPNPEncoder(num_features, conf.model['n_hidden'], num_classes,
                                dropout=conf.model['dropout'], K=conf.model['K_APPNP'],
@@ -28,7 +25,7 @@ class GRCN(torch.nn.Module):
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNDiagEncoder(2, num_features)
         else:
-            self.conv_graph = GCNEncoder(num_features, conf.gsl['n_hidden_1'], conf.gsl['n_hidden_2'], conf.gsl['n_layers'],
+            self.conv_graph = GCNEncoder(num_features, conf.gsl['n_hidden_2'], conf.gsl['n_hidden_1'], conf.gsl['n_layers'],
                              conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
                              conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
                              conf.gsl['input_layer'], conf.gsl['output_layer'])
