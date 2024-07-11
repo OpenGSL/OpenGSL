@@ -14,7 +14,7 @@ from torch_geometric.typing import (
 )
 from torch_geometric.nn.aggr import Aggregation
 from torch_geometric.nn.norm import BatchNorm, LayerNorm, GraphNorm
-from torch_sparse import SparseTensor
+from torch_sparse import SparseTensor, matmul
 from torch_scatter import segment_csr
 from torch_geometric.utils import cumsum, scatter
 
@@ -57,7 +57,6 @@ class AttentiveEncoder(nn.Module):
     def reset_parameters(self):
         for layer in self.layers:
             layer.reset_parameters()
-
 
     def forward(self, x, adj=None):
         '''
@@ -155,17 +154,16 @@ class MLPEncoder(nn.Module):
 
 class GraphConvolutionLayer(nn.Module):
 
-    def __init__(self, in_features, out_features, dropout=0.5, n_linear=1, bias=True, spmm_type=1, act='F.relu',
+    def __init__(self, in_channels, out_channels, dropout=0.5, n_linear=1, bias=True, act='F.relu',
                  last_layer=False, weight_initializer=None, bias_initializer=None, **kwargs):
         super(GraphConvolutionLayer, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.mlp = nn.ModuleList()
-        self.mlp.append(Linear(in_features, out_features, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
+        self.mlp.append(Linear(in_channels, out_channels, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
         for i in range(n_linear-1):
-            self.mlp.append(Linear(out_features, out_features, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
+            self.mlp.append(Linear(out_channels, out_channels, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
         self.dropout = dropout
-        self.spmm = [torch.spmm, torch.sparse.mm][spmm_type]
         self.act = eval(act)
         self.last_layer = last_layer
 
@@ -173,10 +171,8 @@ class GraphConvolutionLayer(nn.Module):
         for layer in self.mlp:
             layer.reset_parameters()
 
-    def forward(self, input, adj):
-        """ Graph Convolutional Layer forward function
-        """
-        x = self.spmm(adj, input)
+    def forward(self, x: torch.Tensor, adj: SparseTensor):
+        x = matmul(adj, x)
         for i in range(len(self.mlp)-1):
             x = self.mlp[i](x)
             x = self.act(x)
@@ -189,8 +185,8 @@ class GraphConvolutionLayer(nn.Module):
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' \
-               + str(self.in_features) + ' -> ' \
-               + str(self.out_features) + ')'
+               + str(self.in_channels) + ' -> ' \
+               + str(self.out_channels) + ')'
 
 
 class GraphConvolutionDiagLayer(nn.Module):
@@ -294,12 +290,12 @@ class GCNEncoder(nn.Module):
         Whether to add bias to linear transform in GCN.
     '''
     def __init__(self, n_feat, n_class, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
-                 spmm_type=0, act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool='max', residual=False, jk=None, n_layers_output=1):
+                 act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
+                 bias_initializer=None, bias=True, pool='max', residual=False, jk=None, n_layers_output=1, **kwargs):
 
         super(GCNEncoder, self).__init__()
 
-        self.nfeat = n_feat
+        self.n_feat = n_feat
         self.nclass = n_class
         self.n_layers = n_layers
         self.input_layer = input_layer
@@ -315,7 +311,7 @@ class GCNEncoder(nn.Module):
         if self.residual:
             assert self.input_layer and self.output_layer
         if norm is None:
-            norm = {'flag':False}
+            norm = {'flag': False}
         self.norm_flag = norm['flag']
         if self.norm_flag:
             self.norm_type = norm['norm_type']
@@ -332,10 +328,7 @@ class GCNEncoder(nn.Module):
             else:
                 self.output_linear = MLPEncoder(n_feat=n_hidden, n_hidden=n_hidden, n_class=n_class, n_layers=n_layers_output)
         self.convs = nn.ModuleList()
-        if self.norm_flag:
-            self.norms = nn.ModuleList()
-        else:
-            self.norms = None
+        self.norms = nn.ModuleList()
 
         for i in range(n_layers):
             if i == 0 and not self.input_layer:
@@ -346,7 +339,7 @@ class GCNEncoder(nn.Module):
                 out_hidden = n_class
             else:
                 out_hidden = n_hidden
-            self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, spmm_type=spmm_type, act=act, weight_initializer=weight_initializer, bias_initializer=bias_initializer, bias=bias))
+            self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, act=act, weight_initializer=weight_initializer, bias_initializer=bias_initializer, bias=bias))
             if self.norm_flag:
                 self.norms.append(norm_layer(in_channels=out_hidden, **norm_kwargs))
         self.convs[-1].last_layer = True
@@ -358,9 +351,8 @@ class GCNEncoder(nn.Module):
             self.output_linear.reset_parameters()
         for layer in self.convs:
             layer.reset_parameters()
-        if self.norms:
-            for norm in self.norms:
-                norm.reset_parameters()
+        for norm in self.norms:
+            norm.reset_parameters()
 
     def forward(self, x, adj=None, return_mid=False):
         '''

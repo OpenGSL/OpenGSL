@@ -4,6 +4,8 @@ from opengsl.utils.logger import Logger
 from opengsl.config.util import save_conf
 import os
 import time as time
+import copy
+import ruamel.yaml as yaml
 from torch_geometric import seed_everything
 
 
@@ -36,7 +38,7 @@ class ExpManager:
     >>> exp.run(n_runs=10, debug=True)
 
     '''
-    def __init__(self, solver=None, save_path=None):
+    def __init__(self, solver=None, save_path='records'):
         self.solver = solver
         self.conf = solver.conf
         self.method = solver.method_name
@@ -48,6 +50,7 @@ class ExpManager:
         self.save_path = None
         self.save_graph_path = None
         self.load_graph_path = None
+        self.logger = Logger()
         if save_path:
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
@@ -85,7 +88,6 @@ class ExpManager:
             n_splits = self.solver.dataset.total_splits
         total_runs = n_runs * n_splits
         assert total_runs <= len(self.train_seeds)
-        logger = Logger(runs=total_runs)
         succeed = 0
         for i in range(n_splits):
             for j in range(400):
@@ -103,7 +105,7 @@ class ExpManager:
                 result, graph = self.solver.run_exp(split=i, debug=debug)
                 # except ValueError:
                 #     continue
-                logger.add_result(succeed, result)
+                self.logger.add_result(succeed, result)
 
                 # save graph
                 if self.save_graph_path:
@@ -113,9 +115,14 @@ class ExpManager:
                 succeed += 1
                 if succeed % n_runs == 0:
                     break
-        self.acc_save, self.std_save = logger.print_statistics()
-        if self.save_path:
-            save_conf(os.path.join(self.save_path, '{}-{}-'.format(self.method, self.data) +
-                                   time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime()) + '.yaml'), self.conf)
-            
+        self.acc_save, self.std_save = self.logger.print_statistics()
+        self.save(self.logger.agg_stats)
         return float(self.acc_save), float(self.std_save)
+
+    def save(self, stats):
+        d = {}
+        d['result'] = stats
+        d.update(vars(copy.deepcopy(self.conf)))
+        path = os.path.join(self.save_path, '{}_{}_'.format(self.method, self.data)+time.strftime('%Y%m%d_%H%M%S', time.localtime())+'.yaml')
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(d, f, indent=2)

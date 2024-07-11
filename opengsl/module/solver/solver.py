@@ -37,6 +37,7 @@ class Solver:
         Metric function, either 'roc_auc_score' or 'accuracy'.
 
     '''
+
     def __init__(self, conf, dataset):
         self.dataset = dataset
         self.conf = conf
@@ -56,7 +57,7 @@ class Solver:
         self.model = None
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.cross_entropy
         self.metric = roc_auc_score if self.num_targets == 1 else accuracy
-        if self.n_classes == 1:        
+        if self.n_classes == 1:
             self.loss_fn = torch.nn.MSELoss()
             self.metric = r2_score
         self.model = None
@@ -83,7 +84,7 @@ class Solver:
         graph : torch.tensor
             The learned structure. `None` for GNN methods.
         '''
-        if 'use_deterministic' in self.conf and self.conf.use_deterministic:
+        if ('use_deterministic' not in self.conf) or self.conf.use_deterministic:
             torch.use_deterministic_algorithms(True)
         self.set(split)
         return self.learn_nc(debug) if self.single_graph else self.learn_gc(debug)
@@ -101,8 +102,8 @@ class Solver:
         '''
         if split is None:
             print('split set to default 0.')
-            split=0
-        assert split<len(self.train_masks), 'error, split id is larger than number of splits'
+            split = 0
+        assert split < len(self.train_masks), 'error, split id is larger than number of splits'
         self.train_mask = self.train_masks[split]
         self.val_mask = self.val_masks[split]
         self.test_mask = self.test_masks[split]
@@ -115,7 +116,7 @@ class Solver:
         self.start_time = time.time()
         self.recoder = Recorder(self.conf.training['patience'], self.conf.training['criterion'])
         if self.single_graph:
-            self.adjs = {'ori':self.adj, 'final':None}
+            self.adjs = {'ori': self.adj, 'final': None}
         self.set_method()
 
     def set_method(self):
@@ -171,7 +172,6 @@ class Solver:
                 self.weights = deepcopy(self.model.state_dict())
             elif flag_earlystop:
                 break
-
 
             if debug:
                 print(
@@ -287,7 +287,7 @@ class Solver:
                 out = self.model(x=data.x, edge_index=data.edge_index, batch=data.batch)
                 pred = F.softmax(out, dim=1)
                 if self.conf.training['metric'] != 'acc':
-                    pred = pred[:,1].unsqueeze(1)
+                    pred = pred[:, 1].unsqueeze(1)
                 preds.append(pred.detach().cpu())
                 ground_truth.append(data.y.detach().cpu().unsqueeze(1))
             loss_test += self.loss_fn(out, data.y.view(-1), reduction='sum').item()
@@ -341,7 +341,7 @@ class Solver:
         '''
         self.model.load_state_dict(self.weights)
         return self.evaluate(self.test_mask)
-    
+
 
 class GSLSolver(Solver):
     def __init__(self, conf, dataset):

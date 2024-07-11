@@ -9,7 +9,7 @@ import os
 import urllib.request
 from torch_geometric.utils import degree
 import torch_geometric.transforms as T
-from ogb.nodeproppred import PygNodePropPredDataset
+# from ogb.nodeproppred import PygNodePropPredDataset
 
 
 class Dataset:
@@ -35,7 +35,7 @@ class Dataset:
     '''
 
     def __init__(self, data, feat_norm=False, verbose=True, n_splits=1, split='public', split_params=None, homophily_control=None,
-                 path='./data/', cv=None):
+                 path='./data/', cv=None, **kwargs):
         self.name = data
         self.feat_norm = feat_norm
         self.verbose = verbose
@@ -170,7 +170,7 @@ class Dataset:
         self.val_masks = []
         self.test_masks = []
         if split == 'public':
-            assert self.name in ['cora', 'citeser', 'pubmed', 'blogcatalog', 'flickr', 'roman-empire', 'amazon-ratings',
+            assert self.name in ['cora', 'citeseer', 'pubmed', 'blogcatalog', 'flickr', 'roman-empire', 'amazon-ratings',
                                  'minesweeper', 'tolokers', 'questions', 'wikics'], 'This dataset has no public splits.'
             if self.name in ['cora', 'citeseer', 'pubmed']:
                 for i in range(n_splits):

@@ -6,6 +6,7 @@ from opengsl.module.solver.solver import Solver
 import torch
 from copy import deepcopy
 from opengsl.module.functional import normalize
+from torch_sparse import SparseTensor
 
 
 class SGCSolver(Solver):
@@ -115,7 +116,7 @@ class GCNSolver(Solver):
             Adjacency matrix.
         True : constant bool
         '''
-        return {'x':self.feats, 'adj':self.normalized_adj}
+        return {'x': self.feats, 'adj': self.normalized_adj}
 
     def set_method(self):
         '''
@@ -130,11 +131,12 @@ class GCNSolver(Solver):
                 self.normalize = normalize
             else:
                 self.normalize = lambda x, y: x
-            self.normalized_adj = self.normalize(self.adj, add_loop=self.conf.dataset['add_loop'])
+            self.normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(self.normalize(self.adj, add_loop=self.conf.dataset['add_loop']))
         else:
             self.model = GNNEncoder(self.dim_feats, self.n_classes, **self.conf.model).to(self.device)
             self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                           weight_decay=self.conf.training['weight_decay'])
+
 
 class LPASolver(Solver):
     '''

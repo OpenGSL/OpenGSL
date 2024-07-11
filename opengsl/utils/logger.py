@@ -9,8 +9,9 @@ class Logger(object):
     runs : int
         Total experimental runs.
     """
-    def __init__(self, runs):
-        self.results = [[] for _ in range(runs)]
+    def __init__(self, **kwargs):
+        self.stats = {}
+        self.agg_stats = {}
 
     def add_result(self, run, result_dict):
         '''
@@ -24,13 +25,22 @@ class Logger(object):
             A dict containing training, valid and test performances.
 
         '''
-        assert "train" in result_dict.keys()
-        assert "valid" in result_dict.keys()
-        assert "test"  in result_dict.keys()
-        assert run >= 0 and run < len(self.results)
-        self.results[run].append(result_dict["train"])
-        self.results[run].append(result_dict["valid"])
-        self.results[run].append(result_dict["test"])
+        for key, value in result_dict.items():
+            if key in self.stats.keys():
+                self.stats[key].append(value)
+            else:
+                self.stats[key] = [value]
+
+    def aggregate(self):
+        for key, value in self.stats.items():
+            if key in ['train', 'valid', 'test']:
+                r = 100 * torch.tensor(self.stats[key])
+            else:
+                r = torch.tensor(self.stats[key])
+            mean, std = r.mean(), r.std()
+            self.agg_stats[key] = f'{mean:.2f} ± {std:.2f}'
+            self.agg_stats[key+'_mean'] = mean.item()
+            self.agg_stats[key + '_std'] = std.item()
 
     def print_statistics(self, run=None):
         '''
@@ -46,26 +56,9 @@ class Logger(object):
             The statistics of a given run or all runs.
 
         '''
-        if run is not None:
-            result = 100 * torch.tensor(self.results[run])
-            print(f'Run {run + 1:02d}:')
-            print(f'Highest Train: {result[0]:.2f}')
-            print(f'Highest Valid: {result[1]:.2f}')
-            print(f'   Final Test: {result[2]:.2f}')
-            return  result[2]
-        else:
-            best_result = 100 * torch.tensor(self.results)
-
-            print(f'All runs:')
-            r = best_result[:, 0]
-            print(f'Highest Train: {r.mean():.2f} ± {r.std():.2f}')
-            r = best_result[:, 1]
-            print(f'Highest Valid: {r.mean():.2f} ± {r.std():.2f}')
-            r = best_result[:, 2]
-            print(f'   Final Test: {r.mean():.2f} ± {r.std():.2f}')
-            
-            import nni
-            if nni.get_trial_id()!="STANDALONE":
-                nni.report_final_result(float(r.mean()))
-            
-            return r.mean(), r.std()
+        self.aggregate()
+        print(f'All runs:')
+        print(f'Highest Train: ' + self.agg_stats['train'])
+        print(f'Highest Valid: ' + self.agg_stats['valid'])
+        print(f'   Final Test: ' + self.agg_stats['test'])
+        return self.agg_stats['test_mean'], self.agg_stats['test_std']
