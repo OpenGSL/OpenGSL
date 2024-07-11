@@ -274,8 +274,6 @@ class GCNEncoder(nn.Module):
         Specify batchnorm or layernorm. The operation won't be done if set to `None`.
     n_linear : int
         Number of linear layers in a GCN layer.
-    spmm_type: int
-        Specify the multiply funtion used between adj and x.
     act : str
         Specify the activation function used.
     input_layer : bool

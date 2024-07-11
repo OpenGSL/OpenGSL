@@ -43,7 +43,6 @@ class GLCNSolver(Solver):
         edges = torch.cat([edge_index, loop_edge_index], dim=1)
         self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(self.device).coalesce()
 
-
     def learn_nc(self, debug=False):
         '''
         Learning process of GLCN.
