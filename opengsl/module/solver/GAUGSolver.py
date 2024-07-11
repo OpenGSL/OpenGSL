@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import time
 from .solver import Solver
 from opengsl.module.functional import normalize
+from torch_sparse import SparseTensor
 
 
 class GAUGSolver(Solver):
@@ -42,8 +43,9 @@ class GAUGSolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = "gaug"
         print("Solver Version : [{}]".format("gaug"))
-        self.normalized_adj = normalize(self.adj)
+        self.normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(normalize(self.adj))
         self.adj_orig = (self.adj.to_dense() + torch.eye(self.n_nodes).to(self.device))  # adj with self loop
+        self.model = GAug(self.dim_feats, self.num_targets, self.conf).to(self.device)
 
     def pretrain_ep_net(self, norm_w, pos_weight, n_epochs, debug=False):
         """ pretrain the edge prediction network """
@@ -242,4 +244,4 @@ class GAUGSolver(Solver):
         self.val_edges = np.concatenate((pos_edges, neg_edges), axis=0)
         self.edge_labels = np.array([1] * n_edges_sample + [0] * n_edges_sample)
 
-        self.model = GAug(self.dim_feats, self.num_targets, self.conf).to(self.device)
+        self.model.reset_parameters()

@@ -42,6 +42,7 @@ class GLCNSolver(Solver):
         loop_edge_index = torch.stack([torch.arange(self.n_nodes), torch.arange(self.n_nodes)])
         edges = torch.cat([edge_index, loop_edge_index], dim=1)
         self.adj = torch.sparse.FloatTensor(edges, torch.ones(edges.shape[1]), [self.n_nodes, self.n_nodes]).to(self.device).coalesce()
+        self.model = GLCN(self.dim_feats, self.num_targets, self.conf).to(self.device)
 
     def learn_nc(self, debug=False):
         '''
@@ -135,6 +136,6 @@ class GLCNSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = GLCN(self.dim_feats, self.num_targets, self.conf).to(self.device)
+        self.model.reset_parameters()
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
-                                       weight_decay=self.conf.training['weight_decay'])
+                                      weight_decay=self.conf.training['weight_decay'])

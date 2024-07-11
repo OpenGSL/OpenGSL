@@ -45,6 +45,7 @@ class IDGLSolver(Solver):
         self.normalized_adj = normalize(self.adj)
         if not self.conf.model['scalable_run']:
             self.normalized_adj = self.normalized_adj.to_dense()
+        self.model = IDGL(self.conf, self.dim_feats, self.num_targets).to(self.device)
 
     def _run_whole_epoch(self, mode='train', debug=False):
         # prepare
@@ -263,7 +264,7 @@ class IDGLSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = IDGL(self.conf, self.dim_feats, self.num_targets).to(self.device)
+        self.model.reset_parameters()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
         self.adjs['first_adj'] = None
         self.adjs['cur_adj'] = None

@@ -39,6 +39,8 @@ class SLAPSSolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = "slaps"
         print("Solver Version : [{}]".format("slaps"))
+        self.model = SLAPS(self.n_nodes, self.dim_feats, self.num_targets, self.feats, self.device, self.conf).to(
+            self.device)
 
     def learn_nc(self, debug=False):
         '''
@@ -130,8 +132,7 @@ class SLAPSSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = SLAPS(self.n_nodes, self.dim_feats, self.num_targets, self.feats, self.device, self.conf).to(
-            self.device)
+        self.model.reset_parameters()
         self.optim = torch.optim.Adam([
             {'params': self.model.gcn_c.parameters(), 'lr': self.conf.training['lr'],
              'weight_decay': self.conf.training['weight_decay']},

@@ -5,32 +5,40 @@ import torch.nn.functional as F
 from opengsl.module.encoder import GraphConvolutionLayer, APPNPEncoder, GINEncoder
 from opengsl.module.metric import WeightedCosine
 from opengsl.module.transform import EpsilonNN, KNN
+from torch_geometric.nn import BatchNorm
 
 
 class GCN(nn.Module):
     """
     This GCN is only used for IGDL for its changeable dropout.
     """
-    def __init__(self, nfeat, nhid, nclass, n_layers=2, dropout=0.5, with_bias=True, norm=False, norm_type='BatchNorm1d', act='F.relu'):
+    def __init__(self, n_feat, n_hidden, n_class, n_layers=2, dropout=0.5, bias=True, norm=False, norm_type='BatchNorm',
+                 act='F.relu', **kwargs):
 
         super(GCN, self).__init__()
 
-        self.nfeat = nfeat
-        self.hidden_sizes = [nhid]
-        self.nclass = nclass
+        self.n_feat = n_feat
+        self.hidden_sizes = [n_hidden]
+        self.n_class = n_class
         self.n_layers = n_layers
         self.layers = nn.ModuleList()
         self.norm_flag = norm
-        self.norm_type = eval('nn.' + norm_type)
+        self.norm_type = eval(norm_type)
         self.act = eval(act)
         self.norms = nn.ModuleList()
-        self.layers.append(GraphConvolutionLayer(nfeat, nhid, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
-        self.norms.append(self.norm_type(nhid))
+        self.layers.append(GraphConvolutionLayer(n_feat, n_hidden, bias=bias, dropout=0, act='lambda x: x', weight_initializer='uniform'))
+        self.norms.append(self.norm_type(n_hidden))
         for i in range(n_layers-2):
-            self.layers.append(GraphConvolutionLayer(nhid, nhid, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
-            self.norms.append(self.norm_type(nhid))
-        self.layers.append(GraphConvolutionLayer(nhid, nclass, bias=with_bias, dropout=0, act='lambda x: x', spmm_type=0, weight_initializer='uniform'))
+            self.layers.append(GraphConvolutionLayer(n_hidden, n_hidden, bias=bias, dropout=0, act='lambda x: x', weight_initializer='uniform'))
+            self.norms.append(self.norm_type(n_hidden))
+        self.layers.append(GraphConvolutionLayer(n_hidden, n_class, bias=bias, dropout=0, act='lambda x: x', weight_initializer='uniform'))
         self.dropout = dropout
+
+    def reset_parameters(self):
+        for layer in self.layers:
+            layer.reset_parameters()
+        for norm in self.norms:
+            norm.reset_parameters()
 
     def forward(self, x, adj, dropout=None):
         for i, layer in enumerate(self.layers[:-1]):
@@ -44,16 +52,16 @@ class GCN(nn.Module):
 
 
 class AnchorGCNLayer(nn.Module):
-    def __init__(self, in_features, out_features, with_bias=False, batch_norm=True):
+    def __init__(self, in_channels, out_channels, with_bias=False, batch_norm=True):
         super(AnchorGCNLayer, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.weight = nn.Parameter(torch.FloatTensor(in_channels, out_channels))
         if with_bias:
-            self.bias = nn.Parameter(torch.FloatTensor(out_features))
+            self.bias = nn.Parameter(torch.FloatTensor(out_channels))
         else:
             self.register_parameter('bias', None)
-        self.bn = nn.BatchNorm1d(out_features) if batch_norm else None
+        self.bn = nn.BatchNorm1d(out_channels) if batch_norm else None
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -63,10 +71,7 @@ class AnchorGCNLayer(nn.Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input, adj, anchor_mp=True):
-        if input.data.is_sparse:
-            support = torch.spmm(input, self.weight)
-        else:
-            support = torch.mm(input, self.weight)
+        support = torch.mm(input, self.weight)
 
         if anchor_mp:
             node_anchor_adj = adj
@@ -74,7 +79,7 @@ class AnchorGCNLayer(nn.Module):
             anchor_norm = node_anchor_adj / torch.clamp(torch.sum(node_anchor_adj, dim=-1, keepdim=True), min=1e-12)
             output = torch.matmul(anchor_norm, torch.matmul(node_norm.transpose(-1, -2), support))
         else:
-            output = torch.spmm(adj, support)
+            output = torch.mm(adj, support)
         if self.bias is not None:
             output = output + self.bias
         return output
@@ -87,24 +92,27 @@ class AnchorGCNLayer(nn.Module):
 
 
 class AnchorGCN(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, n_layers=3, dropout=0.5, with_bias=False, batch_norm=True):
+    def __init__(self, n_feat, n_hidden, n_class, n_layers=3, dropout=0.5, with_bias=False, batch_norm=True, **kwargs):
         super(AnchorGCN, self).__init__()
-        self.nfeat = nfeat
-        self.hidden_sizes = [nhid]
-        self.nclass = nclass
+        self.n_feat = n_feat
+        self.hidden_sizes = [n_hidden]
+        self.n_class = n_class
         self.n_layers = n_layers
         self.dropout = dropout
         self.with_bias = with_bias
         self.batch_norm = batch_norm
 
         self.layers = nn.ModuleList()
-        self.layers.append(AnchorGCNLayer(nfeat, nhid, with_bias=with_bias, batch_norm=batch_norm))
+        self.layers.append(AnchorGCNLayer(n_feat, n_hidden, with_bias=with_bias, batch_norm=batch_norm))
 
         for _ in range(n_layers - 2):
-            self.layers.append(AnchorGCNLayer(nhid, nhid, with_bias=with_bias, batch_norm=batch_norm))
+            self.layers.append(AnchorGCNLayer(n_hidden, n_hidden, with_bias=with_bias, batch_norm=batch_norm))
 
-        self.layers.append(AnchorGCNLayer(nhid, nclass, with_bias=with_bias, batch_norm=False))
+        self.layers.append(AnchorGCNLayer(n_hidden, n_class, with_bias=with_bias, batch_norm=False))
 
+    def reset_parameters(self):
+        for layer in self.layers:
+            layer.reset_parameters()
 
     def forward(self, x, init_adj, cur_node_anchor_adj, graph_skip_conn, first=True, first_init_agg_vec=None,
                 init_agg_vec=None, update_adj_ratio=None, dropout=None, first_node_anchor_adj=None):
@@ -152,6 +160,9 @@ class IDGLGraphLearner(nn.Module):
         self.enn = EpsilonNN(epsilon)
         self.knn = KNN(topk)
 
+    def reset_parameters(self):
+        self.metric.reset_parameters()
+
     def forward(self, context, anchor=None):
         # return a new adj according to the representation gived
 
@@ -170,26 +181,24 @@ class IDGLGraphLearner(nn.Module):
 
 
 class IDGL(nn.Module):
-    def __init__(self, conf, nfeat, nclass):
+    def __init__(self, conf, n_feat, n_class):
         super(IDGL, self).__init__()
-        self.nfeat = nfeat
-        self.nclass = nclass
+        self.nfeat = n_feat
+        self.nclass = n_class
         self.hidden_size = conf.model['n_hidden']
         self.dropout = conf.model['dropout']
         self.scalable_run = conf.model['scalable_run'] if 'scalable_run' in conf.model else False
         self.feat_adj_dropout = conf.gsl['feat_adj_dropout']
 
         if self.scalable_run:
-            self.encoder = AnchorGCN(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass, n_layers=conf.model['n_layers'], dropout=conf.model['dropout'], batch_norm=conf.model['norm'])
+            self.encoder = AnchorGCN(n_feat=n_feat, n_class=n_class, **conf.model)
         elif conf.model['type'] == 'gcn':
-            self.encoder = GCN(nfeat=nfeat, nhid=conf.model['n_hidden'], nclass=nclass,
-                                     n_layers=conf.model['n_layers'], dropout=conf.model['dropout'],
-                                     norm=conf.model['norm'])
+            self.encoder = GCN(n_feat=n_feat, n_class=n_class, **conf.model)
         elif conf.model['type'] == 'appnp':
-            self.encoder = APPNPEncoder(in_channels=nfeat, hidden_channels=conf.model['n_hidden'], out_channels=nclass, dropout=conf.model['dropout'], K=conf.model['K'], alpha=conf.model['alpha'])
+            self.encoder = APPNPEncoder(in_channels=n_feat, hidden_channels=conf.model['n_hidden'], out_channels=n_class, dropout=conf.model['dropout'], K=conf.model['K'], alpha=conf.model['alpha'])
         elif conf.model['type'] == 'gin':
-            self.encoder = GINEncoder(n_feat=nfeat, n_hidden=conf.model['n_hidden'], n_class=nclass, n_layers=conf.model['n_layers'], mlp_layers=conf.model['mlp_layers'])
-        self.graph_learner = IDGLGraphLearner(nfeat,
+            self.encoder = GINEncoder(n_feat=n_feat, n_hidden=conf.model['n_hidden'], n_class=n_class, n_layers=conf.model['n_layers'], mlp_layers=conf.model['mlp_layers'])
+        self.graph_learner = IDGLGraphLearner(n_feat,
                                               topk=conf.gsl['graph_learn_topk'],
                                               epsilon=conf.gsl['graph_learn_epsilon'],
                                               num_pers=conf.gsl['graph_learn_num_pers'])
@@ -198,6 +207,11 @@ class IDGL(nn.Module):
                                                topk=conf.gsl['graph_learn_topk2'],
                                                epsilon=conf.gsl['graph_learn_epsilon2'],
                                                num_pers=conf.gsl['graph_learn_num_pers'])
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def learn_graph(self, graph_learner, node_features, graph_skip_conn=None, graph_include_self=False, init_adj=None, anchor_features=None):
         device = node_features.device

@@ -42,6 +42,16 @@ class PROGNNSolver(Solver):
         self.method_name = "prognn"
         print("Solver Version : [{}]".format("prognn"))
         self.adj = self.adj.to_dense()
+        if self.conf.model['type'] == 'gcn':
+            self.model = GCNEncoder(self.dim_feats, self.num_targets, weight_initializer='uniform', **self.conf.model).to(self.device)
+        elif self.conf.model['type'] == 'appnp':
+            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
+        self.estimator = FGP(self.adj.shape[0], nonlinear='lambda x: x').to(self.device)
 
     def train_gcn(self, epoch, debug=False):
         normalized_adj = symmetry(self.estimator.Adj) if self.conf.gsl['symmetric'] else self.estimator.Adj
@@ -234,21 +244,7 @@ class PROGNNSolver(Solver):
         '''
         Function to set the model and necessary variables for each run, automatically called in function `set`.
         '''
-        if self.conf.model['type'] == 'gcn':
-            self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                             self.conf.model['input_layer'], self.conf.model['output_layer'],
-                             weight_initializer='uniform').to(self.device)
-        elif self.conf.model['type'] == 'appnp':
-            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
-                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
-                               alpha=self.conf.model['alpha']).to(self.device)
-        elif self.conf.model['type'] == 'gin':
-            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
-                               self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
-        # self.estimator = EstimateAdj(self.adj, symmetric=self.conf.gsl['symmetric'], device=self.device).to(self.device)
-        self.estimator = FGP(self.adj.shape[0], nonlinear='lambda x: x').to(self.device)
+        self.model.reset_parameters()
         self.estimator.init_estimation(self.adj)
         self.prox_operators = ProxOperators()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
@@ -258,5 +254,4 @@ class PROGNNSolver(Solver):
                                 lr=self.conf.training['lr_adj'], alphas=[self.conf.gsl['alpha']])
         self.optimizer_nuclear = PGD(self.estimator.parameters(), proxs=[self.prox_operators.prox_nuclear_cuda],
                                      lr=self.conf.training['lr_adj'], alphas=[self.conf.gsl['beta']])
-
         self.wait = 0

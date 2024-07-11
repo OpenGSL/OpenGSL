@@ -8,6 +8,8 @@ from opengsl.module.encoder import GCNEncoder, APPNPEncoder
 from opengsl.module.functional import apply_non_linearity, normalize, symmetry, knn
 from opengsl.module.metric import InnerProduct
 from opengsl.module.transform import KNN
+from torch_sparse import SparseTensor
+
 
 class MLP(torch.nn.Module):
     def __init__(self, nlayers, isize, hsize, osize, features, mlp_epochs, k, knn_metric, non_linearity, i, mlp_act):
@@ -33,6 +35,9 @@ class MLP(torch.nn.Module):
         self.mlp_act = mlp_act
         self.mlp_knn_init()
 
+    def reset_parameters(self):
+        self.mlp_knn_init()
+
     def internal_forward(self, h):
         for i, layer in enumerate(self.layers):
             h = layer(h)
@@ -48,7 +53,7 @@ class MLP(torch.nn.Module):
         if self.input_dim == self.output_dim:
             print("MLP full")
             for layer in self.layers:
-                layer.weight = torch.nn.Parameter(torch.eye(self.input_dim))
+                layer.weight = torch.nn.Parameter(torch.eye(self.input_dim, device=self.features.device))
         else:
             optimizer = torch.optim.Adam(self.parameters(), 0.01)
             labels = KNN(self.k,metric=self.knn_metric)(self.features)
@@ -70,13 +75,14 @@ class MLP(torch.nn.Module):
         similarities = apply_non_linearity(similarities, self.non_linearity, self.i)
         return similarities
 
+
 class GCN_DAE(torch.nn.Module):
     def __init__(self, cfg_model, nlayers, in_dim, hidden_dim, nclasses, dropout, dropout_adj, features, k, knn_metric, i_,
                  non_linearity, normalization, mlp_h, mlp_epochs, mlp_act):
         super(GCN_DAE, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCNEncoder(in_dim, hidden_dim, nclasses, n_layers=nlayers, dropout=dropout, spmm_type=0)
+            self.layers = GCNEncoder(n_feat=in_dim, n_hidden=hidden_dim, n_class=nclasses, n_layers=nlayers, dropout=dropout)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNPEncoder(in_dim, hidden_dim, nclasses, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
@@ -88,6 +94,11 @@ class GCN_DAE(torch.nn.Module):
                                 mlp_h, features, mlp_epochs, k, knn_metric, non_linearity, i_,
                                 mlp_act).cuda()
 
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
+
     def get_adj(self, h):
         Adj_ = self.graph_gen(h)
         Adj_ = symmetry(Adj_)
@@ -98,28 +109,33 @@ class GCN_DAE(torch.nn.Module):
         Adj_ = self.get_adj(features)
         Adj = self.dropout_adj(Adj_)
 
-        x = self.layers(x, Adj)
+        x = self.layers(x, SparseTensor.from_dense(Adj))
 
         return x, Adj_
+
 
 class GCN_C(torch.nn.Module):
     def __init__(self, cfg_model, in_channels, hidden_channels, out_channels, num_layers, dropout, dropout_adj):
         super(GCN_C, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCNEncoder(in_channels, hidden_channels, out_channels, n_layers=num_layers, dropout=dropout, spmm_type=0)
+            self.layers = GCNEncoder(n_feat=in_channels, n_hidden=hidden_channels, n_class=out_channels, n_layers=num_layers, dropout=dropout)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNPEncoder(in_channels, hidden_channels, out_channels, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
 
         self.dropout_adj = torch.nn.Dropout(p=dropout_adj)
 
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
+
     def forward(self, x, adj_t):
         Adj = self.dropout_adj(adj_t)
 
-        x = self.layers(x, Adj)
+        x = self.layers(x, SparseTensor.from_dense(Adj))
         return x
-
 
 
 class SLAPS(torch.nn.Module):
@@ -139,6 +155,10 @@ class SLAPS(torch.nn.Module):
         self.gcn_c = GCN_C(self.conf.model, in_channels=num_features, hidden_channels=self.conf.model['hidden'], out_channels=num_classes,
                             num_layers=self.conf.model['nlayers'], dropout=self.conf.model['dropout2'], dropout_adj=self.conf.model['dropout_adj2'])
 
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, features):
         loss_dae, Adj = self.get_loss_masked_features(features)

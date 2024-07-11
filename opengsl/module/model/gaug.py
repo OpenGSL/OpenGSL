@@ -7,20 +7,22 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
 from opengsl.module.transform import NonLinear
 from opengsl.module.metric import InnerProduct
+from torch_sparse import SparseTensor
 
 
 class VGAE(nn.Module):
     """ GAE/VGAE as edge prediction model """
-    def __init__(self, dim_feats, conf):
+    def __init__(self, n_feat, conf):
         super(VGAE, self).__init__()
         self.gae = conf.gsl['gae']
-        self.encoder = GCNEncoder(dim_feats, conf.gsl['n_hidden'], conf.gsl['n_embed'], conf.gsl['n_layers'],
-                              conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
-                              conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
-                              conf.gsl['input_layer'], conf.gsl['output_layer'], bias=False,
-                              weight_initializer='glorot')
+        self.encoder = GCNEncoder(n_feat=n_feat, n_class=conf.gsl['n_embed'], bias=False, weight_initializer='glorot', **conf.gsl)
         self.nonlinear = NonLinear('relu')
         self.metric = InnerProduct()
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, feats, adj):
         # GCN encoder
@@ -42,30 +44,29 @@ class VGAE(nn.Module):
 
 
 class GAug(nn.Module):
-    def __init__(self,
-                 dim_feats,
-                 n_classes,
-                 conf):
+    def __init__(self, n_feat, n_class, conf):
         super(GAug, self).__init__()
         self.temperature = conf.gsl['temperature']
         self.alpha = conf.gsl['alpha']
         # edge prediction network
-        self.ep_net = VGAE(dim_feats, conf)
+        self.ep_net = VGAE(n_feat, conf)
         # node classification network
         # self.nc_net = GCN(dim_feats, dim_h, n_classes, dropout=dropout)
-        if conf.model['type']=='gcn':
-            self.nc_net = GCNEncoder(dim_feats, conf.model['n_hidden'], n_classes, conf.model['n_layers'], conf.model['dropout'],
-                              conf.model['input_dropout'], conf.model['norm'], conf.model['n_linear'],
-                              conf.model['spmm_type'], conf.model['act'], conf.model['input_layer'],
-                              conf.model['output_layer'], weight_initializer='glorot', bias_initializer='zeros')
-        elif conf.model['type']=='appnp':
-            self.nc_net = APPNPEncoder(dim_feats, conf.model['n_hidden'], n_classes,
-                               dropout=conf.model['dropout'], K=conf.model['K'],
-                               alpha=conf.model['alpha'])
-        elif conf.model['type']=='gin':            
-            self.nc_net = GINEncoder(dim_feats, conf.model['n_hidden'], n_classes,
-                              conf.model['n_layers'], conf.model['mlp_layers'])
+        if conf.model['type'] == 'gcn':
+            self.nc_net = GCNEncoder(n_feat=n_feat, n_class=n_class, weight_initializer='glorot', bias_initializer='zeros', **conf.model)
+        elif conf.model['type'] == 'appnp':
+            self.nc_net = APPNPEncoder(n_feat, conf.model['n_hidden'], n_class,
+                                       dropout=conf.model['dropout'], K=conf.model['K'],
+                                       alpha=conf.model['alpha'])
+        elif conf.model['type'] == 'gin':
+            self.nc_net = GINEncoder(n_feat, conf.model['n_hidden'], n_class,
+                                     conf.model['n_layers'], conf.model['mlp_layers'])
             
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
+
     def sample_adj(self, adj_logits):
         """ sample an adj from the predicted edge probabilities of ep_net """
         edge_probs = adj_logits / torch.max(adj_logits)
@@ -98,7 +99,7 @@ class GAug(nn.Module):
         else:
             adj_new = self.sample_adj_add_bernoulli(adj_logits, adj_orig, self.alpha)
         adj_new_normed = normalize(adj_new)
-        output = self.nc_net(feats, adj_new_normed)
+        output = self.nc_net(feats, SparseTensor.from_dense(adj_new_normed))
         return output, adj_logits, adj_new
 
 

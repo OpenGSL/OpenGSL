@@ -10,6 +10,7 @@ from opengsl.utils.utils import get_homophily
 from opengsl.module.functional import normalize
 from opengsl.module.transform import KNN
 from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from torch_sparse import SparseTensor
 
 
 class GENSolver(Solver):
@@ -47,6 +48,18 @@ class GENSolver(Solver):
         self.method_name = "gen"
         print("Solver Version : [{}]".format("gen"))
         self.homophily = get_homophily(self.labels.cpu(), self.adj.to_dense().cpu(), type='node')
+        if self.conf.model['type'] == 'gcn':
+            self.model = GCNEncoder(n_feat=self.dim_feats, n_class=self.num_targets, weight_initializer='glorot',
+                                    bias_initializer='zeros', **conf.model).to(self.device)
+        elif self.conf.model['type'] == 'appnp':
+            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
+                               alpha=self.conf.model['alpha']).to(self.device)
+        elif self.conf.model['type'] == 'gin':
+            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                             self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
+        self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_masks[0], self.labels,
+                                        self.homophily)
 
     def knn(self, feature):
         # Generate a knn graph for input feature matrix. Note that the graph contains self loop.
@@ -69,7 +82,7 @@ class GENSolver(Solver):
         improve_1 = ''
         best_loss_val = 10
         best_acc_val = 0
-        normalized_adj = normalize(adj)
+        normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(normalize(adj))
         for epoch in range(self.conf.training['n_epochs']):
             improve_2 = ''
             t0 = time.time()
@@ -206,7 +219,7 @@ class GENSolver(Solver):
             Output of the model.
         '''
         self.model.load_state_dict(self.weights)
-        normalized_adj = normalize(self.adjs['final'])
+        normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(normalize(self.adjs['final']))
         return self.evaluate(self.test_mask, normalized_adj)
 
     def set_method(self):
@@ -214,25 +227,10 @@ class GENSolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        if self.conf.model['type'] == 'gcn':
-            self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                             self.conf.model['dropout'], self.conf.model['input_dropout'], self.conf.model['norm'],
-                             self.conf.model['n_linear'], self.conf.model['spmm_type'], self.conf.model['act'],
-                             self.conf.model['input_layer'], self.conf.model['output_layer'],
-                             weight_initializer='glorot',
-                             bias_initializer='zeros').to(self.device)
-        elif self.conf.model['type'] == 'appnp':
-            self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
-                               dropout=self.conf.model['dropout'], K=self.conf.model['K'],
-                               alpha=self.conf.model['alpha']).to(self.device)
-        elif self.conf.model['type'] == 'gin':
-            self.model = GINEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
-                             self.conf.model['n_layers'], self.conf.model['mlp_layers']).to(self.device)
-
-        self.estimator = GENEstimateAdj(self.n_classes, self.adj.to_dense(), self.train_mask, self.labels,
-                                        self.homophily)
-        self.optim = torch.optim.Adam(self.model.parameters(),
-                                      lr=self.conf.training['lr'],
+        self.model.reset_parameters()
+        self.estimator.reset_parameters()
+        self.estimator.idx_train = self.train_mask
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])
         self.best_iter = 0
         self.hidden_output = None

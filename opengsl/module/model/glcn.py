@@ -28,3 +28,8 @@ class GLCN(torch.nn.Module):
         loss2 = norm_regularizer(new_adj)
         others['loss'] = self.loss_lamb1 * loss1 + self.loss_lamb2 * loss2
         return z, adjs, others
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()

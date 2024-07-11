@@ -18,6 +18,13 @@ class EstimateAdj:
 
         self.homophily = homophily
 
+    def reset_parameters(self):
+        self.output = None
+        self.iterations = 0
+        self.count = 0
+        self.N = 0
+        self.E = np.zeros((self.num_node, self.num_node), dtype=np.int64)
+
     def reset_obs(self):
         self.count = 0
         self.N = 0

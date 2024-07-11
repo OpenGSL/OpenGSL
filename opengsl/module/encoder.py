@@ -171,13 +171,20 @@ class GraphConvolutionLayer(nn.Module):
         for layer in self.mlp:
             layer.reset_parameters()
 
-    def forward(self, x: torch.Tensor, adj: SparseTensor):
-        x = matmul(adj, x)
+    def forward(self, x: torch.Tensor, adj: Union[SparseTensor, torch.Tensor]):
+
         for i in range(len(self.mlp)-1):
             x = self.mlp[i](x)
             x = self.act(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.mlp[-1](x)
+
+        if isinstance(adj, SparseTensor):
+            x = matmul(adj, x)
+        elif isinstance(adj, torch.Tensor):
+            x = torch.mm(adj, x)
+            # x = matmul(SparseTensor.from_torch_sparse_coo_tensor(adj),x)
+
         if not self.last_layer:
             x = self.act(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
@@ -202,9 +209,12 @@ class GraphConvolutionDiagLayer(nn.Module):
         self.W = torch.nn.Parameter(self.W.new_ones(self.input_size))
 
     def forward(self, x, adj):
-        hidden = x @ torch.diag(self.W)
-        output = torch.sparse.mm(adj, hidden)
-        return output
+        x = x @ torch.diag(self.W)
+        if isinstance(adj, SparseTensor):
+            x = matmul(adj, x)
+        elif isinstance(adj, torch.Tensor):
+            x = torch.mm(adj, x)
+        return x
 
 
 class GCNDiagEncoder(nn.Module):
