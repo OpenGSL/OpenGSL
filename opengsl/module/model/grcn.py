@@ -25,10 +25,7 @@ class GRCN(torch.nn.Module):
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNDiagEncoder(2, num_features)
         else:
-            self.conv_graph = GCNEncoder(num_features, conf.gsl['n_hidden_2'], conf.gsl['n_hidden_1'], conf.gsl['n_layers'],
-                             conf.gsl['dropout'], conf.gsl['input_dropout'], conf.gsl['norm'],
-                             conf.gsl['n_linear'], conf.gsl['spmm_type'], conf.gsl['act'],
-                             conf.gsl['input_layer'], conf.gsl['output_layer'])
+            self.conv_graph = GCNEncoder(num_features, conf.gsl['n_hidden_2'], conf.gsl['n_hidden_1'], **conf.gsl)
 
         self.K = conf.gsl['K']
         self._normalize = conf.gsl['normalize']   # 用来决定是否对node embedding进行normalize
