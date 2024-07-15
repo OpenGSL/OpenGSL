@@ -6,6 +6,7 @@ import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
 import copy
+from torch_sparse import SparseTensor
 EOS = 1e-10
 
 
@@ -49,6 +50,9 @@ class GCNConv_dgl(nn.Module):
         super(GCNConv_dgl, self).__init__()
         self.linear = nn.Linear(input_size, output_size)
 
+    def reset_parameters(self):
+        self.linear.reset_parameters()
+
     def forward(self, x, g):
         with g.local_scope():
             g.ndata['h'] = self.linear(x)
@@ -69,10 +73,9 @@ class GraphEncoder(nn.Module):
                 self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, hidden_dim))
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
-            if conf.model['type']=='gcn':
-                self.model = GCNEncoder(n_feat=in_dim, nhid=hidden_dim, n_class=emb_dim, n_layers=nlayers, dropout=dropout,
-                                        input_layer=False, output_layer=False, spmm_type=0)
-            elif conf.model['type']=='appnp':
+            if conf.model['type'] == 'gcn':
+                self.model = GCNEncoder(n_feat=in_dim, n_hidden=hidden_dim, n_class=emb_dim, n_layers=nlayers, dropout=dropout)
+            elif conf.model['type'] == 'appnp':
                 self.model = APPNPEncoder(in_dim, hidden_dim, emb_dim,
                                     dropout=dropout, K=conf.model['K'],
                                     alpha=conf.model['alpha'])
@@ -81,6 +84,16 @@ class GraphEncoder(nn.Module):
                                nlayers, conf.model['mlp_layers'])
         self.proj_head = nn.Sequential(nn.Linear(emb_dim, proj_dim), nn.ReLU(inplace=True),
                                            nn.Linear(proj_dim, proj_dim))
+
+    def reset_parameters(self):
+        if self.sparse:
+            for child in self.gnn_encoder_layers:
+                child.reset_parameters()
+        else:
+            self.model.reset_parameters()
+        for child in self.proj_head:
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, x, Adj_):
 
@@ -103,6 +116,11 @@ class GCL(nn.Module):
         self.encoder = GraphEncoder(nlayers, in_dim, hidden_dim, emb_dim, proj_dim, dropout, sparse, conf)
         self.dropout_adj = dropout_adj
         self.sparse = sparse
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, x, Adj_, branch=None):
 
@@ -154,8 +172,14 @@ class GCN_SUB(nn.Module):
                 self.layers.append(GCNConv_dgl(nhid, nhid))
             self.layers.append(GCNConv_dgl(nhid, nclass))
         else:
-            self.model = GCNEncoder(n_feat=nfeat, nhid=nhid, n_class=nclass, n_layers=n_layers, dropout=dropout,
-                                    input_layer=False, output_layer=False, spmm_type=0)
+            self.model = GCNEncoder(n_feat=nfeat, n_hidden=nhid, n_class=nclass, n_layers=n_layers, dropout=dropout)
+
+    def reset_parameters(self):
+        if self.sparse:
+            for child in self.layers:
+                child.reset_parameters()
+        else:
+            self.model.reset_parameters()
 
     def forward(self, x, Adj):
 

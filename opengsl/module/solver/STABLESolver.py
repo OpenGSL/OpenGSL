@@ -46,6 +46,7 @@ class STABLESolver(Solver):
         print("Solver Version : [{}]".format("stable"))
         self.adj = sparse_tensor_to_scipy_sparse(self.adj)
         self.processed_adj = preprocess_adj(self.feats.cpu().numpy(), self.adj, threshold=self.conf.jt)
+        self.model = DGI(self.dim_feats, self.conf.n_embed, 'prelu').to(self.device)
 
     def pretrain(self, debug=False):
 
@@ -80,7 +81,7 @@ class STABLESolver(Solver):
             logits = self.model(self.feats.unsqueeze(0), shuf_fts, sp_adj, sp_aug_adj1, sp_aug_adj2)
             loss = b_xent(logits, lbl)
             if debug:
-                pass
+                print(loss)
 
             if loss < best:
                 best = loss
@@ -190,5 +191,5 @@ class STABLESolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = DGI(self.dim_feats, self.conf.n_embed, 'prelu').to(self.device)
+        self.model.reset_parameters()
         self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.pretrain['lr'], weight_decay=self.conf.pretrain['weight_decay'])

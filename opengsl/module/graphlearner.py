@@ -168,6 +168,10 @@ class AttLearner(GraphLearner):
         self.k = k
         self.sparse = sparse
 
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, x):
         '''
@@ -233,6 +237,10 @@ class MLPLearner(GraphLearner):
         self.sparse = sparse
         self.non_linear = non_linear
 
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, x):
         '''

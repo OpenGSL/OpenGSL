@@ -46,17 +46,21 @@ class NODEFORMERSolver(Solver):
         for i in range(conf.model['rb_order'] - 1):  # edge_index of high order adjacency
             adj = adj_mul(adj, adj, self.n_nodes)
             self.adjs_.append(adj)
+        self.model = NodeFormer(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
+                                num_layers=self.conf.model['n_layers'], dropout=self.conf.model['dropout'],
+                                num_heads=self.conf.model['n_heads'], use_bn=self.conf.model['use_bn'],
+                                nb_random_features=self.conf.model['M'],
+                                use_gumbel=self.conf.model['use_gumbel'], use_residual=self.conf.model['use_residual'],
+                                use_act=self.conf.model['use_act'],
+                                use_jk=self.conf.model['use_jk'],
+                                nb_gumbel_sample=self.conf.model['K'], rb_order=self.conf.model['rb_order'],
+                                rb_trans=self.conf.model['rb_trans']).to(self.device)
 
     def set_method(self):
         '''
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
-        self.model = NodeFormer(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, num_layers=self.conf.model['n_layers'], dropout=self.conf.model['dropout'],
-                           num_heads=self.conf.model['n_heads'], use_bn=self.conf.model['use_bn'], nb_random_features=self.conf.model['M'],
-                           use_gumbel=self.conf.model['use_gumbel'], use_residual=self.conf.model['use_residual'], use_act=self.conf.model['use_act'],
-                           use_jk=self.conf.model['use_jk'],
-                           nb_gumbel_sample=self.conf.model['K'], rb_order=self.conf.model['rb_order'], rb_trans=self.conf.model['rb_trans']).to(self.device)
         self.model.reset_parameters()
         self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=self.conf.training['weight_decay'], lr=self.conf.training['lr'])
 

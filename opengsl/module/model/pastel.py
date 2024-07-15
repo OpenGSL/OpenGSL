@@ -19,7 +19,6 @@ class GraphLearner(nn.Module):
         self.weight_tensor_for_pe = torch.Tensor(self.n_anchors, hidden_size)
         self.weight_tensor_for_pe = nn.Parameter(nn.init.xavier_uniform_(self.weight_tensor_for_pe))
 
-
     def forward(self, context, position_encoding, gpr_rank, position_flag, ctx_mask=None):
         expand_weight_tensor = self.weight_tensor.unsqueeze(1)
         if len(context.shape) == 3:
@@ -51,13 +50,11 @@ class GraphLearner(nn.Module):
 
         return attention
 
-
     def build_knn_neighbourhood(self, attention, topk, markoff_value):
         topk = min(topk, attention.size(-1))
         knn_val, knn_ind = torch.topk(attention, topk, dim=-1)
         weighted_adjacency_matrix = (markoff_value * torch.ones_like(attention)).scatter_(-1, knn_ind, knn_val).cuda()
         return weighted_adjacency_matrix
-
 
     def build_epsilon_neighbourhood(self, attention, epsilon, markoff_value):
         mask = (attention > epsilon).detach().float()
@@ -71,7 +68,6 @@ class GraphLearner(nn.Module):
             weighted_adjacency_matrix = torch.from_numpy(weighted_adjacency_matrix_np).cuda()
 
         return weighted_adjacency_matrix
-
 
 
 class PASTEL(nn.Module):
@@ -92,10 +88,9 @@ class PASTEL(nn.Module):
                                 epsilon=config.model['graph_learn_epsilon'],
                                 n_pers=config.model['graph_learn_num_pers'])
 
-        self.backbone = GCNEncoder(n_feat=n_feat, nhid=config.model['n_hidden'], n_class=nclass, n_layers=config.model['n_layers'],
-                                   dropout=config.model['dropout'], input_layer=False, output_layer=False, spmm_type=0).cuda()
-        
-        
+        self.backbone = GCNEncoder(n_feat=n_feat, n_hidden=config.model['n_hidden'], n_class=nclass, n_layers=config.model['n_layers'],
+                                   dropout=config.model['dropout'], input_layer=False, output_layer=False)
+
     def learn_graph(self, graph_learner, node_features, position_encoding=None, gpr_rank=None, position_flag=False, graph_skip_conn=None, graph_include_self=False, init_adj=None):
         raw_adj = graph_learner(node_features, position_encoding, gpr_rank, position_flag)
         assert raw_adj.min().item() >= 0
@@ -107,7 +102,6 @@ class PASTEL(nn.Module):
         else:
             adj = (1 - graph_skip_conn) * adj + graph_skip_conn * init_adj
         return raw_adj, adj
-
 
     def forward(self, node_features, init_adj=None):
         node_features = F.dropout(node_features, self.config.model.get('feat_adj_dropout', 0), training=self.training)

@@ -5,6 +5,7 @@ import numpy as np
 import copy
 import random
 from sklearn.metrics.pairwise import cosine_similarity
+from torch_sparse import SparseTensor, matmul
 
 
 def preprocess_adj(features, adj, threshold=0.03, jaccard=True):
@@ -114,6 +115,11 @@ class DGI(nn.Module):
     #  sp_aug_adj1 if sparse else aug_adj1,
     #  sp_aug_adj2 if sparse else aug_adj2,
     #  sparse, None, None, None, aug_type=aug_type
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
+
     def forward(self, seq1, seq2, adj, aug_adj1, aug_adj2):
         h_0 = self.gcn(seq1, adj)
 
@@ -155,8 +161,12 @@ class GCN_DGI(nn.Module):
         else:
             self.register_parameter('bias', None)
 
+        self.reset_parameters()
+
+    def reset_parameters(self):
         for m in self.modules():
             self.weights_init(m)
+        self.act = nn.PReLU().to(self.fc.weight.device)
 
     def weights_init(self, m):
         if isinstance(m, nn.Linear):
@@ -167,7 +177,7 @@ class GCN_DGI(nn.Module):
     # Shape of seq: (batch, nodes, features)
     def forward(self, seq, adj):
         seq_fts = self.fc(seq)
-        out = torch.unsqueeze(torch.spmm(adj, torch.squeeze(seq_fts, 0)), 0)
+        out = torch.unsqueeze(torch.mm(adj, torch.squeeze(seq_fts, 0)), 0)
         if self.bias is not None:
             out += self.bias
 
@@ -186,7 +196,9 @@ class Discriminator(nn.Module):
     def __init__(self, n_h):
         super(Discriminator, self).__init__()
         self.f_k = nn.Bilinear(n_h, n_h, 1)
+        self.reset_parameters()
 
+    def reset_parameters(self):
         for m in self.modules():
             self.weights_init(m)
 

@@ -21,7 +21,7 @@ def create_projection_matrix(m, d, seed=0):
     current_seed = seed
     torch.manual_seed(current_seed)
     unstructured_block = torch.randn((d, d))
-    q, _ = torch.qr(unstructured_block)
+    q, _ = torch.linalg.qr(unstructured_block)
     q = torch.t(q)
     block_list.append(q[0:m])
     final_matrix = torch.vstack(block_list)
@@ -284,7 +284,6 @@ class NodeFormer(nn.Module):
         self.use_residual = use_residual
         self.use_act = use_act
         self.use_jk = use_jk
-
 
     def reset_parameters(self):
         for conv in self.convs:

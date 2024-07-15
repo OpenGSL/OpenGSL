@@ -6,7 +6,8 @@ import torch
 import time
 from .solver import Solver
 from opengsl.module.functional import normalize
-import dgl
+from torch_sparse import SparseTensor
+from torch_geometric.utils import remove_self_loops, add_self_loops, to_torch_sparse_tensor
 
 
 class SEGSLSolver(Solver):
@@ -87,7 +88,7 @@ class SEGSLSolver(Solver):
         improve_1 = ''
         best_loss_val = 10
         best_acc_val = 0
-        normalized_adj = normalize(adj, add_loop=False)
+        normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(normalize(adj, add_loop=False))
         for epoch in range(self.conf.training['n_epochs']):
             improve_2 = ''
             t0 = time.time()
@@ -164,11 +165,14 @@ class SEGSLSolver(Solver):
         delete_mask[delete_idx] = False
         new_edge_index = new_edge_index.t()[delete_mask].t()  # 得到新的edge_index了
 
-        graph = dgl.graph((new_edge_index[0], new_edge_index[1]),
-                          num_nodes=self.n_nodes).to(self.device)
-        graph = dgl.remove_self_loop(graph)
-        graph = dgl.add_self_loop(graph)
-        adj = graph.adj().to(self.device)
+        # graph = dgl.graph((new_edge_index[0], new_edge_index[1]),
+        #                   num_nodes=self.n_nodes).to(self.device)
+        # graph = dgl.remove_self_loop(graph)
+        # graph = dgl.add_self_loop(graph)
+        new_edge_index, _ = remove_self_loops(new_edge_index)
+        new_edge_index, _ = add_self_loops(new_edge_index, num_nodes=self.n_nodes)
+        adj = to_torch_sparse_tensor(new_edge_index, size=(self.n_nodes, self.n_nodes)).to(self.device)
+
         return adj
 
     def evaluate(self, test_mask, normalized_adj):

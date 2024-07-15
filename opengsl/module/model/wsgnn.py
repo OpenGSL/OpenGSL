@@ -16,7 +16,7 @@ class QModel(nn.Module):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
         if conf.model['type'] == 'gcn':
-            self.encoder = GCNEncoder(d, nhid, c, n_layers, dropout)
+            self.encoder = GCNEncoder(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
         elif conf.model['type'] == 'appnp':
             self.encoder = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':
@@ -67,7 +67,7 @@ class PModel(nn.Module):
     def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf):
         super(PModel, self).__init__()
         if conf.model['type'] == 'gcn':
-            self.encoder1 = GCNEncoder(d, nhid, c, n_layers, dropout)
+            self.encoder1 = GCNEncoder(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
         elif conf.model['type'] == 'appnp':
             self.encoder1 = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':
@@ -92,7 +92,7 @@ class PModel(nn.Module):
         adj_1 = self.f1(adj_1)
         node_vec_1 = self.encoder1(node_features, adj_1)
 
-        node_vec_2 = self.encoder2(node_features, None).squeeze(1)
+        node_vec_2 = self.encoder2(node_features).squeeze(1)
         if len(node_vec_2.shape) == 2:
             adj_2 = self.metric2(torch.cat([node_vec_1, node_vec_2], dim=1))
             adj_2 = self.f1(adj_2)

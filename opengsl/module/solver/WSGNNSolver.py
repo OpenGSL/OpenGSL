@@ -38,6 +38,11 @@ class WSGNNSolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = 'wsgnn'
         self.edge_index = self.adj.coalesce().indices()
+        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'],
+                           self.conf.model['n_layers'],
+                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'],
+                           self.conf.model['no_bn'], self.dim_feats, self.n_nodes, self.num_targets, self.conf).to(
+            self.device)
 
     def learn_nc(self, debug=False):
         '''
@@ -118,7 +123,6 @@ class WSGNNSolver(Solver):
         return loss, acc, adj_p, adj_q
 
     def set_method(self):
-        self.model = WSGNN(self.conf.model['graph_skip_conn'], self.conf.model['n_hidden'], self.conf.model['dropout'], self.conf.model['n_layers'],
-                           self.conf.model['graph_learn_num_pers'], self.conf.model['mlp_layers'], self.conf.model['no_bn'], self.dim_feats,self.n_nodes,self.num_targets, self.conf).to(self.device)
+        self.model.reset_parameters()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'], weight_decay=self.conf.training['weight_decay'])
         self.criterion = ELBONCLoss(binary=(self.num_targets==1))

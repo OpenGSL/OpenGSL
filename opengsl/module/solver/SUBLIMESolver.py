@@ -42,6 +42,18 @@ class SUBLIMESolver(Solver):
         super().__init__(conf, dataset)
         self.method_name = "sublime"
         print("Solver Version : [{}]".format("sublime"))
+        if self.conf.type_learner == 'fgp':
+            self.graph_learner = FGP(self.feats.shape[0])
+        elif self.conf.type_learner == 'mlp':
+            self.graph_learner = MLPLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
+                                            self.conf.activation_learner)
+        elif self.conf.type_learner == 'att':
+            self.graph_learner = AttLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
+                                            self.conf.activation_learner)
+        self.graph_learner = self.graph_learner.to(self.device)
+        self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
+                         emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj, dropout=self.conf.dropout,
+                         dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse, conf=self.conf).to(self.device)
 
     def loss_gcl(self, model, graph_learner, features, anchor_adj):
 
@@ -249,25 +261,17 @@ class SUBLIMESolver(Solver):
         Function to set the model and necessary variables for each run, automatically called in function `set`.
 
         '''
+        if self.conf.type_learner == 'fgp':
+            self.graph_learner.reset_parameters(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6)
+        else:
+            self.graph_learner.reset_parameters()
+        self.model.reset_parameters()
         if self.conf.sparse:
             self.anchor_adj_raw = self.adj
         else:
             self.anchor_adj_raw = self.adj.to_dense()
         anchor_adj = normalize(self.anchor_adj_raw, add_loop=False)
-        if self.conf.type_learner == 'fgp':
-            self.graph_learner = FGP(self.feats.shape[0])
-            self.graph_learner.reset_parameters(self.feats.cpu(), self.conf.k, self.conf.sim_function, 6)
-        elif self.conf.type_learner == 'mlp':
-            self.graph_learner = MLPLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
-                                            self.conf.activation_learner)
-        elif self.conf.type_learner == 'att':
-            self.graph_learner = AttLearner(2, self.feats.shape[1], self.conf.k, 6, self.conf.sparse,
-                                            self.conf.activation_learner)
-        self.graph_learner = self.graph_learner.to(self.device)
-        self.model = GCL(nlayers=self.conf.n_layers, in_dim=self.dim_feats, hidden_dim=self.conf.n_hidden,
-                    emb_dim=self.conf.n_embed, proj_dim=self.conf.n_proj,
-                    dropout=self.conf.dropout, dropout_adj=self.conf.dropedge_rate, sparse=self.conf.sparse,
-                         conf=self.conf).to(self.device)
+
         self.optimizer_cl = torch.optim.Adam(self.model.parameters(), lr=self.conf.lr, weight_decay=self.conf.wd)
         self.optimizer_learner = torch.optim.Adam(self.graph_learner.parameters(), lr=self.conf.lr,
                                              weight_decay=self.conf.wd)

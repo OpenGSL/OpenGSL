@@ -60,10 +60,10 @@ class Stage_GNN_learner(nn.Module):
         print('Stage Internal type =', internal_type)
         self.internal_type = internal_type
         if self.internal_type == 'gnn':
-            self.encoder1 = GCNEncoder(n_feat=isize, nhid=osize, n_class=osize, n_layers=nlayers, dropout=0,
-                                       input_layer=False, output_layer=False, spmm_type=0, act=act)
+            self.encoder1 = GCNEncoder(n_feat=isize, n_hidden=osize, n_class=osize, n_layers=nlayers, dropout=0,
+                                       input_layer=False, output_layer=False, act=act)
         elif self.internal_type == 'mlp':
-            self.encoder1 = MLPEncoder(in_channels=isize, hidden_channels=osize, out_channels=osize, n_layers=nlayers, dropout=0,
+            self.encoder1 = MLPEncoder(n_feat=isize, n_hidden=osize, n_class=osize, n_layers=nlayers, dropout=0,
                                     activation=act, use_bn=False)
 
         self.k = k
@@ -88,7 +88,7 @@ class Stage_GNN_learner(nn.Module):
 
             self.up_gnn_layers = nn.ModuleList()
             if self.share_up_gnn:
-                self.encoder2 = GCNEncoder(n_feat=osize, nhid=osize, n_class=osize, n_layers=nlayers, dropout=self.dropout_up_gnn,
+                self.encoder2 = GCNEncoder(n_feat=osize, n_hidden=osize, n_class=osize, n_layers=nlayers, dropout=self.dropout_up_gnn,
                                            input_layer=False, output_layer=False, spmm_type=0, act='F.relu')
             else:
                 pass
@@ -104,7 +104,7 @@ class Stage_GNN_learner(nn.Module):
 
     def forward(self, features, adj):
 
-        embeddings = self.encoder1(features, adj)
+        embeddings = self.encoder1(features, adj=adj)
         cur_embeddings = embeddings
         adj_ = adj
         embeddings_ = embeddings
@@ -113,7 +113,7 @@ class Stage_GNN_learner(nn.Module):
             indices_list = []
             down_outs = []
             n_node = features.shape[0]
-            pre_idx = torch.arange(0, n_node).long()
+            pre_idx = torch.arange(0, n_node).long().to(features.device)
             for i in range(self.l_n):  # [0,1,2]
                 down_outs.append(embeddings_)
 

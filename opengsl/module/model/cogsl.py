@@ -4,50 +4,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_sparse import SparseTensor
 import numpy as np
-from opengsl.module.encoder import GCNEncoder
-
-
-class GCN_two_pyg(nn.Module):
-    # TODO
-    # Inspect this in future versions
-    def __init__(self, input_dim, hid_dim1, hid_dim2, dropout=0., activation="relu"):
-        super(GCN_two_pyg, self).__init__()
-        self.conv1 = GCNConv(input_dim, hid_dim1)
-        self.conv2 = GCNConv(hid_dim1, hid_dim2)
-
-        self.dropout = dropout
-        assert activation in ["relu", "leaky_relu", "elu"]
-        self.activation = getattr(F, activation)
-
-    def forward(self, feature, adj):
-        adj = SparseTensor.from_torch_sparse_coo_tensor(adj)
-        x1 = self.activation(self.conv1(feature, adj))
-        x1 = F.dropout(x1, p=self.dropout, training=self.training)
-        x2 = self.conv2(x1, adj)
-        return x2
-
-
-class GCN_one_pyg(nn.Module):
-    # TODO
-    # Inspect this in future versions
-    def __init__(self, in_ft, out_ft, bias=True, activation=None):
-        super(GCN_one_pyg, self).__init__()
-        self.conv1 = GCNConv(in_ft, out_ft)
-        self.activation = activation
-        if bias:
-            self.bias = nn.Parameter(torch.FloatTensor(out_ft))
-            self.bias.data.fill_(0.0)
-        else:
-            self.register_parameter('bias', None)
-
-    def forward(self, feat, adj):
-        adj = SparseTensor.from_torch_sparse_coo_tensor(adj)
-        out = self.conv1(feat, adj)
-        if self.bias is not None:
-            out += self.bias
-        if self.activation is not None:
-            out = self.activation(out)
-        return out
+from opengsl.module.encoder import GCNEncoder, GNNEncoder
 
 
 class Classification(nn.Module):
@@ -56,13 +13,18 @@ class Classification(nn.Module):
         self.num_class = num_class
         self.pyg = pyg
         if pyg == False:
-            self.encoder_v1 = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
-            self.encoder_v2 = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
-            self.encoder_v = GCNEncoder(num_feature, cls_hid_1, num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v1 = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v2 = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
         else:
-            self.encoder_v1 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-            self.encoder_v2 = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
-            self.encoder_v = GCN_two_pyg(num_feature, cls_hid_1, num_class, dropout)
+            self.encoder_v1 = GNNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout)
+            self.encoder_v2 = GNNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout)
+            self.encoder_v = GNNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout)
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, feat, view, flag):
         if not self.pyg:
@@ -149,9 +111,9 @@ class GenView(nn.Module):
         super(GenView, self).__init__()
         self.pyg = pyg
         if pyg == False:
-            self.gen_gcn = GCNEncoder(num_feature, hid, hid, n_layers=1, dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gen_gcn = GCNEncoder(n_feat=num_feature, n_hidden=hid, n_class=hid, n_layers=1, dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
-            self.gen_gcn = GCN_one_pyg(num_feature, hid, activation=nn.ReLU())  
+            self.gen_gcn = GNNEncoder(n_feat=num_feature, n_hidden=hid, n_class=hid, n_layers=1, dropout=0)
         #self.gen_gcn = GraphConvolution(num_feature, hid, dropout=0)
         self.gen_mlp = nn.Linear(2 * hid, 1)
         nn.init.xavier_normal_(self.gen_mlp.weight, gain=1.414)
@@ -160,6 +122,11 @@ class GenView(nn.Module):
         
         self.com_lambda = com_lambda
         self.dropout = nn.Dropout(dropout)
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, v_ori, feat, v_indices, num_node):
         emb = self.gen_gcn(feat, v_ori if self.pyg else v_ori.to_dense())
@@ -183,6 +150,11 @@ class View_Estimator(nn.Module):
             self.normalize = self.normalize1
         else:
             self.normalize = self.normalize2
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def normalize1(self, adj):
         return (adj + adj.t())
@@ -209,14 +181,14 @@ class MI_NCE(nn.Module):
         super(MI_NCE, self).__init__()
         self.pyg = pyg
         if pyg == False:
-            self.gcn = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
-            self.gcn1 = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
-            self.gcn2 = GCNEncoder(num_feature, mi_hid_1, mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn1 = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn2 = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
             #print("pyg")
-            self.gcn = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-            self.gcn1 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
-            self.gcn2 = GCN_one_pyg(num_feature, mi_hid_1, activation=nn.PReLU())
+            self.gcn = GNNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, dropout=0, act='nn.PReLU()')
+            self.gcn1 = GNNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, dropout=0, act='nn.PReLU()')
+            self.gcn2 = GNNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, dropout=0, act='nn.PReLU()')
         self.proj = nn.Sequential(
             nn.Linear(mi_hid_1, mi_hid_1),
             nn.ELU(),
@@ -225,6 +197,14 @@ class MI_NCE(nn.Module):
         self.con = Contrast(tau)
         self.big = big
         self.batch = batch
+
+    def reset_parameters(self):
+        self.gcn.reset_parameters()
+        self.gcn1.reset_parameters()
+        self.gcn2.reset_parameters()
+        for child in self.proj:
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def forward(self, views, feat):
         v_emb = self.proj(self.gcn(feat, views[0] if self.pyg else views[0].to_dense()))
@@ -246,14 +226,18 @@ class MI_NCE(nn.Module):
 
 
 class CoGSL(nn.Module):
-    def __init__(self, num_feature, cls_hid_1, num_class, gen_hid, mi_hid_1,
-                 com_lambda_v1, com_lambda_v2, lam, alpha, cls_dropout, ve_dropout, tau, pyg, big, batch, name):
+    def __init__(self, num_feature, cls_hid_1, num_class, gen_hid, mi_hid_1, com_lambda_v1, com_lambda_v2, lam, alpha,
+                 cls_dropout, ve_dropout, tau, pyg, big, batch, name):
         super(CoGSL, self).__init__()
         self.cls = Classification(num_feature, cls_hid_1, num_class, cls_dropout, pyg)
         self.ve = View_Estimator(num_feature, gen_hid, com_lambda_v1, com_lambda_v2, ve_dropout, pyg, big)
         self.mi = MI_NCE(num_feature, mi_hid_1, tau, pyg, big, batch)
         self.fusion = Fusion(lam, alpha, name)
-        
+
+    def reset_parameters(self):
+        for child in self.children():
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
 
     def get_view(self, view1, view1_indices, view2, view2_indices, num_nodes, feats):
         new_v1, new_v2 = self.ve(view1, view1_indices, view2, view2_indices, num_nodes, feats)

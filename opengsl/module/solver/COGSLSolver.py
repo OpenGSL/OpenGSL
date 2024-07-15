@@ -65,6 +65,13 @@ class COGSLSolver(Solver):
         self.view1 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view1, False))
         self.view2 = scipy_sparse_to_sparse_tensor(normalize_sp_matrix(_view2, False))
         self.loss_fn = F.binary_cross_entropy_with_logits if self.num_targets == 1 else F.nll_loss
+        self.model = CoGSL(self.dim_feats, self.conf.model['cls_hid_1'], self.num_targets, self.conf.model['gen_hid'],
+                           self.conf.model['mi_hid_1'], self.conf.model['com_lambda_v1'],
+                           self.conf.model['com_lambda_v2'],
+                           self.conf.model['lam'], self.conf.model['alpha'], self.conf.model['cls_dropout'],
+                           self.conf.model['ve_dropout'], self.conf.model['tau'], self.conf.dataset['pyg'],
+                           self.conf.dataset['big'], self.conf.dataset['batch'], self.conf.dataset['name']).to(
+            self.device)
 
     def view_knn(self):
         adj = np.zeros((self.n_nodes, self.n_nodes), dtype=np.int64)
@@ -242,13 +249,7 @@ class COGSLSolver(Solver):
         return self.loss_acc(logits[test_mask], self.labels[test_mask])
 
     def set_method(self):
-        self.model = CoGSL(self.dim_feats, self.conf.model['cls_hid_1'], self.num_targets, self.conf.model['gen_hid'],
-                           self.conf.model['mi_hid_1'], self.conf.model['com_lambda_v1'],
-                           self.conf.model['com_lambda_v2'],
-                           self.conf.model['lam'], self.conf.model['alpha'], self.conf.model['cls_dropout'],
-                           self.conf.model['ve_dropout'], self.conf.model['tau'], self.conf.dataset['pyg'],
-                           self.conf.dataset['big'], self.conf.dataset['batch'], self.conf.dataset['name']).to(
-            self.device)
+        self.model.reset_parameters()
         self.opti_ve = torch.optim.Adam(self.model.ve.parameters(), lr=self.conf.training['ve_lr'],
                                         weight_decay=self.conf.training['ve_weight_decay'])
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opti_ve, 0.99)
@@ -258,7 +259,6 @@ class COGSLSolver(Solver):
                                         weight_decay=self.conf.training['mi_weight_decay'])
 
         self.view1 = self.view1.to(self.device)
-
         self.view2 = self.view2.to(self.device)
         self.view1_indices = self.view1_indices.to(self.device)
         self.view2_indices = self.view2_indices.to(self.device)

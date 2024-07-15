@@ -16,7 +16,7 @@ from torch_geometric.nn.aggr import Aggregation
 from torch_geometric.nn.norm import BatchNorm, LayerNorm, GraphNorm
 from torch_sparse import SparseTensor, matmul
 from torch_scatter import segment_csr
-from torch_geometric.utils import cumsum, scatter
+from torch_geometric.utils import cumsum, scatter, is_torch_sparse_tensor
 
 
 class AttentiveLayer(nn.Module):
@@ -442,7 +442,7 @@ class GNNEncoder(nn.Module):
         Whether to add bias to linear transform in GCN.
     '''
     def __init__(self, n_feat, n_class, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
-                 act='F.relu', input_layer=False, output_layer=False, bias=True, pool='max', residual=False, jk=None,
+                 act='F.relu', input_layer=False, output_layer=False, bias=True, pool=None, residual=False, jk=None,
                  n_layers_output=1, backbone='gcn', **kwargs):
 
         super(GNNEncoder, self).__init__()
@@ -526,10 +526,13 @@ class GNNEncoder(nn.Module):
             for norm in self.norms:
                 norm.reset_parameters()
 
-    def forward(self, x=None, edge_index=None, edge_attr=None, batch=None, get_cls=True, return_before_pool=False):
+    def forward(self, x=None, edge_index: torch.Tensor = None, edge_attr=None, batch=None, get_cls=True, return_before_pool=False):
         batch_size = batch.max()+1 if batch is not None else 1
         xs = []
-        edges = SparseTensor.from_edge_index(edge_index=edge_index, edge_attr=edge_attr, sparse_sizes=(x.shape[0], x.shape[0]))
+        if edge_index.is_sparse:
+            edges = SparseTensor.from_torch_sparse_coo_tensor(edge_index)
+        else:
+            edges = SparseTensor.from_edge_index(edge_index=edge_index, edge_attr=edge_attr, sparse_sizes=(x.shape[0], x.shape[0]))
         if self.input_layer:
             x = self.input_linear(x)
             x = self.act(x)
@@ -551,7 +554,7 @@ class GNNEncoder(nn.Module):
                 xs.append(x1)
             x = x1 + x if self.residual else x1
         x = self.jk(xs) if self.jk else x
-        if self.pool :
+        if self.pool:
             x_pooled = global_pool(x, batch, self.pool)
         else:
             x_pooled = x

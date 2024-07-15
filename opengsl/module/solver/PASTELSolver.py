@@ -47,7 +47,7 @@ class PASTELSolver(Solver):
         
         self.conf = conf
         self.adj = normalize(self.adj)
-        
+
 
     def learn_nc(self, debug=False):
         '''
@@ -385,7 +385,7 @@ def all_pairs_shortest_path_length_parallel(graph, cutoff=None, num_workers=4):
     elif len(nodes) < 400:
         num_workers = int(num_workers / 2)
 
-    pool = mp.Pool(processes=num_workers)
+    pool = mp.Pool(processes=1)
     results = [pool.apply_async(single_source_shortest_path_length_range,
                                 args=(graph, nodes[int(len(nodes) / num_workers * i):int(len(nodes) / num_workers * (i + 1))], cutoff)) for i in range(num_workers)]
     output = [p.get() for p in results]
