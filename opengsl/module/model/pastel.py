@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from opengsl.module.encoder import GCNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL
 
 
 class GraphLearner(nn.Module):
@@ -88,8 +88,8 @@ class PASTEL(nn.Module):
                                 epsilon=config.model['graph_learn_epsilon'],
                                 n_pers=config.model['graph_learn_num_pers'])
 
-        self.backbone = GCNEncoder(n_feat=n_feat, n_hidden=config.model['n_hidden'], n_class=nclass, n_layers=config.model['n_layers'],
-                                   dropout=config.model['dropout'], input_layer=False, output_layer=False)
+        self.backbone = GNNEncoder_OpenGSL(n_feat=n_feat, n_hidden=config.model['n_hidden'], n_class=nclass, n_layers=config.model['n_layers'],
+                                           dropout=config.model['dropout'], input_layer=False, output_layer=False)
 
     def learn_graph(self, graph_learner, node_features, position_encoding=None, gpr_rank=None, position_flag=False, graph_skip_conn=None, graph_include_self=False, init_adj=None):
         raw_adj = graph_learner(node_features, position_encoding, gpr_rank, position_flag)

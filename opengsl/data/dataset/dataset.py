@@ -81,7 +81,7 @@ class Dataset:
             self.g = self.data_raw[0]
             self.feats = self.g.x  # unnormalized
             if ds_name == 'flickr':
-                self.feats = self.feats.to_dense()
+                self.feats = self.feats.to_dense().float()
             self.n_nodes = self.feats.shape[0]
             self.dim_feats = self.feats.shape[1]
             self.labels = self.g.y

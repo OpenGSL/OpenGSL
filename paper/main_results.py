@@ -5,13 +5,13 @@ import pandas as pd
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data', type=str, default='cora', help='dataset')
-parser.add_argument('--method', type=str, default='gcn', help="Select methods")
+parser.add_argument('--data', type=str, default='citeseer', help='dataset')
+parser.add_argument('--method', type=str, default='prose', help="Select methods")
 parser.add_argument('--config', type=str, default=None)
 parser.add_argument('--debug', action='store_false')
 parser.add_argument('--gpu', type=str, default='0', help="Visible GPU")
 parser.add_argument('--n_splits', type=int, default=1)
-parser.add_argument('--n_runs', type=int, default=1)
+parser.add_argument('--n_runs', type=int, default=5)
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)

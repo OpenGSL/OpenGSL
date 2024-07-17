@@ -1,6 +1,6 @@
 import numpy as np
 from copy import deepcopy
-from opengsl.module.encoder import GCNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL
 from opengsl.module.model.segsl import knn_maxE1, add_knn, get_weight, get_adj_matrix, PartitionTree, get_community, reshape
 import torch
 import time
@@ -76,8 +76,8 @@ class SEGSLSolver(Solver):
         return self.result, self.best_graph
 
     def train_gcn(self, iter, adj, debug=False):
-        self.model = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
-                         self.conf.model['dropout'], self.conf.model['input_dropout']).to(self.device)
+        self.model = GNNEncoder_OpenGSL(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'],
+                                        self.conf.model['dropout'], self.conf.model['input_dropout']).to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(),
                                       lr=self.conf.training['lr'],
                                       weight_decay=self.conf.training['weight_decay'])

@@ -1,7 +1,7 @@
 import dgl
 import torch
 import torch.nn as nn
-from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 import dgl.function as fn
 import numpy as np
 import torch.nn.functional as F
@@ -74,7 +74,7 @@ class GraphEncoder(nn.Module):
             self.gnn_encoder_layers.append(GCNConv_dgl(hidden_dim, emb_dim))
         else:
             if conf.model['type'] == 'gcn':
-                self.model = GCNEncoder(n_feat=in_dim, n_hidden=hidden_dim, n_class=emb_dim, n_layers=nlayers, dropout=dropout)
+                self.model = GNNEncoder_OpenGSL(n_feat=in_dim, n_hidden=hidden_dim, n_class=emb_dim, n_layers=nlayers, dropout=dropout)
             elif conf.model['type'] == 'appnp':
                 self.model = APPNPEncoder(in_dim, hidden_dim, emb_dim,
                                     dropout=dropout, K=conf.model['K'],
@@ -172,7 +172,7 @@ class GCN_SUB(nn.Module):
                 self.layers.append(GCNConv_dgl(nhid, nhid))
             self.layers.append(GCNConv_dgl(nhid, nclass))
         else:
-            self.model = GCNEncoder(n_feat=nfeat, n_hidden=nhid, n_class=nclass, n_layers=n_layers, dropout=dropout)
+            self.model = GNNEncoder_OpenGSL(n_feat=nfeat, n_hidden=nhid, n_class=nclass, n_layers=n_layers, dropout=dropout)
 
     def reset_parameters(self):
         if self.sparse:

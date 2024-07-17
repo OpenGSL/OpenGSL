@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from opengsl.module.metric import WeightedCosine
-from opengsl.module.encoder import MLPEncoder, GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import MLPEncoder, GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 from opengsl.module.transform import Normalize
 from opengsl.module.fuse import Interpolate
 
@@ -16,7 +16,7 @@ class QModel(nn.Module):
         super(QModel, self).__init__()
         self.graph_skip_conn = graph_skip_conn
         if conf.model['type'] == 'gcn':
-            self.encoder = GCNEncoder(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
+            self.encoder = GNNEncoder_OpenGSL(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
         elif conf.model['type'] == 'appnp':
             self.encoder = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':
@@ -67,7 +67,7 @@ class PModel(nn.Module):
     def __init__(self, nhid, dropout, n_layers, graph_learn_num_pers, mlp_layers, no_bn, d, n, c, conf):
         super(PModel, self).__init__()
         if conf.model['type'] == 'gcn':
-            self.encoder1 = GCNEncoder(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
+            self.encoder1 = GNNEncoder_OpenGSL(n_feat=d, n_hidden=nhid, n_class=c, n_layers=n_layers, dropout=dropout)
         elif conf.model['type'] == 'appnp':
             self.encoder1 = APPNPEncoder(d, nhid, c, dropout, conf.model['hops'], conf.model['alpha'])
         elif conf.model['type'] == 'gin':

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from .solver import Solver
-from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 from opengsl.module.regularizer import norm_regularizer, smoothness_regularizer, PGD, ProxOperators
 from opengsl.module.functional import normalize, symmetry
 from opengsl.module.metric import FGP
@@ -43,7 +43,7 @@ class PROGNNSolver(Solver):
         print("Solver Version : [{}]".format("prognn"))
         self.adj = self.adj.to_dense()
         if self.conf.model['type'] == 'gcn':
-            self.model = GCNEncoder(self.dim_feats, self.num_targets, weight_initializer='uniform', **self.conf.model).to(self.device)
+            self.model = GNNEncoder_OpenGSL(self.dim_feats, self.num_targets, weight_initializer='uniform', **self.conf.model).to(self.device)
         elif self.conf.model['type'] == 'appnp':
             self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],

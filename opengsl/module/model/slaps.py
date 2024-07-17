@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import math
 import dgl
 import numpy as np
-from opengsl.module.encoder import GCNEncoder, APPNPEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, APPNPEncoder
 from opengsl.module.functional import apply_non_linearity, normalize, symmetry, knn
 from opengsl.module.metric import InnerProduct
 from opengsl.module.transform import KNN
@@ -82,7 +82,7 @@ class GCN_DAE(torch.nn.Module):
         super(GCN_DAE, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCNEncoder(n_feat=in_dim, n_hidden=hidden_dim, n_class=nclasses, n_layers=nlayers, dropout=dropout)
+            self.layers = GNNEncoder_OpenGSL(n_feat=in_dim, n_hidden=hidden_dim, n_class=nclasses, n_layers=nlayers, dropout=dropout)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNPEncoder(in_dim, hidden_dim, nclasses, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])
@@ -119,7 +119,7 @@ class GCN_C(torch.nn.Module):
         super(GCN_C, self).__init__()
 
         if cfg_model['type'] == 'gcn':
-            self.layers = GCNEncoder(n_feat=in_channels, n_hidden=hidden_channels, n_class=out_channels, n_layers=num_layers, dropout=dropout)
+            self.layers = GNNEncoder_OpenGSL(n_feat=in_channels, n_hidden=hidden_channels, n_class=out_channels, n_layers=num_layers, dropout=dropout)
         elif cfg_model['type'] == 'appnp':
             self.layers = APPNPEncoder(in_channels, hidden_channels, out_channels, spmm_type=1,
                                dropout=dropout, K=cfg_model['appnp_k'], alpha=cfg_model['appnp_alpha'])

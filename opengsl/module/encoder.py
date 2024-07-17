@@ -155,7 +155,7 @@ class MLPEncoder(nn.Module):
 class GraphConvolutionLayer(nn.Module):
 
     def __init__(self, in_channels, out_channels, dropout=0.5, n_linear=1, bias=True, act='F.relu',
-                 last_layer=False, weight_initializer=None, bias_initializer=None, **kwargs):
+                 weight_initializer=None, bias_initializer=None, **kwargs):
         super(GraphConvolutionLayer, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -165,7 +165,6 @@ class GraphConvolutionLayer(nn.Module):
             self.mlp.append(Linear(out_channels, out_channels, bias=bias, weight_initializer=weight_initializer, bias_initializer=bias_initializer))
         self.dropout = dropout
         self.act = eval(act)
-        self.last_layer = last_layer
 
     def reset_parameters(self):
         for layer in self.mlp:
@@ -184,10 +183,6 @@ class GraphConvolutionLayer(nn.Module):
         elif isinstance(adj, torch.Tensor):
             x = torch.mm(adj, x)
             # x = matmul(SparseTensor.from_torch_sparse_coo_tensor(adj),x)
-
-        if not self.last_layer:
-            x = self.act(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
         return x
 
     def __repr__(self):
@@ -262,9 +257,10 @@ class GCNDiagEncoder(nn.Module):
         return x
 
 
-class GCNEncoder(nn.Module):
+class GNNEncoder_OpenGSL(nn.Module):
     '''
-    GCN encoder.
+    GNN encoder.
+    TODO to be fused with GNNEncoder_PYG in future versions
 
     Parameters
     ----------
@@ -297,11 +293,12 @@ class GCNEncoder(nn.Module):
     bias : bool
         Whether to add bias to linear transform in GCN.
     '''
-    def __init__(self, n_feat, n_class, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
-                 act='F.relu', input_layer=False, output_layer=False, weight_initializer=None,
-                 bias_initializer=None, bias=True, pool='max', residual=False, jk=None, n_layers_output=1, **kwargs):
 
-        super(GCNEncoder, self).__init__()
+    def __init__(self, n_feat, n_class, n_hidden, n_layers=2, dropout=0.5, input_dropout=0.0, norm=None, n_linear=1,
+                 act='F.relu', input_layer=False, output_layer=False, weight_initializer=None, bias_initializer=None,
+                 bias=True, residual=False, jk=None, n_layers_output=1, **kwargs):
+
+        super(GNNEncoder_OpenGSL, self).__init__()
 
         self.n_feat = n_feat
         self.nclass = n_class
@@ -314,7 +311,6 @@ class GCNEncoder(nn.Module):
             self.output_layer = True
         self.n_linear = n_linear
         self.dropout = dropout
-        self.pool = pool
         self.residual = residual
         if self.residual:
             assert self.input_layer and self.output_layer
@@ -323,6 +319,7 @@ class GCNEncoder(nn.Module):
         self.norm_flag = norm['flag']
         if self.norm_flag:
             self.norm_type = norm['norm_type']
+            self.norm_first = norm['norm_first'] if 'norm_first' in norm else False
             self.supports_norm_batch = self.norm_type in ['LayerNorm', 'GraphNorm']
             norm_layer = eval(self.norm_type)
             norm_kwargs = norm['norm_kwargs'] if 'norm_kwargs' in norm else dict()
@@ -349,8 +346,10 @@ class GCNEncoder(nn.Module):
                 out_hidden = n_hidden
             self.convs.append(GraphConvolutionLayer(in_hidden, out_hidden, dropout, n_linear, act=act, weight_initializer=weight_initializer, bias_initializer=bias_initializer, bias=bias))
             if self.norm_flag:
-                self.norms.append(norm_layer(in_channels=out_hidden, **norm_kwargs))
-        self.convs[-1].last_layer = True
+                if self.norm_first:
+                    self.norms.append(norm_layer(in_channels=in_hidden, **norm_kwargs))
+                else:
+                    self.norms.append(norm_layer(in_channels=out_hidden, **norm_kwargs))
 
     def reset_parameters(self):
         if self.input_layer:
@@ -380,22 +379,29 @@ class GCNEncoder(nn.Module):
             hidden representations. Returned when `return_mid` is True.
 
         '''
+        xs = []
         if self.input_layer:
             x = self.input_linear(x)
             x = self.input_drop(x)
             x = self.act(x)
         for i, layer in enumerate(self.convs):
-            if self.norm_flag:
-                x_res = self.norms[i](x)
-                x_res = layer(x_res, adj)
-                x = x + x_res
+            if self.norm_flag and self.norm_first:
+                x_res = layer(self.norms[i](x), adj)
             else:
-                x = layer(x,adj)
-            if i != self.n_layers - 1:
-                mid = x
+                x_res = layer(x, adj)
+            if i < self.n_layers - 1 or self.output_layer:
+                if self.norm_flag and (not self.norm_first):
+                    x_res = self.norms[i](x_res)
+                x_res = self.act(x_res)
+                x_res = F.dropout(x_res, p=self.dropout, training=self.training)
+            x = x_res + x if self.residual else x_res
+            xs.append(x)
+        x = self.jk(xs) if self.jk else x
         if self.output_layer:
-            x = self.output_normalization(x)
-            x = self.output_linear(x).squeeze(1)
+            mid = x
+            x = self.output_linear(x)
+        else:
+            mid = xs[-2]
         if return_mid:
             return mid, x.squeeze(1)
         else:

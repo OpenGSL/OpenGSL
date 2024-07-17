@@ -1,7 +1,7 @@
 from copy import deepcopy
 from opengsl.module.model.bmgcn import BMGCN
 from opengsl.utils.utils import one_hot
-from opengsl.module.encoder import MLPEncoder, GCNEncoder
+from opengsl.module.encoder import MLPEncoder, GNNEncoder_OpenGSL
 import torch
 import time
 from .solver import Solver
@@ -96,7 +96,7 @@ class BMGCNSolver(Solver):
         self.model_mlp.load_state_dict(self.mlp_weights)
 
         # train
-        model_gcn = GCNEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'], self.conf.model['dropout'], spmm_type=0)
+        model_gcn = GNNEncoder_OpenGSL(self.dim_feats, self.conf.model['n_hidden'], self.num_targets, self.conf.model['n_layers'], self.conf.model['dropout'], spmm_type=0)
         model_cpgnn = BMGCN(self.num_targets, self.model_mlp, model_gcn, [1, 1], self.conf.enhance, self.device)
         model_cpgnn.to(self.device)
 

@@ -1,5 +1,5 @@
 import torch
-from opengsl.module.encoder import GCNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL
 from opengsl.module.graphlearner import OneLayerNN
 from opengsl.module.regularizer import norm_regularizer, smoothness_regularizer
 from torch_sparse import SparseTensor
@@ -10,7 +10,7 @@ class GLCN(torch.nn.Module):
     def __init__(self, n_feat, n_classes, conf):
         super(GLCN, self).__init__()
         if conf.model['type'] == 'gcn':
-            self.gnn_encoder = GCNEncoder(n_feat, n_classes, **conf.model)
+            self.gnn_encoder = GNNEncoder_OpenGSL(n_feat, n_classes, **conf.model)
         self.graph_learner = OneLayerNN(n_feat, conf.model['n_hidden_graph'], p_dropout=conf.model['dropout'])
         self.loss_lamb1 = conf.training['loss_lamb1']
         self.loss_lamb2 = conf.training['loss_lamb2']

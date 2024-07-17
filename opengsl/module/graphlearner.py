@@ -5,7 +5,7 @@ from torch_geometric.nn import inits
 import torch.nn.init as init
 from sklearn.neighbors import kneighbors_graph
 import numpy as np
-from opengsl.module.encoder import AttentiveEncoder, MLPEncoder, GCNEncoder
+from opengsl.module.encoder import AttentiveEncoder, MLPEncoder, GNNEncoder_OpenGSL
 from opengsl.module.metric import WeightedCosine, Cosine
 from opengsl.module.transform import KNN, NonLinear
 from opengsl.module.functional import knn_fast
@@ -287,7 +287,7 @@ class GLNLearner(GraphLearner):
         n
         '''
         super(GLNLearner, self).__init__()
-        self.encoder = GCNEncoder(d_in, d_hidden, d_hidden, n_layers=2, dropout=0)
+        self.encoder = GNNEncoder_OpenGSL(d_in, d_hidden, d_hidden, n_layers=2, dropout=0)
         self.Z = nn.Parameter(torch.FloatTensor(d_hidden, d_hidden))
         self.M = nn.Parameter(torch.FloatTensor(n, n))
         self.Q = nn.Parameter(torch.FloatTensor(d_hidden, d_hidden))

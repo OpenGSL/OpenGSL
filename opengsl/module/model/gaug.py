@@ -4,7 +4,7 @@ import pyro as pyro
 from opengsl.module.functional import normalize
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
-from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 from opengsl.module.transform import NonLinear
 from opengsl.module.metric import InnerProduct
 from torch_sparse import SparseTensor
@@ -15,7 +15,7 @@ class VGAE(nn.Module):
     def __init__(self, n_feat, conf):
         super(VGAE, self).__init__()
         self.gae = conf.gsl['gae']
-        self.encoder = GCNEncoder(n_feat=n_feat, n_class=conf.gsl['n_embed'], bias=False, weight_initializer='glorot', **conf.gsl)
+        self.encoder = GNNEncoder_OpenGSL(n_feat=n_feat, n_class=conf.gsl['n_embed'], bias=False, weight_initializer='glorot', **conf.gsl)
         self.nonlinear = NonLinear('relu')
         self.metric = InnerProduct()
 
@@ -53,7 +53,7 @@ class GAug(nn.Module):
         # node classification network
         # self.nc_net = GCN(dim_feats, dim_h, n_classes, dropout=dropout)
         if conf.model['type'] == 'gcn':
-            self.nc_net = GCNEncoder(n_feat=n_feat, n_class=n_class, weight_initializer='glorot', bias_initializer='zeros', **conf.model)
+            self.nc_net = GNNEncoder_OpenGSL(n_feat=n_feat, n_class=n_class, weight_initializer='glorot', bias_initializer='zeros', **conf.model)
         elif conf.model['type'] == 'appnp':
             self.nc_net = APPNPEncoder(n_feat, conf.model['n_hidden'], n_class,
                                        dropout=conf.model['dropout'], K=conf.model['K'],

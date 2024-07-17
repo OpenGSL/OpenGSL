@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_sparse import SparseTensor
 import numpy as np
-from opengsl.module.encoder import GCNEncoder, GNNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, GNNEncoder
 
 
 class Classification(nn.Module):
@@ -13,9 +13,9 @@ class Classification(nn.Module):
         self.num_class = num_class
         self.pyg = pyg
         if pyg == False:
-            self.encoder_v1 = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
-            self.encoder_v2 = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
-            self.encoder_v = GCNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v1 = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v2 = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
+            self.encoder_v = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout, weight_initializer='glorot', bias_initializer='zeros')
         else:
             self.encoder_v1 = GNNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout)
             self.encoder_v2 = GNNEncoder(n_feat=num_feature, n_hidden=cls_hid_1, n_class=num_class, dropout=dropout)
@@ -111,7 +111,7 @@ class GenView(nn.Module):
         super(GenView, self).__init__()
         self.pyg = pyg
         if pyg == False:
-            self.gen_gcn = GCNEncoder(n_feat=num_feature, n_hidden=hid, n_class=hid, n_layers=1, dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gen_gcn = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=hid, n_class=hid, n_layers=1, dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
             self.gen_gcn = GNNEncoder(n_feat=num_feature, n_hidden=hid, n_class=hid, n_layers=1, dropout=0)
         #self.gen_gcn = GraphConvolution(num_feature, hid, dropout=0)
@@ -181,9 +181,9 @@ class MI_NCE(nn.Module):
         super(MI_NCE, self).__init__()
         self.pyg = pyg
         if pyg == False:
-            self.gcn = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
-            self.gcn1 = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
-            self.gcn2 = GCNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn1 = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
+            self.gcn2 = GNNEncoder_OpenGSL(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, act='nn.PReLU()', dropout=0, weight_initializer='glorot', bias_initializer='zeros')
         else:
             #print("pyg")
             self.gcn = GNNEncoder(n_feat=num_feature, n_hidden=mi_hid_1, n_class=mi_hid_1, n_layers=1, dropout=0, act='nn.PReLU()')

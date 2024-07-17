@@ -1,6 +1,6 @@
 from opengsl.module.model.gnns import SGC, LPA, MLP, LINK, LINKX, APPNP, GPRGNN, GAT, GIN
 import time
-from opengsl.module.encoder import GCNEncoder, GNNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, GNNEncoder
 from opengsl.module.model.jknet import JKNet
 from opengsl.module.solver.solver import Solver
 import torch
@@ -124,7 +124,7 @@ class GCNSolver(Solver):
 
         '''
         if self.single_graph:
-            self.model = GCNEncoder(self.dim_feats, n_class=self.num_targets, **self.conf.model).to(self.device)
+            self.model = GNNEncoder_OpenGSL(self.dim_feats, n_class=self.num_targets, **self.conf.model).to(self.device)
             self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                           weight_decay=self.conf.training['weight_decay'])
             if self.conf.dataset['normalize']:

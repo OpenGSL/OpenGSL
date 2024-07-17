@@ -5,7 +5,7 @@ from .solver import Solver
 import copy
 from opengsl.module.model.prose import Stage_GNN_learner, GCN_Classifer, GCL, get_feat_mask, split_batch
 from opengsl.module.functional import normalize
-from opengsl.module.encoder import GCNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL
 
 
 class PROSESolver(Solver):

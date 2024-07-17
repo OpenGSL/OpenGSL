@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 import numpy as np
 from copy import deepcopy
-from opengsl.module.encoder import GCNEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL
 from opengsl.module.model.stable import DGI, preprocess_adj, aug_random_edge, get_reliable_neighbors
 import torch
 import time
@@ -116,7 +116,7 @@ class STABLESolver(Solver):
             return evaluate(model, self.test_mask)
 
 
-        model = GCNEncoder(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
+        model = GNNEncoder_OpenGSL(self.conf.n_embed, self.conf.n_hidden, self.num_targets, self.conf.n_layers, self.conf.dropout).to(self.device)
         optim = torch.optim.Adam(model.parameters(), lr=self.conf.lr, weight_decay=self.conf.weight_decay)
         best_loss_val = 10
         for epoch in range(self.conf.n_epochs):

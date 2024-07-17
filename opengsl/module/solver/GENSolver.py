@@ -9,7 +9,7 @@ from .solver import Solver
 from opengsl.utils.utils import get_homophily
 from opengsl.module.functional import normalize
 from opengsl.module.transform import KNN
-from opengsl.module.encoder import GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 from torch_sparse import SparseTensor
 
 
@@ -49,8 +49,8 @@ class GENSolver(Solver):
         print("Solver Version : [{}]".format("gen"))
         self.homophily = get_homophily(self.labels.cpu(), self.adj.to_dense().cpu(), type='node')
         if self.conf.model['type'] == 'gcn':
-            self.model = GCNEncoder(n_feat=self.dim_feats, n_class=self.num_targets, weight_initializer='glorot',
-                                    bias_initializer='zeros', **conf.model).to(self.device)
+            self.model = GNNEncoder_OpenGSL(n_feat=self.dim_feats, n_class=self.num_targets, weight_initializer='glorot',
+                                            bias_initializer='zeros', **conf.model).to(self.device)
         elif self.conf.model['type'] == 'appnp':
             self.model = APPNPEncoder(self.dim_feats, self.conf.model['n_hidden'], self.num_targets,
                                dropout=self.conf.model['dropout'], K=self.conf.model['K'],

@@ -1,6 +1,6 @@
 import torch
 from opengsl.module.functional import normalize
-from opengsl.module.encoder import GCNDiagEncoder, GCNEncoder, APPNPEncoder, GINEncoder
+from opengsl.module.encoder import GCNDiagEncoder, GNNEncoder_OpenGSL, APPNPEncoder, GINEncoder
 from opengsl.module.fuse import Interpolate
 from opengsl.module.transform import Normalize, KNN, Symmetry
 from opengsl.module.metric import InnerProduct
@@ -14,7 +14,7 @@ class GRCN(torch.nn.Module):
         self.num_nodes = num_nodes
         self.n_feat = n_feat
         if conf.model['type'] == 'gcn':
-            self.conv_task = GCNEncoder(n_feat=n_feat, n_class=n_class, **conf.model)
+            self.conv_task = GNNEncoder_OpenGSL(n_feat=n_feat, n_class=n_class, **conf.model)
         elif conf.model['type'] == 'appnp':
             self.conv_task = APPNPEncoder(n_feat, conf.model['n_hidden'], n_class,
                                           dropout=conf.model['dropout'], K=conf.model['K_APPNP'],
@@ -26,7 +26,7 @@ class GRCN(torch.nn.Module):
         if conf.gsl['model_type'] == 'diag':
             self.conv_graph = GCNDiagEncoder(2, n_feat)
         else:
-            self.conv_graph = GCNEncoder(n_feat, conf.gsl['n_hidden_2'], conf.gsl['n_hidden_1'], **conf.gsl)
+            self.conv_graph = GNNEncoder_OpenGSL(n_feat, conf.gsl['n_hidden_2'], conf.gsl['n_hidden_1'], **conf.gsl)
 
         self.K = conf.gsl['K']
         self._normalize = conf.gsl['normalize']   # 用来决定是否对node embedding进行normalize
