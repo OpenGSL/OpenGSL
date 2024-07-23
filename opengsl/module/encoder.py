@@ -328,10 +328,11 @@ class GNNEncoder_OpenGSL(nn.Module):
             self.input_linear = nn.Linear(in_features=n_feat, out_features=n_hidden)
             self.input_drop = nn.Dropout(input_dropout)
         if self.output_layer:
-            if jk == 'cat':
-                self.output_linear = MLPEncoder(n_feat=n_hidden * n_layers, n_hidden=n_hidden, n_class=n_class, n_layers=n_layers_output)
-            else:
-                self.output_linear = MLPEncoder(n_feat=n_hidden, n_hidden=n_hidden, n_class=n_class, n_layers=n_layers_output)
+            n_hidden_output = n_hidden * n_layers if jk == 'cat' else n_hidden
+            self.output_linear = MLPEncoder(n_feat=n_hidden_output, n_hidden=n_hidden, n_class=n_class,
+                                            n_layers=n_layers_output)
+            if self.norm_flag and self.norm_first:
+                self.output_normalization = norm_layer(in_channels=n_hidden_output, **norm_kwargs)
         self.convs = nn.ModuleList()
         self.norms = nn.ModuleList()
 
@@ -399,6 +400,8 @@ class GNNEncoder_OpenGSL(nn.Module):
         x = self.jk(xs) if self.jk else x
         if self.output_layer:
             mid = x
+            if self.norm_flag and self.norm_first:
+                x = self.output_normalization(x)
             x = self.output_linear(x)
         else:
             mid = xs[-2]

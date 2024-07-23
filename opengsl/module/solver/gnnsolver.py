@@ -103,6 +103,13 @@ class GCNSolver(Solver):
     def __init__(self, conf, dataset):
         super().__init__(conf, dataset)
         self.method_name = "gcn"
+        if self.conf.dataset['normalize']:
+            self.normalize = normalize
+        else:
+            self.normalize = lambda x, y: x
+        self.normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(
+            self.normalize(self.adj, add_loop=self.conf.dataset['add_loop']))
+        self.model = GNNEncoder_OpenGSL(self.dim_feats, n_class=self.num_targets, **self.conf.model).to(self.device)
 
     def input_distributer(self):
         '''
@@ -124,14 +131,9 @@ class GCNSolver(Solver):
 
         '''
         if self.single_graph:
-            self.model = GNNEncoder_OpenGSL(self.dim_feats, n_class=self.num_targets, **self.conf.model).to(self.device)
+            self.model.reset_parameters()
             self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
                                           weight_decay=self.conf.training['weight_decay'])
-            if self.conf.dataset['normalize']:
-                self.normalize = normalize
-            else:
-                self.normalize = lambda x, y: x
-            self.normalized_adj = SparseTensor.from_torch_sparse_coo_tensor(self.normalize(self.adj, add_loop=self.conf.dataset['add_loop']))
         else:
             self.model = GNNEncoder(self.dim_feats, self.n_classes, **self.conf.model).to(self.device)
             self.optim = torch.optim.Adam(self.model.parameters(), lr=self.conf.training['lr'],
