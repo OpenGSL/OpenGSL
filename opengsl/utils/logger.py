@@ -61,4 +61,12 @@ class Logger(object):
         print(f'Highest Train: ' + self.agg_stats['train'])
         print(f'Highest Valid: ' + self.agg_stats['valid'])
         print(f'   Final Test: ' + self.agg_stats['test'])
+        
+        try:
+            import nni
+            if nni.get_trial_id()!="STANDALONE":
+                nni.report_final_result(float(self.agg_stats['test_mean']))
+        except ImportError:
+            pass
+        
         return self.agg_stats['test_mean'], self.agg_stats['test_std']
