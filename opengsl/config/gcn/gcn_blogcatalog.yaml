@@ -15,7 +15,7 @@ dataset:
   feat_norm: true
   add_loop: true
   normalize: true
-  sparse: false
+  sparse: true
 #  homophily_control: 0.4
 
 training:

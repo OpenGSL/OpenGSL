@@ -17,7 +17,7 @@ gsl:
   normalize: false
   n_layers: 2
   n_linear: 1 # layers of linear per gcn layer
-  act: tanh # [relu, elu, gelu, leakyrelu]
+  act: F.tanh # [F.relu, F.elu, F.gelu, F.leakyrelu]
   n_hidden_1: 100
   n_hidden_2: 10
   dropout: 0

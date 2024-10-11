@@ -10,6 +10,7 @@ training:
   criterion: ~
 
 model:
+  type: gcn
   n_layers: 3
   n_hidden: 128
   dropout: 0.2

@@ -257,7 +257,7 @@ class MLPLearner(GraphLearner):
         '''
         if self.sparse:
             # To be integrated in future versions
-            embeddings = self.internal_forward(x)
+            embeddings = self.encoder(x)
             rows, cols, values = knn_fast(embeddings, self.k, 1000)
             rows_ = torch.cat((rows, cols))
             cols_ = torch.cat((cols, rows))

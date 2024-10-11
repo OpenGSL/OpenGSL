@@ -21,7 +21,7 @@ n_layers: 2
 type_learner: mlp
 k: 10
 sim_function: cosine
-activation_learner: relu
+activation_learner: F.relu
 eval_freq: 20
 tau: 0.999
 maskfeat_rate_learner: 0.4

@@ -21,7 +21,7 @@ n_layers: 2
 type_learner: att
 k: 20
 sim_function: cosine
-activation_learner: tanh
+activation_learner: F.tanh
 eval_freq: 200
 tau: 0.9999
 maskfeat_rate_learner: 0.6

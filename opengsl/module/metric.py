@@ -32,7 +32,8 @@ class WeightedCosine(nn.Module):
             self.reset_parameters()
 
     def reset_parameters(self):
-        init.xavier_uniform_(self.w)
+        if self.w is not None:
+            init.xavier_uniform_(self.w)
 
     def forward(self, x, y=None, non_negative=False):
         '''

@@ -13,9 +13,9 @@ model:
 dataset:
   cora_split: false # for cora,citeseer and pubmed
   feat_norm: true
-  add_loop: false
-  normalize: false
-  sparse: false
+  add_loop: true
+  normalize: true
+  sparse: true
 #  homophily_control: 0.4
 
 training:
